@@ -101,7 +101,7 @@ export function KnowledgeGraph() {
             </div>
           </div>
           <div className="p-4 bg-card flex items-center justify-between border-t">
-            <p className="text-xs text-muted-foreground">Phase 10 — Graph is generated from structured roadmap data, not arbitrary LLM. Pan/zoom is native browser scroll for MVP; React Flow interactive version is next.</p>
+            <p className="text-xs text-muted-foreground">Graph generated from your roadmap nodes. Pan and zoom with scroll. Open your roadmap to add or complete nodes — the graph updates automatically.</p>
             <Button variant="outline" size="sm" onClick={() => (window.location.href = "/roadmap")}>
               Open Roadmap <ArrowRight className="h-3 w-3 ml-1" />
             </Button>

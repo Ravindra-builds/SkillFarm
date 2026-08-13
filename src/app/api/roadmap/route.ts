@@ -13,13 +13,15 @@ export async function GET() {
     let roadmap = await getRoadmap(userId);
     if (!roadmap) {
       const profile = await getLearningProfile(userId);
-      if (!profile) {
-        return new Response(JSON.stringify({ error: "No learning profile yet. Complete your profile on /dashboard first." }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      roadmap = generateRoadmap({ userId, profile });
+      const activeProfile = profile ?? {
+        goal: "Become a production-ready software engineer",
+        currentLevel: "intermediate" as const,
+        knownSkills: ["JavaScript", "TypeScript"],
+        weeklyHours: 10,
+        learningStyle: "mixed" as const,
+        format: "mixed" as const,
+      };
+      roadmap = generateRoadmap({ userId, profile: activeProfile });
       await saveRoadmap(userId, roadmap);
     }
 

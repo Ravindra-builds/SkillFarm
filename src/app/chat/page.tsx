@@ -71,11 +71,11 @@ export default async function ChatPage({ searchParams }: Props) {
   const userName = user?.name ?? (isMockUser ? "Alex" : null);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
         <Header user={user} authConfigured={configured} />
-        <main className="flex-1 bg-background flex flex-col">
+        <main className="flex-1 min-h-0 flex flex-col bg-background overflow-hidden">
           <MentorChat
             initialMessages={initialMessages}
             conversationId={conversationId ?? null}

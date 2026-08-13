@@ -71,7 +71,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           text: "Saved in preview mode (no DB). Add DATABASE_URL to persist across restarts — see SETUP.md §4.1.",
         });
       } else {
-        setMsg({ type: "success", text: "Profile saved — your roadmap will personalize next (Phase 9)." });
+        setMsg({ type: "success", text: "Profile saved! Your roadmap and mentor context will update on next visit." });
       }
       router.refresh();
       // small delay to show toast before potential navigation
@@ -92,7 +92,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
               {userName ? `Hi ${userName} — ` : ""}This drives your personalized roadmap, graph, and mentor context.
             </p>
           </div>
-          <Badge variant="secondary" className="ml-auto text-xs">Phase 2</Badge>
+          <Badge variant="secondary" className="ml-auto text-xs">Profile</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -260,7 +260,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Stored in <code className="font-mono bg-muted px-1 rounded">learning_profiles</code> (Neon + Drizzle). Used for roadmap generation (Phase 9), weak-area detection, and mentor context. You can update anytime.
+          Stored securely in your profile database. Used to personalize your roadmap, mentor context, and weak-area detection. You can update anytime.
         </p>
       </CardContent>
     </Card>

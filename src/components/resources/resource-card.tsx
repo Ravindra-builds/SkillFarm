@@ -1,65 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Star, ExternalLink, Clock, ShieldCheck, Sparkles } from "lucide-react";
 
-export interface MockResource {
-  id: string;
-  title: string;
-  provider: string;
-  url: string;
-  type: string;
-  overall: number;
-  authority: number;
-  freshness: number;
-  why: string;
-  level: string;
-  updated: string;
-}
+// Re-export type from the canonical mock data module for convenience.
+// Mock data itself (MOCK_RESOURCES array) now lives in src/data/mock/resources.ts
+// and must be imported from there — never embed it in UI components.
+export type { MockResource } from "@/data/mock/resources";
 
-export const mockResources: MockResource[] = [
-  {
-    id: "1",
-    title: "Official Node.js Documentation — Guides",
-    provider: "nodejs.org",
-    url: "https://nodejs.org/docs",
-    type: "Official docs",
-    overall: 9.4,
-    authority: 10,
-    freshness: 9.5,
-    level: "Beginner → Intermediate",
-    updated: "Updated 3 days ago",
-    why: "Matches your current level and covers the exact concepts needed before your next roadmap step (HTTP, streams, ESM).",
-  },
-  {
-    id: "2",
-    title: "The Express.js GitHub — Production best practices",
-    provider: "github.com/expressjs/express",
-    url: "https://github.com/expressjs/express",
-    type: "GitHub",
-    overall: 9.1,
-    authority: 9.2,
-    freshness: 8.8,
-    level: "Intermediate",
-    updated: "12k ★ • Active",
-    why: "Strong practical examples and middleware patterns you can copy for your REST API project.",
-  },
-  {
-    id: "3",
-    title: "Web Dev Simplified — JWT Authentication Crash Course",
-    provider: "youtube.com",
-    url: "https://youtube.com",
-    type: "Video • 24 min",
-    overall: 8.7,
-    authority: 8.0,
-    freshness: 9.0,
-    level: "Beginner friendly",
-    updated: "382k views",
-    why: "Visual walkthrough of JWT + refresh rotation — great before the Security Mentor handoff.",
-  },
-];
-
-export function ResourceCard({ r }: { r: MockResource }) {
+export function ResourceCard({ r }: { r: import("@/data/mock/resources").MockResource }) {
   return (
     <Card className="border-muted/50 hover:shadow-md transition-shadow">
       <CardContent className="p-5">

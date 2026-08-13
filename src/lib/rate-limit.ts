@@ -3,7 +3,12 @@
  *
  * Protects API routes from abuse using Upstash Redis sliding window counters
  * with in-memory sliding window fallback when Redis is unconfigured.
+ *
+ * ⚠️ The in-memory fallback is NOT effective in serverless/multi-worker environments
+ * (Vercel, Lambda) because each worker has its own counter. For production rate
+ * limiting, configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.
  */
+import { getRedis } from "@/lib/redis";
 
 type RateLimitResult = {
   success: boolean;
@@ -19,15 +24,6 @@ type WindowEntry = {
 
 const localStore = new Map<string, WindowEntry>();
 
-function isRedisConfigured(): boolean {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return false;
-  const s = url.toLowerCase();
-  if (s.includes("...upstash") || (s.includes("upstash.io") && s.includes("..."))) return false;
-  return s.startsWith("https://");
-}
-
 export async function checkRateLimit(
   identifier: string,
   limit = 30,
@@ -36,14 +32,9 @@ export async function checkRateLimit(
   const key = `ratelimit:${identifier}`;
   const now = Date.now();
 
-  if (isRedisConfigured()) {
+  const redis = await getRedis();
+  if (redis) {
     try {
-      const { Redis } = await import("@upstash/redis");
-      const redis = new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL!,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-      });
-
       const current = await redis.incr(key);
       if (current === 1) {
         await redis.expire(key, windowSec);

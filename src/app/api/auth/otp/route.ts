@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { generateOTP, verifyOTP } from "@/lib/otp-store";
 import { createCustomSession } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 const requestSchema = z.object({
   action: z.enum(["send", "verify"]),
@@ -12,6 +15,19 @@ const requestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    // Rate-limit: 5 OTP requests per minute per IP (prevents enumeration & brute-force)
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+    const rateCheck = await checkRateLimit(`otp:${ip}`, 5, 60);
+    if (!rateCheck.success) {
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please wait before trying again.", retryAfter: rateCheck.resetSec }),
+        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) } }
+      );
+    }
+
     const json = await req.json().catch(() => ({}));
     const parsed = requestSchema.safeParse(json);
     if (!parsed.success) {
@@ -25,11 +41,13 @@ export async function POST(req: Request) {
 
     if (action === "send") {
       const generated = generateOTP(email);
+      // 🔒 SECURITY: Only include the preview code in non-production environments.
+      // In production, this field is omitted — the code must arrive via email.
       return new Response(
         JSON.stringify({
           success: true,
           message: `OTP sent to ${email}`,
-          previewCode: generated, // Return code in preview for easy testing
+          ...(IS_DEV ? { previewCode: generated } : {}),
         }),
         { headers: { "Content-Type": "application/json" } }
       );

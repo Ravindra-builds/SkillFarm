@@ -107,15 +107,14 @@ export async function createConversation(
   }
 
   try {
-    // Ensure user row exists in DB to prevent foreign key error 23503
-    await ensureDbUser({ id: userId, email: userId }).catch(() => null);
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
 
     const db = getDb();
     const [row] = await db
       .insert(conversations)
       .values({
         id: conv.id,
-        userId,
+        userId: dbUserId,
         title: conv.title,
         activeMentorId: conv.activeMentorId,
       })
@@ -164,15 +163,34 @@ export async function getConversations(userId: string): Promise<ChatConversation
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }
   try {
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
     const rows = await db
       .select()
       .from(conversations)
-      .where(eq(conversations.userId, userId))
+      .where(eq(conversations.userId, dbUserId))
       .orderBy(desc(conversations.updatedAt));
+    if (rows.length === 0 && dbUserId !== userId) {
+      // Check if user was recorded under raw userId
+      const fallbackRows = await db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.userId, userId))
+        .orderBy(desc(conversations.updatedAt));
+      if (fallbackRows.length > 0) {
+        return fallbackRows.map((r) => ({
+          id: r.id,
+          userId: r.userId,
+          title: r.title,
+          activeMentorId: r.activeMentorId,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }));
+      }
+    }
     if (rows.length === 0) {
       // also check memory (in case some convs were created in memory before DB was added)
-      const mem = Array.from(memConversations.values()).filter((c) => c.userId === userId);
+      const mem = Array.from(memConversations.values()).filter((c) => c.userId === userId || c.userId === dbUserId);
       return mem.length > 0 ? mem : [];
     }
     return rows.map((r) => ({

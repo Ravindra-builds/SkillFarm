@@ -7,8 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardStats, NextActionCard } from "@/components/dashboard/stats";
 import { MentorTeamCompact } from "@/components/dashboard/mentor-team";
-import { ResourceCard, mockResources } from "@/components/resources/resource-card";
+import { ResourceCard } from "@/components/resources/resource-card";
 import { LearningProfileForm } from "@/components/profile/learning-profile-form";
+import { isMockModeForced } from "@/lib/env";
+import { MOCK_RESOURCES } from "@/data/mock/resources";
+import { MOCK_ROADMAP_NODES } from "@/data/mock/dashboard";
 import {
   MessageSquare,
   ArrowRight,
@@ -65,9 +68,12 @@ export default async function DashboardPage() {
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">
               Good day, {greetingName} 👋
             </h1>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium">
-              <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> 7 Day Streak
-            </Badge>
+            {/* Streak badge — only shown in mock/preview mode; replace with real streak data in Phase 15 */}
+            {isMockModeForced() && (
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium">
+                <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> 7 Day Streak
+              </Badge>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {profile
@@ -150,15 +156,7 @@ export default async function DashboardPage() {
             </CardHeader>
 
             <CardContent className="space-y-3">
-              {[
-                { title: "Node.js Fundamentals & ESM", desc: "Event loop, streams, ESM modules", status: "completed", mentor: "Backend" },
-                { title: "HTTP & REST API Design", desc: "Verbs, status codes, OpenAPI specs", status: "completed", mentor: "Backend" },
-                { title: "Express / Fastify & Zod", desc: "Routing, middleware, edge validation", status: "completed", mentor: "Backend" },
-                { title: "PostgreSQL & Drizzle ORM", desc: "Schema, indexing, migrations", status: "current", mentor: "Backend" },
-                { title: "Authentication & Security", desc: "JWT, httpOnly cookies, OAuth 2.0", status: "next", mentor: "Security" },
-                { title: "Caching with Upstash Redis", desc: "TTL, cache keys, rate limiting", status: "locked", mentor: "Backend" },
-                { title: "Docker Containerization", desc: "Multi-stage builds, deployment", status: "locked", mentor: "DevOps" },
-              ].map((n) => (
+              {MOCK_ROADMAP_NODES.map((n) => (
                 <div key={n.title} className="flex items-center gap-4 rounded-xl border p-4 bg-card hover:bg-muted/40 transition-colors">
                   <div className="shrink-0">
                     {n.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
@@ -215,15 +213,25 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Evaluated Resources */}
+          {/* Recommended Resources — shown from mock data in preview/dev mode.
+               In production, these come from /api/research via the resources page. */}
           <Card className="border-muted/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Recommended Resources</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {mockResources.slice(0, 3).map((r) => (
-                <ResourceCard key={r.id} r={r} />
-              ))}
+              {isMockModeForced() ? (
+                MOCK_RESOURCES.slice(0, 3).map((r) => (
+                  <ResourceCard key={r.id} r={r} />
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed p-6 text-center">
+                  <p className="text-sm font-medium text-foreground">No resources yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Visit the <Link href="/resources" className="text-violet-500 hover:underline">Resources</Link> page to discover AI-evaluated learning materials.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

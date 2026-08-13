@@ -53,23 +53,23 @@ export function Header({ user, authConfigured }: HeaderProps) {
           variant="ghost"
           size="sm"
           className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           title="Go Back"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Back</span>
         </Button>
 
-        <Link href="/dashboard" onClick={() => router.push("/dashboard")}>
+        {/* <Link href="/dashboard" onClick={() => router.push("/")}>
           <Button
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
             title="Dashboard Home"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/")}
           >
             <Home className="h-3.5 w-3.5 text-violet-500" /> <span className="hidden sm:inline">Home</span>
           </Button>
-        </Link>
+        </Link> */}
 
         <Separator orientation="vertical" className="mx-1 h-5" />
 

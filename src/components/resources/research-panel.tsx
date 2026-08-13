@@ -43,7 +43,7 @@ export function ResearchPanel({ initialQuery }: { initialQuery?: string }) {
       <Card className="border-muted/50">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Search className="h-4 w-4 text-violet-600" /> Research Engine — Phase 7/8
+            <Search className="h-4 w-4 text-violet-600" /> AI Research Engine
           </CardTitle>
           <p className="text-sm text-muted-foreground">Tavily + GitHub + YouTube in parallel, deduped and scored (authority 25%, freshness 20%, accuracy 20%, practical 15%, beginner 10%, community 10%). Cached via Upstash or memory.</p>
         </CardHeader>

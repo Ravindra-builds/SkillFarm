@@ -60,10 +60,29 @@ if (!hasGoogle) {
 
 import { getCustomSession } from "./session";
 
+function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[auth] AUTH_SECRET is not set. This is required in production. " +
+        "Generate one with `npx auth secret` or `openssl rand -base64 32`."
+      );
+    }
+    // Development-only fallback — logged so it's hard to miss
+    console.warn(
+      "[auth] ⚠️  AUTH_SECRET not set — using insecure dev fallback. " +
+      "Add AUTH_SECRET to .env.local before testing auth flows."
+    );
+    return "dev-secret-not-for-production-change-me-32chars!!";
+  }
+  return secret;
+}
+
 const nextAuth = NextAuth({
   // Use database sessions when DB exists, otherwise JWT (no DB required)
   adapter: hasDatabase ? getAdapter() : undefined,
-  secret: process.env.AUTH_SECRET ?? "dev-secret-not-for-production-change-me-32chars!!",
+  secret: getAuthSecret(),
   session: { strategy: hasDatabase ? "database" : "jwt" },
   providers: hasGoogle
     ? [
@@ -79,7 +98,10 @@ const nextAuth = NextAuth({
   },
   callbacks: {
     authorized: async ({ auth: session }) => {
-      return true;
+      // Allow if a session exists. Route-level redirect logic lives in middleware.ts.
+      // Returning false here would block NextAuth's own middleware — we leave
+      // the redirect logic to our custom middleware.ts instead for full control.
+      return !!session;
     },
     jwt: async ({ token, user }) => {
       if (user) token.sub = user.id;

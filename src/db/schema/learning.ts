@@ -106,9 +106,20 @@ export const projects = pgTable("projects", {
   title: text("title").notNull(),
   description: text("description"),
   repoUrl: text("repoUrl"),
-  status: text("status").default("active"),
+  status: text("status").default("not-started"), // not-started | in-progress | completed
+  mentorId: text("mentorId"),
+  difficulty: text("difficulty"), // beginner | intermediate | advanced
+  topic: text("topic"),
+  // AI-generated rich fields serialised as JSON
+  metadata: jsonb("metadata").$type<{
+    requirements?: string[];
+    stretchGoals?: string[];
+    commonMistakes?: string[];
+  }>(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
+
 
 export const userMemories = pgTable("user_memories", {
   id: uuid("id").defaultRandom().primaryKey(),

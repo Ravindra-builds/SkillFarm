@@ -2,12 +2,12 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { learningProfiles } from "@/db/schema";
+import { ensureDbUser } from "@/lib/users";
 
 /**
- * Learning profile — Phase 2
- *
- * This is the structured memory that drives personalization.
- * Keep it minimal now; Phase 9 will auto-generate roadmaps from it.
+ * Learning Profile — structured memory that drives personalization.
+ * Persisted in Neon (learning_profiles table) with in-memory fallback
+ * when DATABASE_URL is not configured.
  */
 
 export const learningProfileSchema = z.object({
@@ -54,14 +54,24 @@ export async function getLearningProfile(userId: string): Promise<LearningProfil
   }
 
   try {
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
     const rows = await db
       .select()
       .from(learningProfiles)
-      .where(eq(learningProfiles.userId, userId))
+      .where(eq(learningProfiles.userId, dbUserId))
       .limit(1);
-    const row = rows[0];
-    if (!row) return null;
+    let row = rows[0];
+    if (!row && dbUserId !== userId) {
+      // Fallback check by raw userId if dbUserId was different
+      const fallbackRows = await db
+        .select()
+        .from(learningProfiles)
+        .where(eq(learningProfiles.userId, userId))
+        .limit(1);
+      row = fallbackRows[0];
+    }
+    if (!row) return memoryFallback.get(userId) ?? null;
 
     // Map DB row → typed profile
     const prefs = (row.preferences as { learningStyle?: string; weeklyHours?: number; format?: string } | null) ?? {};
@@ -101,19 +111,22 @@ export async function saveLearningProfile(
   }
 
   try {
+    // Ensure the user row exists and resolve the actual primary key id from `user` table.
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
+
     const db = getDb();
     // Upsert: insert or update on userId unique
     const existing = await db
       .select({ id: learningProfiles.id })
       .from(learningProfiles)
-      .where(eq(learningProfiles.userId, userId))
+      .where(eq(learningProfiles.userId, dbUserId))
       .limit(1);
 
     if (existing.length === 0) {
       const [inserted] = await db
         .insert(learningProfiles)
         .values({
-          userId,
+          userId: dbUserId,
           goal: parsed.goal,
           currentLevel: parsed.currentLevel,
           knownSkills: parsed.knownSkills,
@@ -128,7 +141,7 @@ export async function saveLearningProfile(
         ok: true,
         profile: {
           id: inserted.id,
-          userId,
+          userId: dbUserId,
           ...parsed,
           updatedAt: inserted.updatedAt,
         },
@@ -149,13 +162,13 @@ export async function saveLearningProfile(
           },
           updatedAt: new Date(),
         })
-        .where(eq(learningProfiles.userId, userId))
+        .where(eq(learningProfiles.userId, dbUserId))
         .returning();
       return {
         ok: true,
         profile: {
           id: updated.id,
-          userId,
+          userId: dbUserId,
           ...parsed,
           updatedAt: updated.updatedAt,
         },

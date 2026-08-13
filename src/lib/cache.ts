@@ -4,31 +4,17 @@
  * Tries Upstash Redis (if env set), otherwise in-memory LRU.
  * Used for research results, resource scores, etc.
  */
+import { getRedis } from "@/lib/redis";
 
 type CacheEntry = { value: unknown; expiresAt: number };
-
 const memCache = new Map<string, CacheEntry>();
 const MAX_MEM = 200;
 
-function isRedisConfigured(): boolean {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return false;
-  const s = url.toLowerCase();
-  if (s.includes("...upstash") || s.includes("upstash.io") && s.includes("...")) return false;
-  return s.startsWith("https://");
-}
-
 async function redisGet(key: string): Promise<unknown | null> {
-  if (!isRedisConfigured()) return null;
+  const redis = await getRedis();
+  if (!redis) return null;
   try {
-    const { Redis } = await import("@upstash/redis");
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-    const val = await redis.get(key);
-    return val as unknown;
+    return await redis.get(key) as unknown;
   } catch (err) {
     console.error("[cache] redis get failed, fallback to memory:", err);
     return null;
@@ -36,13 +22,9 @@ async function redisGet(key: string): Promise<unknown | null> {
 }
 
 async function redisSet(key: string, value: unknown, ttlSec: number): Promise<void> {
-  if (!isRedisConfigured()) return;
+  const redis = await getRedis();
+  if (!redis) return;
   try {
-    const { Redis } = await import("@upstash/redis");
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
     await redis.set(key, value as string, { ex: ttlSec });
   } catch (err) {
     console.error("[cache] redis set failed:", err);

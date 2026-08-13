@@ -325,7 +325,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
     : mentor?.config.expertise.slice(0, 4).join(" • ") ?? "";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] max-h-[calc(100vh-64px)]">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="border-b bg-card/50 backdrop-blur px-4 sm:px-6 py-3 flex items-center gap-3">
         <div className="h-9 w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold" style={{ background: headerColor }}>
           {isAuto ? <Network className="h-4 w-4" /> : (mentor?.config.shortName[0] ?? "M")}
@@ -574,7 +574,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           </div>
           <div className="mt-2 flex items-center justify-between flex-wrap gap-1.5">
             <p className="text-xs text-muted-foreground">
-              {isAuto ? "Phase 5 • Orchestrator auto-routes (no manual pick needed)." : "Phase 4 • Manual mentor. Switch to Auto for orchestrator."} Press Enter to send.
+              {isAuto ? "Orchestrator mode — automatically routes to the best mentor(s) for your question." : "Direct mentor mode — talking directly to your selected mentor. Switch to Auto for orchestrator routing."} Press Enter to send.
             </p>
             {isMock && <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20">Mock</Badge>}
           </div>

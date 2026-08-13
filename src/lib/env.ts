@@ -140,3 +140,62 @@ export const isProviderConfigured = {
     (!!process.env.AUTH_GOOGLE_ID || !!process.env.GOOGLE_CLIENT_ID),
   openai: () => !isMockModeForced() && !!process.env.OPENAI_API_KEY,
 };
+
+/**
+ * Shared placeholder detector.
+ *
+ * Returns true when a string is missing or looks like a sample/placeholder value
+ * (e.g. "sk-...", "replace-with-...", "ep-xxx"). Used across search clients, auth,
+ * and the chat route to decide whether to fall back to mock mode.
+ *
+ * Previously duplicated in auth.ts, api/chat/route.ts, search/tavily.ts,
+ * agents/orchestrator/router.ts, handoff.ts, synthesizer.ts. Use this instead.
+ */
+export function isPlaceholder(v?: string | null): boolean {
+  if (!v) return true;
+  const s = v.trim().toLowerCase();
+  if (s.length < 8) return true;
+  const placeholderPatterns = [
+    "sk-...",
+    "replace-with",
+    "ep-xxx",
+    "user:password@ep-xxx",
+    "your-google",
+    "changeme",
+    "tvly-...",
+    "aiза...",   // common typo in sample envs
+  ];
+  return placeholderPatterns.some((p) => s.includes(p));
+}
+
+/**
+ * Shared database availability check.
+ *
+ * Returns true only when DATABASE_URL is set, looks like a real Postgres URL,
+ * and mock mode is not forced. Previously duplicated in chat-store.ts,
+ * learning-profile.ts, roadmap-store.ts, project-store.ts, users.ts,
+ * handoff-store.ts. Use this instead.
+ */
+export function isDbAvailable(): boolean {
+  if (isMockModeForced()) return false;
+  const v = process.env.DATABASE_URL;
+  if (!v) return false;
+  if (isPlaceholder(v)) return false;
+  return v.trim().toLowerCase().startsWith("postgresql");
+}
+
+/**
+ * Shared userId resolver for API routes.
+ *
+ * Avoids copy-pasting the same fallback chain across every API route.
+ * Always returns a string (never null/undefined).
+ *
+ * @param session - the session object from auth()
+ * @param fallback - userId to use when not authenticated (default: "guest-preview-user")
+ */
+export function resolveUserId(
+  session: { user?: { email?: string | null; id?: string } } | null | undefined,
+  fallback = "guest-preview-user"
+): string {
+  return session?.user?.email ?? (session?.user as { id?: string } | undefined)?.id ?? fallback;
+}

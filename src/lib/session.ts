@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { ensureDbUser } from "@/lib/users";
+import { SignJWT, jwtVerify } from "jose";
 
 export type CustomUserSession = {
   id: string;
@@ -11,7 +12,58 @@ export type CustomUserSession = {
 const SESSION_COOKIE_NAME = "skillfarm_session";
 const LEGACY_COOKIE_NAME = "SkillFarm_session";
 
-export async function createCustomSession(email: string, name?: string, isGuest = false): Promise<CustomUserSession> {
+/**
+ * Returns the signing key as a Uint8Array derived from AUTH_SECRET.
+ * Falls back to a dev-only insecure key when the env var is missing.
+ *
+ * In production, missing AUTH_SECRET throws at auth startup (see lib/auth.ts),
+ * so this fallback is only reachable in local dev without a secret set.
+ */
+function getSigningKey(): Uint8Array {
+  const secret =
+    process.env.AUTH_SECRET ?? "dev-secret-not-for-production-change-me-32chars!!";
+  return new TextEncoder().encode(secret);
+}
+
+/**
+ * Sign a session payload and return a compact JWS token (signed JWT).
+ * Algorithm: HS256 (HMAC-SHA256) — symmetric, no public key needed.
+ */
+async function signSession(payload: CustomUserSession): Promise<string> {
+  return new SignJWT({ ...payload })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("30d")
+    .sign(getSigningKey());
+}
+
+/**
+ * Verify and decode a compact JWS token.
+ * Returns null if the signature is invalid, expired, or the token is malformed.
+ */
+async function verifySession(token: string): Promise<CustomUserSession | null> {
+  try {
+    const { payload } = await jwtVerify(token, getSigningKey(), {
+      algorithms: ["HS256"],
+    });
+    const { id, email, name, isGuest } = payload as Record<string, unknown>;
+    if (typeof email !== "string" || !email) return null;
+    return {
+      id: typeof id === "string" ? id : email,
+      email,
+      name: typeof name === "string" ? name : email.split("@")[0],
+      isGuest: isGuest === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function createCustomSession(
+  email: string,
+  name?: string,
+  isGuest = false
+): Promise<CustomUserSession> {
   const normalizedEmail = email.toLowerCase().trim();
   const sessionUser: CustomUserSession = {
     id: normalizedEmail,
@@ -21,10 +73,16 @@ export async function createCustomSession(email: string, name?: string, isGuest 
   };
 
   // Auto-provision user row in Neon database if available
-  await ensureDbUser({ id: normalizedEmail, email: normalizedEmail, name: sessionUser.name }).catch(() => null);
+  await ensureDbUser({
+    id: normalizedEmail,
+    email: normalizedEmail,
+    name: sessionUser.name,
+  }).catch(() => null);
+
+  const token = await signSession(sessionUser);
 
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, JSON.stringify(sessionUser), {
+  cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -38,10 +96,22 @@ export async function createCustomSession(email: string, name?: string, isGuest 
 export async function getCustomSession(): Promise<CustomUserSession | null> {
   try {
     const cookieStore = await cookies();
-    const cookie = cookieStore.get(SESSION_COOKIE_NAME) || cookieStore.get(LEGACY_COOKIE_NAME);
+    const cookie =
+      cookieStore.get(SESSION_COOKIE_NAME) || cookieStore.get(LEGACY_COOKIE_NAME);
     if (!cookie?.value) return null;
-    const parsed = JSON.parse(cookie.value) as CustomUserSession;
-    if (parsed && parsed.email) return parsed;
+
+    // Try signed JWT first (new format)
+    const verified = await verifySession(cookie.value);
+    if (verified) return verified;
+
+    // Backward compat: try unsigned JSON (old format — drop after first login cycle)
+    try {
+      const parsed = JSON.parse(cookie.value) as CustomUserSession;
+      if (parsed && parsed.email) return parsed;
+    } catch {
+      // Not JSON either — discard
+    }
+
     return null;
   } catch {
     return null;
