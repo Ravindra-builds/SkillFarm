@@ -4,8 +4,7 @@ import type { RoadmapNode } from "@/lib/roadmap-store";
 
 export function generateProjectsFromRoadmap(userId: string, nodes: RoadmapNode[]): Project[] {
   return nodes.map((node) => {
-    const status: ProjectStatus =
-      node.status === "completed" ? "completed" : node.status === "current" ? "in-progress" : "not-started";
+    const status: ProjectStatus = node.status === "current" ? "in-progress" : "not-started";
 
     return {
       id: randomUUID(),

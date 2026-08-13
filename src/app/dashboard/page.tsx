@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { auth, isAuthConfigured, isDatabaseConfigured } from "@/lib/auth";
 import { getLearningProfile } from "@/lib/learning-profile";
+import { getRoadmap, saveRoadmap } from "@/lib/roadmap-store";
+import { generateRoadmap } from "@/agents/roadmap/generator";
 import { saveProfileAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,21 +13,20 @@ import { ResourceCard } from "@/components/resources/resource-card";
 import { LearningProfileForm } from "@/components/profile/learning-profile-form";
 import { isMockModeForced } from "@/lib/env";
 import { MOCK_RESOURCES } from "@/data/mock/resources";
-import { MOCK_ROADMAP_NODES } from "@/data/mock/dashboard";
 import {
   MessageSquare,
   ArrowRight,
-  Sparkles,
   GitBranch,
   Clock,
   CheckCircle2,
   Circle,
   Lock,
-  ShieldCheck,
   Flame,
   Brain,
   Zap,
 } from "lucide-react";
+
+import { getUserStreak } from "@/lib/streak";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,24 @@ export default async function DashboardPage() {
     console.error("[dashboard/page] getLearningProfile failed:", err);
     profile = null;
   }
-  const greetingName = user?.name?.split(" ")[0] ?? (user ? "there" : "Alex");
+
+  // Load or auto-generate real roadmap from profile
+  let roadmap = await getRoadmap(userId);
+  if (!roadmap && profile) {
+    roadmap = generateRoadmap({ userId, profile });
+    await saveRoadmap(userId, roadmap);
+  }
+
+  // Load real user activity streak
+  const streak = await getUserStreak(userId);
+
+  const nodes = roadmap?.nodes ?? [];
+  const nodesTotal = nodes.length;
+  const nodesCompleted = nodes.filter((n) => n.status === "completed").length;
+  const progressPercent = nodesTotal > 0 ? Math.round((nodesCompleted / nodesTotal) * 100) : 0;
+  const currentNode = nodes.find((n) => n.status === "current") ?? nodes.find((n) => n.status === "next");
+
+  const greetingName = user?.name?.split(" ")[0] ?? (user ? "there" : "Developer");
   const goalText = profile?.goal ?? "Become a production-ready software engineer";
   const weeklyHours = profile?.weeklyHours ?? 10;
 
@@ -68,12 +86,9 @@ export default async function DashboardPage() {
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">
               Good day, {greetingName} 👋
             </h1>
-            {/* Streak badge — only shown in mock/preview mode; replace with real streak data in Phase 15 */}
-            {isMockModeForced() && (
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium">
-                <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> 7 Day Streak
-              </Badge>
-            )}
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium">
+              <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> {streak.streakDays} Day Streak
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground">
             {profile
@@ -132,23 +147,43 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* Metrics Row */}
-      <DashboardStats />
+      {/* Dynamic Real Metrics Row */}
+      <DashboardStats
+        progressPercent={progressPercent}
+        progressLabel={roadmap ? `${nodesCompleted}/${nodesTotal} Nodes` : "No active track"}
+        nodesCompleted={nodesCompleted}
+        nodesTotal={nodesTotal}
+        nextNodeLabel={currentNode?.title ?? "—"}
+        nextNodeEta="1–2 weeks"
+        goal={goalText}
+        weeklyHours={weeklyHours}
+        activeLabel={currentNode ? `Current: ${currentNode.title}` : undefined}
+        streakDays={streak.streakDays}
+        streakPercentile={streak.streakPercentile}
+        streakHistory={streak.streakHistory}
+      />
 
       {/* Main Grid with Spacing */}
       <div className="grid lg:grid-cols-[1.7fr_1fr] gap-8">
         {/* Left Column */}
         <div className="space-y-8">
-          <NextActionCard />
+          <NextActionCard
+            mentorLabel={currentNode?.mentorId ? `${currentNode.mentorId} Mentor` : "Tech Lead"}
+            title={currentNode ? `Current Topic: ${currentNode.title}` : "Complete your learning profile"}
+            description={currentNode?.description ?? "Set your goal and skills to generate your roadmap."}
+            tags={currentNode?.relatedConcepts ?? []}
+            estimatedTime={currentNode ? `${currentNode.difficulty}` : ""}
+            projectHref={currentNode ? `/projects` : "/dashboard"}
+          />
 
-          {/* Active Roadmap Progress */}
+          {/* Active Roadmap Progress — Dynamic Real Data */}
           <Card className="border-muted/50">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-violet-500" /> Active Roadmap Track
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">7 Active Nodes</Badge>
+                <Badge variant="secondary" className="text-xs">{nodesTotal} Total Nodes</Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Personalized path based on goal: “{goalText}”
@@ -156,32 +191,41 @@ export default async function DashboardPage() {
             </CardHeader>
 
             <CardContent className="space-y-3">
-              {MOCK_ROADMAP_NODES.map((n) => (
-                <div key={n.title} className="flex items-center gap-4 rounded-xl border p-4 bg-card hover:bg-muted/40 transition-colors">
-                  <div className="shrink-0">
-                    {n.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                    {n.status === "current" && (
-                      <div className="h-5 w-5 rounded-full border-2 border-violet-500 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
-                      </div>
-                    )}
-                    {n.status === "next" && <Circle className="h-5 w-5 text-violet-500" />}
-                    {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
+              {nodes.length > 0 ? (
+                nodes.map((n) => (
+                  <div key={n.id} className="flex items-center gap-4 rounded-xl border p-4 bg-card hover:bg-muted/40 transition-colors">
+                    <div className="shrink-0">
+                      {n.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                      {n.status === "current" && (
+                        <div className="h-5 w-5 rounded-full border-2 border-violet-500 flex items-center justify-center">
+                          <div className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+                        </div>
+                      )}
+                      {n.status === "next" && <Circle className="h-5 w-5 text-violet-500" />}
+                      {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-tight">{n.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{n.description}</p>
+                    </div>
+                    <Badge variant="outline" className="hidden sm:inline-flex text-xs">{n.mentorId}</Badge>
+                    {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-xs">Done</Badge>}
+                    {n.status === "current" && <Badge className="bg-violet-600 text-white text-xs">Current</Badge>}
+                    {n.status === "next" && <Badge variant="secondary" className="text-xs">Up next</Badge>}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium leading-tight">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
-                  </div>
-                  <Badge variant="outline" className="hidden sm:inline-flex text-xs">{n.mentor}</Badge>
-                  {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-xs">Done</Badge>}
-                  {n.status === "current" && <Badge className="bg-violet-600 text-white text-xs">Current</Badge>}
-                  {n.status === "next" && <Badge variant="secondary" className="text-xs">Up next</Badge>}
+                ))
+              ) : (
+                <div className="rounded-xl border border-dashed p-6 text-center">
+                  <p className="text-sm font-medium text-foreground">No active roadmap track yet</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Save your learning profile above to generate your dynamic roadmap.
+                  </p>
                 </div>
-              ))}
+              )}
 
               <div className="pt-3 flex items-center justify-between text-xs">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Est: 6–8 weeks at {weeklyHours}h/week
+                  <Clock className="h-3.5 w-3.5" /> Pace: {weeklyHours}h / week
                 </span>
                 <Link href="/roadmap" className="font-semibold text-violet-500 hover:underline">
                   Full Roadmap →
@@ -213,8 +257,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Recommended Resources — shown from mock data in preview/dev mode.
-               In production, these come from /api/research via the resources page. */}
+          {/* Recommended Resources */}
           <Card className="border-muted/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Recommended Resources</CardTitle>

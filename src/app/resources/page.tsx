@@ -2,6 +2,8 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { auth, isAuthConfigured } from "@/lib/auth";
 import { ResearchPanel } from "@/components/resources/research-panel";
+import { getRoadmap } from "@/lib/roadmap-store";
+import { getLearningProfile } from "@/lib/learning-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,24 @@ export default async function ResourcesPage() {
   const user = (session as unknown as { user?: { name?: string | null; email?: string | null; image?: string | null } } | null)?.user ?? null;
   const isMockUser = !configured && !user;
 
+  const userId = (user?.email as string) ?? (user as unknown as { id?: string })?.id ?? "guest-preview-user";
+
+  let initialQuery = "Best resources to learn Node.js, PostgreSQL and AI Engineering";
+  try {
+    const roadmap = await getRoadmap(userId);
+    const currentNode = roadmap?.nodes.find((n) => n.status === "current") ?? roadmap?.nodes.find((n) => n.status === "next");
+    if (currentNode) {
+      initialQuery = `Learn ${currentNode.title}: ${currentNode.description}`;
+    } else {
+      const profile = await getLearningProfile(userId);
+      if (profile?.goal) {
+        initialQuery = `Best resources to learn ${profile.goal}`;
+      }
+    }
+  } catch (err) {
+    console.error("[resources/page] failed to build dynamic query:", err);
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
@@ -27,7 +47,7 @@ export default async function ResourcesPage() {
         <Header user={user} authConfigured={configured} />
         <main className="flex-1 bg-muted/30 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-            <ResearchPanel initialQuery="Best resources to learn backend with Node.js and PostgreSQL" />
+            <ResearchPanel initialQuery={initialQuery} />
           </div>
         </main>
       </div>

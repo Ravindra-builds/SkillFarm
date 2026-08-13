@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,23 @@ export function ResearchPanel({ initialQuery }: { initialQuery?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [meta, setMeta] = useState<{ cached: boolean; sourcesUsed: string[]; durationMs: number } | null>(null);
 
-  async function run() {
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+      runQuery(initialQuery);
+    }
+  }, [initialQuery]);
+
+  async function runQuery(qToRun?: string) {
+    const targetQuery = qToRun ?? query;
+    if (!targetQuery.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, maxResults: 6 }),
+        body: JSON.stringify({ query: targetQuery, maxResults: 6 }),
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
@@ -36,6 +45,10 @@ export function ResearchPanel({ initialQuery }: { initialQuery?: string }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function run() {
+    return runQuery(query);
   }
 
   return (

@@ -11,16 +11,20 @@ export async function GET() {
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
     let roadmap = await getRoadmap(userId);
-    if (!roadmap) {
-      const profile = await getLearningProfile(userId);
-      const activeProfile = profile ?? {
-        goal: "Become a production-ready software engineer",
-        currentLevel: "intermediate" as const,
-        knownSkills: ["JavaScript", "TypeScript"],
-        weeklyHours: 10,
-        learningStyle: "mixed" as const,
-        format: "mixed" as const,
-      };
+    const profile = await getLearningProfile(userId);
+
+    const activeProfile = profile ?? {
+      goal: "Become a production-ready software engineer",
+      currentLevel: "intermediate" as const,
+      knownSkills: ["JavaScript", "TypeScript"],
+      weeklyHours: 10,
+      learningStyle: "mixed" as const,
+      format: "mixed" as const,
+    };
+
+    // Auto-regenerate if no roadmap exists OR if profile was updated after the roadmap
+    const isStale = profile && roadmap && new Date(profile.updatedAt).getTime() > new Date(roadmap.updatedAt).getTime();
+    if (!roadmap || isStale) {
       roadmap = generateRoadmap({ userId, profile: activeProfile });
       await saveRoadmap(userId, roadmap);
     }

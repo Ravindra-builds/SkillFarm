@@ -25,7 +25,7 @@ import {
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: null },
   { href: "/chat", label: "Mentor Chat", icon: MessageSquare, badge: "Live" },
-  { href: "/roadmap", label: "Roadmap", icon: Map, badge: "72%" },
+  { href: "/roadmap", label: "Roadmap", icon: Map, badge: null },
   { href: "/knowledge", label: "Knowledge Graph", icon: Network, badge: null },
   { href: "/resources", label: "Resources", icon: BookOpen, badge: null },
   { href: "/projects", label: "Projects", icon: FolderKanban, badge: null },

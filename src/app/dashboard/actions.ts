@@ -2,29 +2,43 @@
 
 import { auth } from "@/lib/auth";
 import { saveLearningProfile, type LearningProfileInput } from "@/lib/learning-profile";
+import { generateRoadmap } from "@/agents/roadmap/generator";
+import { saveRoadmap } from "@/lib/roadmap-store";
+import { generateProjectsFromRoadmap } from "@/agents/projects/generator";
+import { saveProjects } from "@/lib/project-store";
 
 /**
- * Server action for the learning profile form (Phase 2).
- * We resolve the userId from the session; if no session (preview mode),
- * we fallback to a stable guest id so the demo still works.
+ * Server action for the learning profile form.
+ * Resolves the userId from session, saves the profile, and automatically
+ * synchronizes the personalized roadmap and practical projects.
  */
 export async function saveProfileAction(
   data: LearningProfileInput
 ): Promise<{ ok: boolean; isMock: boolean; error?: string }> {
   try {
     const session = await auth();
-    // In preview without Google, session is null → use guest id so the form still demos save.
-    // Once auth is wired, this will be session.user.email.
     const userId =
       (session?.user?.email as string | undefined) ??
       (session?.user as unknown as { id?: string } | undefined)?.id ??
       "guest-preview-user";
 
     const result = await saveLearningProfile(userId, data);
+
+    if (result.ok && result.profile) {
+      // Regenerate personalized roadmap based on updated profile
+      const newRoadmap = generateRoadmap({ userId, profile: result.profile });
+      await saveRoadmap(userId, newRoadmap);
+
+      // Regenerate practical projects based on updated roadmap
+      if (newRoadmap.nodes.length > 0) {
+        const newProjects = generateProjectsFromRoadmap(userId, newRoadmap.nodes);
+        await saveProjects(userId, newProjects);
+      }
+    }
+
     return { ok: true, isMock: result.isMock };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    // Zod validation errors bubble as string
     return { ok: false, isMock: false, error: msg };
   }
 }

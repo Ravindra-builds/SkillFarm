@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, Lock, Clock, Sparkles, Hammer, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Circle, Lock, Clock, Sparkles, Hammer, AlertTriangle, RotateCcw } from "lucide-react";
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
 
 export function RoadmapView() {
@@ -52,13 +52,13 @@ export function RoadmapView() {
     }
   }
 
-  async function markCompleted(nodeId: string) {
+  async function updateStatus(nodeId: string, newStatus: RoadmapNode["status"]) {
     if (!roadmap) return;
     try {
       const res = await fetch("/api/roadmap/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nodeId, status: "completed" }),
+        body: JSON.stringify({ nodeId, status: newStatus }),
       });
       if (res.ok) {
         const updated = await res.json();
@@ -70,21 +70,20 @@ export function RoadmapView() {
         }
       }
     } catch (e) {
-      console.error("[roadmap] markCompleted failed:", e);
+      console.error("[roadmap] updateStatus failed:", e);
     }
     // Optimistic fallback if API offline
     const updated = {
       ...roadmap,
       nodes: roadmap.nodes.map((n) => {
-        if (n.id === nodeId) return { ...n, status: "completed" as const };
+        if (n.id === nodeId) return { ...n, status: newStatus };
         return n;
       }),
     };
-    const idx = updated.nodes.findIndex((n) => n.id === nodeId);
-    const next = updated.nodes[idx + 1];
-    if (next && (next.status === "locked" || next.status === "next")) next.status = "current";
     updated.updatedAt = new Date();
     setRoadmap(updated as Roadmap);
+    const updatedSelected = updated.nodes.find((n) => n.id === nodeId);
+    if (updatedSelected) setSelected(updatedSelected as RoadmapNode);
   }
 
   if (loading) {
@@ -212,12 +211,20 @@ export function RoadmapView() {
                     Prerequisites: {selected.prerequisites.length ? selected.prerequisites.join(", ") : "None"}
                   </Badge>
                 </div>
-                {selected.status !== "completed" && (
-                  <Button onClick={() => markCompleted(selected.id)} className="w-full" size="sm">
+                {selected.status !== "completed" ? (
+                  <Button onClick={() => updateStatus(selected.id, "completed")} className="w-full" size="sm">
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark as completed
                   </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Completed — next node unlocked
+                    </p>
+                    <Button onClick={() => updateStatus(selected.id, "current")} variant="outline" className="w-full text-xs" size="sm">
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" /> Mark as undone / Reset status
+                    </Button>
+                  </div>
                 )}
-                {selected.status === "completed" && <p className="text-xs text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Completed — next node unlocked</p>}
               </CardContent>
             </Card>
           ) : null}
