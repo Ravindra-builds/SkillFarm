@@ -4,14 +4,14 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { MentorChat } from "@/components/chat/chat";
 import { ConversationHistory } from "@/components/chat/conversation-history";
-import { ensureConversation, getMessages } from "@/lib/chat-store";
+import { ensureConversation, getMessages, createConversation, getConversations } from "@/lib/chat-store";
 import { getHandoffs } from "@/lib/handoff-store";
 import { isValidMentorId, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams?: Promise<{ conversationId?: string; mentor?: string }>;
+  searchParams?: Promise<{ conversationId?: string; mentor?: string; new?: string }>;
 };
 
 export default async function ChatPage({ searchParams }: Props) {
@@ -40,6 +40,7 @@ export default async function ChatPage({ searchParams }: Props) {
   const userId = (user?.email as string | undefined) ?? (user as unknown as { id?: string } | undefined)?.id ?? "guest-preview-user";
   const sp = searchParams ? await searchParams : {};
   let conversationId: string | undefined = sp?.conversationId ?? undefined;
+  const isNew = sp?.new === "true" || sp?.new === "1";
   const mentorParam = sp?.mentor as string | undefined;
   const initialMentorId: MentorId | "auto" =
     mentorParam === "auto" || !mentorParam
@@ -50,11 +51,21 @@ export default async function ChatPage({ searchParams }: Props) {
 
   let initialMessages: { id: string; role: "user" | "assistant"; content: string; mentorId?: string }[] = [];
   let initialHandoffs: { id: string; fromMentorId: string; toMentorId: string; reason: string | null; createdAt: Date }[] = [];
+  let initialConversations: { id: string; title: string | null; activeMentorId: string | null; updatedAt: Date }[] = [];
 
   try {
-    const convo = await ensureConversation(userId, conversationId, initialMentorId === "auto" ? undefined : initialMentorId);
+    let convo;
+    if (isNew && !conversationId) {
+      convo = await createConversation(userId, undefined, initialMentorId === "auto" ? undefined : initialMentorId);
+    } else {
+      convo = await ensureConversation(userId, conversationId, initialMentorId === "auto" ? undefined : initialMentorId);
+    }
     conversationId = convo.id;
-    const [msgs, handoffs] = await Promise.all([getMessages(conversationId), getHandoffs(conversationId)]);
+    const [msgs, handoffs, convs] = await Promise.all([
+      getMessages(conversationId),
+      getHandoffs(conversationId),
+      getConversations(userId),
+    ]);
     initialMessages = msgs.map((m) => ({
       id: m.id,
       role: m.role as "user" | "assistant",
@@ -62,10 +73,17 @@ export default async function ChatPage({ searchParams }: Props) {
       mentorId: m.mentorId ?? undefined,
     }));
     initialHandoffs = handoffs;
+    initialConversations = convs.map((c) => ({
+      id: c.id,
+      title: c.title,
+      activeMentorId: c.activeMentorId,
+      updatedAt: c.updatedAt,
+    }));
   } catch (err) {
     console.error("[chat/page] conversation ensure failed:", err);
     initialMessages = [];
     initialHandoffs = [];
+    initialConversations = [];
   }
 
   const userName = user?.name ?? (isMockUser ? "Alex" : null);
@@ -81,13 +99,17 @@ export default async function ChatPage({ searchParams }: Props) {
 
         <main className="flex-1 min-h-0 flex overflow-hidden">
           {/* Conversation history panel — only shown on md+ */}
-          <div className="hidden md:flex">
-            <ConversationHistory activeConversationId={conversationId ?? null} />
+          <div className="hidden md:flex shrink-0">
+            <ConversationHistory
+              activeConversationId={conversationId ?? null}
+              initialConversations={initialConversations}
+            />
           </div>
 
           {/* Chat interface */}
           <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
             <MentorChat
+              key={conversationId ?? "new"}
               initialMessages={initialMessages}
               conversationId={conversationId ?? null}
               userName={userName}

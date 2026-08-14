@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 type Conversation = {
@@ -50,7 +51,7 @@ function Toast({ toasts, onRemove }: { toasts: ToastItem[]; onRemove: (id: strin
             t.type === "info" && "bg-card border-border text-foreground"
           )}
         >
-          <span className="flex-1">{t.message}</span>
+          <span className="flex-1 text-xs font-medium">{t.message}</span>
           <button
             onClick={() => onRemove(t.id)}
             className="text-muted-foreground hover:text-foreground transition-colors"
@@ -80,7 +81,7 @@ function mentorDot(mentorId: string | null) {
   const color = mentorId ? (mentorColors[mentorId] ?? "#7C5CFC") : "#7C5CFC";
   return (
     <span
-      className="h-2 w-2 rounded-full shrink-0 mt-0.5"
+      className="h-2 w-2 rounded-full shrink-0 mt-1"
       style={{ background: color }}
     />
   );
@@ -95,12 +96,14 @@ function ConvRow({
   onPin,
   onDelete,
   onRename,
+  onSelect,
 }: {
   conv: Conversation;
   isActive: boolean;
   onPin: (id: string) => void;
   onDelete: (id: string, title: string) => void;
   onRename: (id: string, newTitle: string) => void;
+  onSelect?: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(conv.title ?? "Untitled");
@@ -133,16 +136,22 @@ function ConvRow({
     <Link
       href={`/chat?conversationId=${conv.id}`}
       className={cn(
-        "group relative flex flex-col gap-0.5 rounded-lg px-3 py-2.5 text-sm transition-colors cursor-pointer select-none",
+        "group relative flex flex-col gap-0.5 rounded-lg px-2.5 py-2 text-sm transition-colors cursor-pointer select-none",
         isActive
-          ? "bg-primary/10 text-foreground"
+          ? "bg-primary/10 text-foreground font-medium"
           : "hover:bg-accent text-muted-foreground hover:text-foreground"
       )}
-      onClick={(e) => editing && e.preventDefault()}
+      onClick={(e) => {
+        if (editing) {
+          e.preventDefault();
+        } else if (onSelect) {
+          onSelect();
+        }
+      }}
     >
       <div className="flex items-start gap-2">
         {mentorDot(conv.activeMentorId)}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 pr-6 group-hover:pr-14 transition-all">
           {editing ? (
             <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
               <Input
@@ -172,31 +181,31 @@ function ConvRow({
               </button>
             </div>
           ) : (
-            <p className="truncate text-xs font-medium leading-snug">{displayTitle}</p>
+            <p className="truncate text-xs leading-snug">{displayTitle}</p>
           )}
           <p className="text-[10px] text-muted-foreground/60 mt-0.5">{relDate}</p>
         </div>
-        {conv.pinned && (
-          <Pin className="h-3 w-3 text-violet-400 shrink-0 mt-0.5" />
+        {conv.pinned && !editing && (
+          <Pin className="h-3 w-3 text-violet-400 shrink-0 mt-0.5 group-hover:hidden" />
         )}
       </div>
 
       {/* Action buttons — appear on hover */}
       {!editing && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-card/80 backdrop-blur-sm rounded-md border border-border/60 p-0.5 shadow-sm">
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5 bg-card/90 backdrop-blur-sm rounded-md border border-border/60 p-0.5 shadow-sm">
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(e); }}
-            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors hover:bg-accent"
+            className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors hover:bg-accent"
             title="Rename"
           >
             <Pencil className="h-3 w-3" />
           </button>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPin(conv.id); }}
-            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-violet-400 transition-colors hover:bg-accent"
+            className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-violet-400 transition-colors hover:bg-accent"
             title={conv.pinned ? "Unpin" : "Pin"}
           >
-            {conv.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+            {conv.pinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3 text-muted-foreground" />}
           </button>
           <button
             onClick={(e) => {
@@ -204,7 +213,7 @@ function ConvRow({
               e.stopPropagation();
               onDelete(conv.id, displayTitle);
             }}
-            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-red-400 transition-colors hover:bg-accent"
+            className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-red-400 transition-colors hover:bg-accent"
             title="Delete"
           >
             <Trash2 className="h-3 w-3" />
@@ -233,25 +242,34 @@ function formatRelative(date: Date): string {
 // ──────────────────────────────────────────────────────────────────────────────
 export type ConversationHistoryProps = {
   activeConversationId?: string | null;
+  initialConversations?: Conversation[];
+  onSelect?: () => void;
 };
 
-export function ConversationHistory({ activeConversationId }: ConversationHistoryProps) {
+export function ConversationHistory({
+  activeConversationId,
+  initialConversations,
+  onSelect,
+}: ConversationHistoryProps) {
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [conversations, setConversations] = useState<Conversation[]>(
+    initialConversations ?? []
+  );
+  const [loading, setLoading] = useState(!initialConversations);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
 
-  // Pin state lives in localStorage — it's a UI preference, not server data
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
-
-  useEffect(() => {
+  // Pin state lives in localStorage — initialized with lazy initializer function to avoid cascading renders
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
     try {
       const stored = localStorage.getItem("skillfarm:pinned");
-      if (stored) setPinnedIds(new Set(JSON.parse(stored) as string[]));
+      if (stored) return new Set(JSON.parse(stored) as string[]);
     } catch {}
-  }, []);
+    return new Set();
+  });
 
   function savePins(pins: Set<string>) {
     setPinnedIds(pins);
@@ -270,7 +288,7 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  async function fetchConversations() {
+  const fetchConversations = useCallback(async () => {
     try {
       const res = await fetch("/api/conversations", { cache: "no-store" });
       if (res.ok) {
@@ -279,11 +297,38 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
       }
     } catch {}
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
-    fetchConversations();
-  }, [activeConversationId]); // refetch when active changes (new message → new convo title update)
+    let ignore = false;
+
+    async function load() {
+      try {
+        const res = await fetch("/api/conversations", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (!ignore) {
+            setConversations(data.conversations ?? []);
+          }
+        }
+      } catch {}
+      if (!ignore) {
+        setLoading(false);
+      }
+    }
+
+    load();
+
+    const handleUpdate = () => {
+      load();
+    };
+    window.addEventListener("skillfarm:conversation-updated", handleUpdate);
+
+    return () => {
+      ignore = true;
+      window.removeEventListener("skillfarm:conversation-updated", handleUpdate);
+    };
+  }, [activeConversationId]);
 
   function handlePin(id: string) {
     const next = new Set(pinnedIds);
@@ -310,13 +355,13 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
       const res = await fetch(`/api/conversations/${id}`, { method: "DELETE" });
       if (res.ok) {
         setConversations((prev) => prev.filter((c) => c.id !== id));
-        // Also remove from pins
         const next = new Set(pinnedIds);
         next.delete(id);
         savePins(next);
-        addToast(`"${title.slice(0, 40)}" deleted`, "success");
-        // Navigate away if this was the active conversation
-        if (id === activeConversationId) router.push("/chat");
+        addToast(`"${title.slice(0, 30)}" deleted`, "success");
+        if (id === activeConversationId) {
+          router.push("/chat?new=true");
+        }
       } else {
         addToast("Failed to delete conversation", "error");
       }
@@ -345,7 +390,36 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
     }
   }
 
-  function handleNewChat() {
+  async function handleNewChat() {
+    if (isCreatingNew) return;
+    setIsCreatingNew(true);
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New conversation", mentorId: "backend" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.conversation?.id) {
+          if (data.alreadyExists) {
+            addToast("You already have an empty chat — switched to it", "info");
+          } else {
+            addToast("New chat started ✨", "success");
+          }
+          await fetchConversations();
+          if (onSelect) onSelect();
+          router.push(`/chat?conversationId=${data.conversation.id}`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("[conversation-history] Create new chat error:", err);
+    } finally {
+      setIsCreatingNew(false);
+    }
+
+    if (onSelect) onSelect();
     router.push("/chat");
   }
 
@@ -365,7 +439,7 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
     <>
       {/* Delete confirmation overlay */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl border bg-card shadow-2xl p-6">
             <h3 className="font-semibold text-base">Delete conversation?</h3>
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
@@ -401,7 +475,7 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
       {/* Panel */}
       <div
         className={cn(
-          "flex flex-col border-r bg-card/40 transition-all duration-300 shrink-0",
+          "flex flex-col border-r bg-card/40 transition-all duration-300 shrink-0 h-full",
           collapsed ? "w-[48px]" : "w-[260px]"
         )}
       >
@@ -417,17 +491,22 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
                 onClick={handleNewChat}
+                disabled={isCreatingNew}
                 title="New chat"
               >
-                <MessageSquarePlus className="h-4 w-4" />
+                {isCreatingNew ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <MessageSquarePlus className="h-4 w-4" />
+                )}
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-7 w-7 text-muted-foreground"
               onClick={() => setCollapsed((v) => !v)}
               title={collapsed ? "Expand" : "Collapse"}
             >
@@ -446,54 +525,67 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
               onClick={handleNewChat}
+              disabled={isCreatingNew}
               title="New chat"
             >
-              <MessageSquarePlus className="h-4 w-4" />
+              {isCreatingNew ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquarePlus className="h-4 w-4" />
+              )}
             </Button>
-            {sorted.slice(0, 6).map((c) => (
+            {sorted.slice(0, 8).map((c) => (
               <Link
                 key={c.id}
                 href={`/chat?conversationId=${c.id}`}
                 title={c.title ?? "Conversation"}
+                onClick={onSelect}
                 className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center transition-colors",
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-colors relative group",
                   c.id === activeConversationId
                     ? "bg-primary/10 text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <MessageSquare className="h-3.5 w-3.5" />
+                {c.pinned && (
+                  <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-violet-500" />
+                )}
               </Link>
             ))}
           </div>
         ) : (
           /* Expanded state — full list */
-          <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5 scrollbar-thin">
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : conversations.length === 0 ? (
               <div className="py-8 px-3 text-center">
-                <MessageSquare className="h-8 w-8 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-xs text-muted-foreground">No conversations yet.</p>
+                <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center mx-auto mb-3 text-muted-foreground">
+                  <MessageSquare className="h-5 w-5 opacity-60" />
+                </div>
+                <p className="text-xs font-medium text-foreground">No conversations yet</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Start chatting with your AI mentor team.</p>
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="mt-3 text-xs h-7"
+                  className="mt-3 text-xs h-7 gap-1.5 bg-primary/90 hover:bg-primary"
                   onClick={handleNewChat}
+                  disabled={isCreatingNew}
                 >
-                  Start one
+                  <Sparkles className="h-3 w-3" />
+                  New Chat
                 </Button>
               </div>
             ) : (
               <>
                 {pinned.length > 0 && (
                   <>
-                    <p className="px-3 pt-1 pb-0.5 text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase flex items-center gap-1">
-                      <Pin className="h-2.5 w-2.5" /> Pinned
+                    <p className="px-2.5 pt-1 pb-0.5 text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase flex items-center gap-1">
+                      <Pin className="h-2.5 w-2.5 text-violet-400" /> Pinned
                     </p>
                     {pinned.map((c) => (
                       <ConvRow
@@ -503,10 +595,11 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
                         onPin={handlePin}
                         onDelete={handleDeleteRequest}
                         onRename={handleRename}
+                        onSelect={onSelect}
                       />
                     ))}
                     {recent.length > 0 && (
-                      <p className="px-3 pt-2 pb-0.5 text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                      <p className="px-2.5 pt-2 pb-0.5 text-[10px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
                         Recent
                       </p>
                     )}
@@ -520,6 +613,7 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
                     onPin={handlePin}
                     onDelete={handleDeleteRequest}
                     onRename={handleRename}
+                    onSelect={onSelect}
                   />
                 ))}
               </>
@@ -529,15 +623,25 @@ export function ConversationHistory({ activeConversationId }: ConversationHistor
 
         {/* New chat button at bottom when expanded */}
         {!collapsed && (
-          <div className="border-t p-2 shrink-0">
+          <div className="border-t p-2 shrink-0 bg-card/20">
             <Button
               variant="outline"
               size="sm"
-              className="w-full text-xs h-8 gap-1.5"
+              className="w-full text-xs h-8 gap-1.5 bg-background/50 hover:bg-accent border-border/60 font-medium"
               onClick={handleNewChat}
+              disabled={isCreatingNew}
             >
-              <MessageSquarePlus className="h-3.5 w-3.5" />
-              New chat
+              {isCreatingNew ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <MessageSquarePlus className="h-3.5 w-3.5 text-primary" />
+                  New chat
+                </>
+              )}
             </Button>
           </div>
         )}

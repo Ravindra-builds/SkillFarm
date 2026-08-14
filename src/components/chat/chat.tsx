@@ -8,10 +8,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History } from "lucide-react";
+import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
 import { ConversationHistory } from "@/components/chat/conversation-history";
+import { FormattedMessage } from "@/components/chat/markdown";
 
 type ChatMsg = {
   id: string;
@@ -58,25 +59,21 @@ const SUGGESTIONS: Record<MentorId | "auto", string[]> = {
     "Server Components vs Client Components — when to use which?",
     "How to make this card accessible and responsive?",
     "How to optimize Next.js images and fonts?",
-    "Show me a shadcn form with Zod validation",
   ],
   devops: [
-    "How do I Dockerize a Next.js app for production?",
-    "Set up GitHub Actions CI for my API",
-    "How to manage secrets in Vercel/Neon?",
-    "How to add health checks and monitoring?",
+    "Show me a multi-stage Dockerfile for Next.js",
+    "How to set up GitHub Actions CI/CD for a Node API?",
+    "Best practices for secrets and environment variables",
   ],
   security: [
-    "How do I secure a JWT auth flow?",
-    "What are the top OWASP risks for my API?",
-    "How to rate-limit login and prevent brute force?",
-    "Should I store tokens in localStorage or cookies?",
+    "Review my JWT refresh token rotation pattern",
+    "How to prevent CSRF and XSS in Next.js?",
+    "What are the OWASP Top 10 risks for my SaaS?",
   ],
   "system-design": [
-    "Is my SaaS architecture production ready?",
-    "Monolith vs microservices for my MVP?",
-    "How to design a caching layer with Redis?",
-    "How to handle 10k concurrent users?",
+    "How to design a scalable notification system?",
+    "Monolith vs microservices for an early-stage startup?",
+    "How to handle rate limiting at scale with Redis?",
   ],
 };
 
@@ -88,41 +85,6 @@ function createId(prefix: string): string {
 
 export function BackendChat(props: Props) {
   return <MentorChat {...props} initialMentorId="backend" />;
-}
-
-function FormattedMessage({ content }: { content: string }) {
-  const cleanText = content.replace(/\[\[HANDOFF:[^\]]+\]\]/g, "");
-  const parts = cleanText.split(/(```[\s\S]*?```)/g);
-
-  return (
-    <div className="space-y-3 text-sm leading-relaxed">
-      {parts.map((part, idx) => {
-        if (part.startsWith("```")) {
-          const firstLineEnd = part.indexOf("\n");
-          const lang = part.slice(3, firstLineEnd).trim() || "code";
-          const code = part.slice(firstLineEnd + 1, -3).trim();
-
-          return (
-            <div key={idx} className="my-2.5 overflow-hidden rounded-xl border border-white/10 bg-[#0D1117] shadow-inner">
-              <div className="flex items-center justify-between border-b border-white/10 bg-white/5 px-3 py-1.5 text-xs text-muted-foreground font-mono">
-                <span>{lang}</span>
-                <span className="text-[10px] text-violet-400 font-sans">Formatted Code</span>
-              </div>
-              <pre className="overflow-x-auto p-3.5 text-xs font-mono text-zinc-200 leading-relaxed">
-                <code>{code}</code>
-              </pre>
-            </div>
-          );
-        }
-
-        return (
-          <div key={idx} className="whitespace-pre-wrap">
-            {part}
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /**
@@ -286,6 +248,10 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       if (res.headers.get("X-Is-Mock") === "1") setIsMock(true);
       const decisionHeader = res.headers.get("X-Decision");
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("skillfarm:conversation-updated"));
+      }
       if (decisionHeader) {
         try {
           const d = JSON.parse(decodeURIComponent(decisionHeader));
@@ -375,6 +341,34 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
     }
   }
 
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+  async function handleNewChat() {
+    if (isCreatingChat) return;
+    setIsCreatingChat(true);
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New conversation", mentorId: isAuto ? "backend" : mentorId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.conversation?.id) {
+          setMobileHistoryOpen(false);
+          router.push(`/chat?conversationId=${data.conversation.id}`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to start new chat:", err);
+    } finally {
+      setIsCreatingChat(false);
+    }
+    setMobileHistoryOpen(false);
+    router.push("/chat");
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -391,7 +385,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="border-b bg-card/50 backdrop-blur px-4 sm:px-6 py-3 flex items-center gap-3">
+      <div className="border-b bg-card/50 backdrop-blur px-3 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
         {/* Mobile: history drawer trigger */}
         <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
           <SheetTrigger
@@ -402,32 +396,69 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
             <History className="h-4 w-4" />
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-[280px] flex flex-col">
-            <ConversationHistory activeConversationId={convId} />
+            <ConversationHistory
+              activeConversationId={convId}
+              onSelect={() => setMobileHistoryOpen(false)}
+            />
           </SheetContent>
         </Sheet>
-        <div className="h-9 w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold" style={{ background: headerColor }}>
+
+        {/* Mobile: quick new chat button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-8 w-8 shrink-0 text-primary hover:bg-primary/10"
+          onClick={handleNewChat}
+          disabled={isCreatingChat}
+          title="New chat"
+        >
+          {isCreatingChat ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <MessageSquarePlus className="h-4 w-4" />
+          )}
+        </Button>
+
+        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ background: headerColor }}>
           {isAuto ? <Network className="h-4 w-4" /> : (mentor?.config.shortName[0] ?? "M")}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-heading font-semibold leading-none">{headerTitle}</p>
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <p className="font-heading font-semibold leading-none text-xs sm:text-sm">{headerTitle}</p>
             {isAuto ? (
-              <Badge className="bg-[#7C5CFC] text-white border-0 text-[11px]">Auto Router</Badge>
+              <Badge className="bg-[#7C5CFC] text-white border-0 text-[10px] sm:text-[11px] py-0">Auto Router</Badge>
             ) : (
-              <Badge className="text-white border-0 text-[11px]" style={{ background: mentor?.config.color }}>
+              <Badge className="text-white border-0 text-[10px] sm:text-[11px] py-0" style={{ background: mentor?.config.color }}>
                 {mentor?.config.role}
               </Badge>
             )}
-            {isMock && <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20">Mock</Badge>}
+            {isMock && <Badge variant="outline" className="text-[10px] sm:text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20 py-0">Mock</Badge>}
             {isStreaming && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
           </div>
-          <p className="text-xs text-muted-foreground truncate">{headerSubtitle}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{headerSubtitle}</p>
         </div>
+
         <div className="hidden sm:flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNewChat}
+            disabled={isCreatingChat}
+            className="h-8 gap-1.5 text-xs border-border/60 bg-background/60 hover:bg-accent font-medium text-foreground"
+            title="Start a new chat"
+          >
+            {isCreatingChat ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <MessageSquarePlus className="h-3.5 w-3.5 text-primary" />
+            )}
+            <span>New Chat</span>
+          </Button>
+
           <select
             value={mentorId}
             onChange={(e) => switchMentor(e.target.value as MentorId | "auto")}
-            className="h-8 rounded-lg border bg-background px-2 text-sm min-w-[140px]"
+            className="h-8 rounded-lg border bg-background px-2 text-xs min-w-[130px]"
             aria-label="Select mentor"
           >
             <option value="auto">Auto (Orchestrator)</option>

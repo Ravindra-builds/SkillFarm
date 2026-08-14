@@ -45,6 +45,54 @@ function isDbAvailable(): boolean {
 const memConversations = new Map<string, ChatConversation>();
 const memMessages = new Map<string, ChatMessage[]>();
 
+/**
+ * Derives a clean, intelligent conversation title from the first user message
+ * without making expensive LLM calls or consuming tokens.
+ */
+export function formatTitleFromMessage(content: string): string {
+  if (!content) return "New conversation";
+
+  // 1. Strip code blocks, markdown symbols, and extra whitespace
+  let clean = content
+    .replace(/```[\s\S]*?```/g, "")
+    .replace(/`[^`]*`/g, "")
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
+    .replace(/[#*_~>\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!clean) return "New conversation";
+
+  // 2. Extract first sentence or question
+  const firstSentence = clean.split(/[\n\.\?!]/)[0]?.trim();
+  let candidate = firstSentence && firstSentence.length >= 4 ? firstSentence : clean;
+
+  // 3. Trim length cleanly at word boundary (max 42 chars)
+  if (candidate.length > 42) {
+    const cut = candidate.slice(0, 42);
+    const lastSpace = cut.lastIndexOf(" ");
+    candidate = (lastSpace > 15 ? cut.slice(0, lastSpace) : cut).trim() + "…";
+  }
+
+  // 4. Capitalize first letter
+  candidate = candidate.charAt(0).toUpperCase() + candidate.slice(1);
+  return candidate || "New conversation";
+}
+
+/**
+ * Checks if the user already has a brand new / empty conversation (0 messages).
+ */
+export async function getEmptyConversation(userId: string): Promise<ChatConversation | null> {
+  const list = await getConversations(userId);
+  for (const conv of list) {
+    const msgs = await getMessages(conv.id);
+    if (msgs.length === 0) {
+      return conv;
+    }
+  }
+  return null;
+}
+
 export async function ensureConversation(
   userId: string,
   conversationId?: string,
@@ -56,7 +104,6 @@ export async function ensureConversation(
       // Optionally update activeMentorId if mentor changed
       if (mentorId && existing.activeMentorId !== mentorId) {
         existing.activeMentorId = mentorId;
-        // Best-effort touch in memory; DB update is lazy
         memConversations.set(existing.id, { ...existing, updatedAt: new Date() });
         if (isDbAvailable()) {
           try {
@@ -71,18 +118,14 @@ export async function ensureConversation(
     }
   }
 
-  // Try to find latest conversation for this user, or create a new one
-  const list = await getConversations(userId);
-  if (list.length > 0 && !conversationId) {
-    const latest = list[0];
-    // If mentor differs, update it
-    if (mentorId && latest.activeMentorId !== mentorId) {
-      return ensureConversation(userId, latest.id, mentorId);
-    }
-    return latest;
+  // When opening chat without a specific ID, always prefer an empty conversation if one already exists,
+  // or initialize a brand new chat automatically (so the user is in a fresh chat, not a previous conversation).
+  const empty = await getEmptyConversation(userId);
+  if (empty) {
+    return empty;
   }
 
-  return createConversation(userId, undefined, mentorId);
+  return createConversation(userId, "New conversation", mentorId);
 }
 
 export async function createConversation(
@@ -94,7 +137,7 @@ export async function createConversation(
   const conv: ChatConversation = {
     id: randomUUID(),
     userId,
-    title: title ?? `${mentorId ? mentorId.charAt(0).toUpperCase() + mentorId.slice(1) : "Backend"} Mentor — Chat`,
+    title: title ?? "New conversation",
     activeMentorId: mentorId ?? "backend",
     createdAt: now,
     updatedAt: now,
@@ -251,6 +294,19 @@ export async function saveMessage(
   list.push(msg);
   memMessages.set(conversationId, list);
 
+  // Auto-generate title from first user message if conversation has default title
+  let updatedTitle: string | undefined = undefined;
+  if (role === "user") {
+    const mem = memConversations.get(conversationId);
+    const isDefaultTitle = !mem?.title || mem.title === "New conversation" || mem.title.includes("Mentor — Chat");
+    if (isDefaultTitle) {
+      updatedTitle = formatTitleFromMessage(content);
+      if (mem) {
+        memConversations.set(conversationId, { ...mem, title: updatedTitle, updatedAt: new Date() });
+      }
+    }
+  }
+
   if (!isDbAvailable()) return msg;
 
   try {
@@ -263,9 +319,13 @@ export async function saveMessage(
       mentorId: mentorId ?? "backend",
       createdAt: msg.createdAt,
     });
-    // Touch conversation updatedAt
+    // Touch conversation updatedAt and optionally title
+    const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
+    if (updatedTitle) {
+      updatePayload.title = updatedTitle;
+    }
     await (db.update(conversations) as unknown as { set: (v: Record<string, unknown>) => { where: (c: unknown) => Promise<void> } })
-      .set({ updatedAt: new Date() } as Record<string, unknown>)
+      .set(updatePayload)
       .where(eq(conversations.id, conversationId) as unknown as never);
   } catch (err) {
     console.error("[chat-store] saveMessage DB failed, kept in memory:", err);

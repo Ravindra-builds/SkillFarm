@@ -20,7 +20,7 @@
 import { composeSystemPrompt } from "@/agents/mentors/index";
 import { baseSystemPrompt, SKILLFARM_BASE_PROMPT_VERSION } from "@/agents/base-system-prompt";
 import { wrapUntrustedData } from "@/agents/mentors/tools";
-import { detectScopeViolation } from "@/app/api/chat/route";
+import { detectScopeViolation } from "@/lib/scope-guard";
 
 // ---------------------------------------------------------------------------
 // Test helpers
