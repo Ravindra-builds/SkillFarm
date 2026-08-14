@@ -2,12 +2,12 @@ import type { MentorId } from "@/config/mentors";
 import { routeQuery, keywordRoute } from "./router";
 import { synthesizeParallel, streamSynthesis } from "./synthesizer";
 import { getMentor } from "@/agents/mentors";
-import { openai } from "@ai-sdk/openai";
 import { getLearningProfile } from "@/lib/learning-profile";
 import { research, formatResourcesForPrompt } from "@/agents/research/research";
 import { wrapUntrustedData } from "@/agents/mentors/tools";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { addMemory } from "@/lib/memory/mem0";
+import { getLlmModel, isLlmConfigured } from "@/lib/llm";
 
 /**
  * Orchestrator
@@ -16,17 +16,11 @@ import { addMemory } from "@/lib/memory/mem0";
  * and returns a streaming Response.
  */
 
-function isPlaceholder(v?: string | null) {
-  if (!v) return true;
-  const s = v.trim().toLowerCase();
-  return s.includes("sk-...") || s.includes("replace-with") || s.length < 20 || !s.startsWith("sk-");
-}
-
 export async function orchestrate(
   query: string,
   userId: string,
   conversationHistory: { role: string; content: string }[],
-  opts?: { forceMentorId?: MentorId }
+  opts?: { forceMentorId?: MentorId; provider?: string; model?: string }
 ) {
   // Manual override: if user explicitly picked a mentor, skip routing
   if (opts?.forceMentorId) {
@@ -49,7 +43,7 @@ export async function orchestrate(
 
   // Auto routing
   const context = await getProfileContext(userId);
-  const decision = await routeQuery(query, context);
+  const decision = await routeQuery(query, context, { provider: opts?.provider, model: opts?.model });
 
   if (decision.requiredMentors.length === 1) {
     return { mode: "single" as const, mentorId: decision.requiredMentors[0], decision };
@@ -72,18 +66,20 @@ export async function runOrchestratedChat(
   userId: string,
   history: { role: string; content: string }[],
   conversationId: string,
-  saveMessage: (cid: string, role: "assistant", content: string, mentorId: string) => Promise<unknown>
+  saveMessage: (cid: string, role: "assistant", content: string, mentorId: string) => Promise<unknown>,
+  opts?: { provider?: string; model?: string }
 ) {
-  const result = await orchestrate(query, userId, history);
-  const hasKey = process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
+  const result = await orchestrate(query, userId, history, opts);
+  const hasConfiguredLlm = isLlmConfigured(opts?.provider, opts?.model);
 
   if (result.mode === "single") {
     const mentorId = result.mentorId;
     const decision = result.decision;
     const mentor = getMentor(mentorId)!;
-    // Single mentor — stream directly
-    if (!hasKey) {
-      const mock = `### ${mentor.config.name} (via Orchestrator) — mock\n\nYou asked: "${query.slice(0, 200)}" — routed to ${mentorId} (confidence ${decision.confidence}). Decision: ${decision.reasoning}\n\nMock insight: ${mentor.config.expertise.slice(0, 2).join(", ")} perspective.\n\nAdd OPENAI_API_KEY for live.`;
+
+    // Single mentor mock fallback if not configured
+    if (!hasConfiguredLlm) {
+      const mock = `### ${mentor.config.name} (via Orchestrator) — mock\n\nYou asked: "${query.slice(0, 200)}" — routed to ${mentorId} (confidence ${decision.confidence}). Decision: ${decision.reasoning}\n\nMock insight: ${mentor.config.expertise.slice(0, 2).join(", ")} perspective.\n\nConfigure an LLM provider key for live responses.`;
       const encoder = new TextEncoder();
       const stream = new ReadableStream({
         async start(controller) {
@@ -125,14 +121,13 @@ export async function runOrchestratedChat(
     }
 
     const streamResult = streamTextFn({
-      model: openai(mentor.model),
+      model: getLlmModel({ provider: opts?.provider, model: opts?.model ?? mentor.model, role: "chat" }),
       system: mentor.prompt + deepCtxPrompt + researchPromptCtx,
       messages: [...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })), { role: "user" as const, content: query }],
       temperature: 0.7,
       maxOutputTokens: 800,
       onFinish: async ({ text }) => {
         await saveMessage(conversationId, "assistant", text, mentorId).catch(() => {});
-        // Async long-term memory extraction via Mem0
         addMemory(userId, `User asked "${query.slice(0, 100)}" — Mentor responded with ${mentorId} guidance`).catch(() => {});
       },
     });
@@ -149,13 +144,13 @@ export async function runOrchestratedChat(
   // Multi — parallel + synthesis
   const multiResult = result as { mode: "multi"; mentorIds: MentorId[]; decision: typeof result.decision };
   const mentorIds = multiResult.mentorIds;
-  const { text: combined, isMock } = await synthesizeParallel(query, mentorIds, userId, history);
-  if (isMock) {
-    return streamSynthesis(query, combined, mentorIds, userId, { conversationId, saveMessage });
-  }
-
-  return streamSynthesis(query, combined, mentorIds, userId, { conversationId, saveMessage });
+  const { text: combined, isMock } = await synthesizeParallel(query, mentorIds, userId, history, opts);
+  return streamSynthesis(query, combined, mentorIds, userId, {
+    conversationId,
+    saveMessage,
+    provider: opts?.provider,
+    model: opts?.model,
+  });
 }
 
 export { routeQuery, keywordRoute };
-export * from "./types";

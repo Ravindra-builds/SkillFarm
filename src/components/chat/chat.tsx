@@ -8,11 +8,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus } from "lucide-react";
+import { Send, Sparkles, Loader2, AlertCircle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus, Cpu } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
 import { ConversationHistory } from "@/components/chat/conversation-history";
 import { FormattedMessage } from "@/components/chat/markdown";
+import { ModelSelector } from "@/components/chat/model-selector";
+import {
+  getStoredLlmPreference,
+  getModelById,
+  type ModelOption,
+} from "@/lib/llm-client-store";
 
 type ChatMsg = {
   id: string;
@@ -25,6 +31,15 @@ type ChatMsg = {
 type ScopeError = {
   message: string;
   suggestion: string;
+};
+
+/** User-friendly error message */
+type FriendlyError = {
+  title: string;
+  message: string;
+  suggestion?: string;
+  retryable?: boolean;
+  lastQuery?: string;
 };
 
 type Props = {
@@ -133,6 +148,55 @@ function ScopeErrorCard({ error, onDismiss }: { error: ScopeError; onDismiss: ()
   );
 }
 
+/** Calm, user-friendly card shown on server/model errors instead of raw technical dumps */
+function FriendlyServiceErrorCard({
+  error,
+  onRetry,
+  onDismiss,
+}: {
+  error: FriendlyError;
+  onRetry?: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <Card className="border-border/80 bg-card/90 shadow-sm max-w-2xl mx-auto rounded-2xl backdrop-blur animate-in fade-in zoom-in-95">
+      <CardContent className="p-4 flex gap-3.5 items-start">
+        <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+          <AlertCircle className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-foreground">{error.title}</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{error.message}</p>
+          {error.suggestion && (
+            <div className="mt-2 rounded-lg bg-muted/60 border border-border/50 px-3 py-2">
+              <p className="text-xs text-muted-foreground leading-relaxed">{error.suggestion}</p>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-2">
+            {error.retryable && onRetry && (
+              <Button
+                size="sm"
+                className="h-8 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-lg gap-1.5 font-medium shadow-xs"
+                onClick={onRetry}
+              >
+                <RefreshCw className="h-3 w-3" /> Try Again
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs rounded-lg border-border/70 font-medium"
+              onClick={onDismiss}
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function MentorChat({ initialMessages, conversationId: initialConv, userName, isMockUser, initialMentorId, initialHandoffs }: Props) {
   const router = useRouter();
   const [mentorId, setMentorId] = useState<MentorId | "auto">(initialMentorId ?? "auto");
@@ -141,9 +205,17 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   const [messages, setMessages] = useState<ChatMsg[]>(initialMessages ?? []);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [friendlyError, setFriendlyError] = useState<FriendlyError | null>(null);
+  const [lastSubmittedQuery, setLastSubmittedQuery] = useState<string>("");
   const [scopeError, setScopeError] = useState<ScopeError | null>(null);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+
+  // Active AI Model selection state (syncs with Settings)
+  const [selectedLlm, setSelectedLlm] = useState<ModelOption>(() => {
+    const pref = getStoredLlmPreference();
+    return getModelById(pref.selectedModel);
+  });
+
   const [convId, setConvId] = useState<string | undefined>(() => {
     if (initialConv) return initialConv;
     if (typeof window === "undefined") return undefined;
@@ -165,6 +237,20 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   const streamTextRef = useRef("");
 
   const allMentors = Object.values(mentors);
+
+  // Sync preference changes in real-time across tabs/settings
+  useEffect(() => {
+    const handlePrefChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.selectedModel) {
+        setSelectedLlm(getModelById(customEvent.detail.selectedModel));
+      }
+    };
+    window.addEventListener("skillfarm:llm-preference-changed", handlePrefChange);
+    return () => {
+      window.removeEventListener("skillfarm:llm-preference-changed", handlePrefChange);
+    };
+  }, []);
 
   // Sync prop changes during rendering (React 19 pattern)
   const [prevPropMentorId, setPrevPropMentorId] = useState(initialMentorId);
@@ -207,11 +293,13 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   async function send(text?: string) {
     const content = (text ?? input).trim();
     if (!content || isStreaming) return;
-    setError(null);
+    setFriendlyError(null);
     setScopeError(null);
     setDecision(null);
     setActiveMentorHeader(null);
     setLastHandoff(null);
+    setLastSubmittedQuery(content);
+
     const userMsg: ChatMsg = { id: createId("u"), role: "user", content };
     const assistantId = createId("a");
     const assistantMsg: ChatMsg = { id: assistantId, role: "assistant", content: "", mentorId: isAuto ? undefined : (mentorId as string) };
@@ -224,6 +312,8 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
       const payload: Record<string, unknown> = {
         messages: [...messages, userMsg].map((m) => ({ role: m.role, content: m.content })),
         conversationId: convId,
+        provider: selectedLlm.provider,
+        model: selectedLlm.id,
       };
       // Phase 5: auto mode sends no mentorId or "auto" → orchestrator; manual sends explicit MentorId
       if (!isAuto) payload.mentorId = mentorId;
@@ -237,13 +327,23 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        // Handle scope guard (HTTP 422) separately — show friendly card, not red error
+        // Handle scope guard (HTTP 422) separately — show friendly card
         if (res.status === 422 && j.error === "scope_too_broad") {
           setScopeError({ message: j.message ?? "", suggestion: j.suggestion ?? "" });
           setMessages((prev) => prev.filter((m) => m.id !== assistantId));
           return;
         }
-        throw new Error(j.message ?? j.error ?? `Request failed (${res.status})`);
+
+        // Clean user-friendly error response from server
+        setFriendlyError({
+          title: j.title || "Service Interruption",
+          message: j.message || "We encountered a temporary issue while connecting with your mentor.",
+          suggestion: j.suggestion || "Please try submitting your question again.",
+          retryable: j.retryable ?? true,
+          lastQuery: content,
+        });
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        return;
       }
 
       if (res.headers.get("X-Is-Mock") === "1") setIsMock(true);
@@ -328,13 +428,26 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
       }
 
       if (!streamTextRef.current.trim()) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: "_No content. Check `OPENAI_API_KEY` or try mock mode._" } : m))
-        );
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+        setFriendlyError({
+          title: "No Response Generated",
+          message: "The mentor was unable to generate a response. This may occur if the selected model is busy or temporarily unavailable.",
+          suggestion: "Please try submitting your question again or choose another model from the selector.",
+          retryable: true,
+          lastQuery: content,
+        });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to send";
-      setError(msg);
+      setFriendlyError({
+        title: "Service Interruption",
+        message: msg.includes("fetch") || msg.includes("network")
+          ? "The connection to the mentor was interrupted."
+          : "We encountered an issue while processing your message.",
+        suggestion: "Please try submitting your question again.",
+        retryable: true,
+        lastQuery: content,
+      });
       setMessages((prev) => prev.filter((m) => m.id !== assistantId || m.content.trim().length > 0));
     } finally {
       setIsStreaming(false);
@@ -472,10 +585,11 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         </div>
       </div>
 
+      {/* Mobile: Mentor Pills */}
       <div className="sm:hidden border-b bg-card px-3 py-2 flex gap-1.5 overflow-x-auto">
         <button
           onClick={() => switchMentor("auto")}
-          className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium border transition ${isAuto ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${isAuto ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
           style={isAuto ? { background: "#7C5CFC" } : undefined}
         >
           Auto
@@ -484,7 +598,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           <button
             key={m.id}
             onClick={() => switchMentor(m.id as MentorId)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium border transition ${mentorId === m.id ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${mentorId === m.id ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
             style={mentorId === m.id ? { background: m.color } : undefined}
           >
             {m.shortName}
@@ -642,19 +756,16 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           </div>
         )}
 
-        {error && (
-          <Card className="border-red-500/30 bg-red-500/10 max-w-2xl mx-auto">
-            <CardContent className="p-3 flex gap-2 items-start">
-              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-red-700 dark:text-red-300">Failed</p>
-                <p className="text-xs font-mono bg-white/50 dark:bg-black/20 p-2 rounded border mt-1">{error}</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={() => setError(null)}>
-                  <RefreshCw className="h-3 w-3 mr-1" /> Dismiss
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        {friendlyError && (
+          <FriendlyServiceErrorCard
+            error={friendlyError}
+            onRetry={() => {
+              const q = friendlyError.lastQuery || lastSubmittedQuery;
+              setFriendlyError(null);
+              if (q) send(q);
+            }}
+            onDismiss={() => setFriendlyError(null)}
+          />
         )}
 
         {scopeError && (
@@ -664,36 +775,74 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       <Separator />
 
-      <div className="p-3 sm:p-4 bg-card border-t">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 relative">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isAuto ? "Ask anything — orchestrator will route…" : `Ask the ${mentor?.config.shortName}…`}
-                rows={1}
-                className="min-h-[48px] max-h-[120px] resize-none pr-12"
-                disabled={isStreaming}
-              />
-              <div className="absolute right-2 bottom-2 text-[11px] text-muted-foreground">{input.length}/4000</div>
+      <div className="p-3 sm:p-4 bg-card/60 backdrop-blur-md border-t">
+        <div className="max-w-3xl mx-auto space-y-2">
+          {/* Integrated prompt card */}
+          <div className="relative rounded-2xl border border-border/80 bg-background/90 shadow-xs transition-all focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/15">
+            {/* Expanding Textarea */}
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                isAuto
+                  ? "Ask anything — orchestrator will route to the right specialist…"
+                  : `Ask ${mentor?.config.shortName}…`
+              }
+              rows={2}
+              className="min-h-[56px] max-h-[160px] resize-none border-0 shadow-none bg-transparent px-3.5 pt-3 pb-2 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/60"
+              disabled={isStreaming}
+            />
+
+            {/* Bottom Toolbar inside the prompt box */}
+            <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-border/30">
+              {/* Left: Model Selector (claude, gpt, gemini style) */}
+              <div className="flex items-center gap-2">
+                <ModelSelector
+                  placement="top"
+                  currentModelId={selectedLlm.id}
+                  onModelSelect={(m) => setSelectedLlm(m)}
+                />
+              </div>
+
+              {/* Right: Character count & Send button */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-muted-foreground/70 font-mono">
+                  {input.length}/4000
+                </span>
+                <Button
+                  onClick={() => send()}
+                  disabled={!input.trim() || isStreaming}
+                  className="h-8 w-8 rounded-xl text-white transition-transform active:scale-95 shrink-0"
+                  style={{ background: headerColor }}
+                  size="icon"
+                  title="Send message (Enter)"
+                >
+                  {isStreaming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
             </div>
-            <Button
-              onClick={() => send()}
-              disabled={!input.trim() || isStreaming}
-              className="h-12 w-12 rounded-xl text-white"
-              style={{ background: headerColor }}
-              size="icon"
-            >
-              {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
           </div>
-          <div className="mt-2 flex items-center justify-between flex-wrap gap-1.5">
-            <p className="text-xs text-muted-foreground">
-              {isAuto ? "Orchestrator mode — automatically routes to the best mentor(s) for your question." : "Direct mentor mode — talking directly to your selected mentor. Switch to Auto for orchestrator routing."} Press Enter to send.
+
+          <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground flex-wrap gap-1.5">
+            <p>
+              {isAuto
+                ? "Auto Orchestrator routes questions across mentors."
+                : `Direct chat with ${mentor?.config.name}.`}{" "}
+              Press <kbd className="rounded border px-1 text-[10px] bg-muted/60">Enter</kbd> to send, <kbd className="rounded border px-1 text-[10px] bg-muted/60">Shift+Enter</kbd> for newline.
             </p>
-            {isMock && <Badge variant="outline" className="text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20">Mock</Badge>}
+            {isMock && (
+              <Badge
+                variant="outline"
+                className="text-[10px] bg-amber-500/10 text-amber-700 border-amber-500/20"
+              >
+                Mock Mode
+              </Badge>
+            )}
           </div>
         </div>
       </div>

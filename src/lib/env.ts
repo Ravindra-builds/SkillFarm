@@ -88,11 +88,10 @@ function validateEnv() {
     NEXT_PUBLIC_ENABLE_MOCK_MODE: process.env.NEXT_PUBLIC_ENABLE_MOCK_MODE,
   };
 
-  // During next build without env, skip hard failure but log.
-  if (isBuild && !server.DATABASE_URL) {
-    console.warn(
-      "[env] Skipping strict validation during build — DATABASE_URL not set. This is OK for CI/build, but the app will not run without it."
-    );
+  const isTest = process.env.NODE_ENV === "test" || !!process.env.JEST_WORKER_ID;
+
+  // During next build or unit tests without full env, skip hard failure.
+  if ((isBuild || isTest) && !server.DATABASE_URL) {
     return { ...server, ...client } as z.infer<typeof serverSchema> &
       z.infer<typeof clientSchema>;
   }
@@ -101,15 +100,19 @@ function validateEnv() {
   const parsedClient = clientSchema.safeParse(client);
 
   if (!parsedServer.success) {
-    console.error("❌ Invalid server environment variables:");
-    console.error(parsedServer.error.flatten().fieldErrors);
-    if (!isBuild) throw new Error("Invalid server environment variables");
+    if (!isBuild && !isTest) {
+      console.error("❌ Invalid server environment variables:");
+      console.error(parsedServer.error.flatten().fieldErrors);
+      throw new Error("Invalid server environment variables");
+    }
   }
 
   if (!parsedClient.success) {
-    console.error("❌ Invalid client environment variables:");
-    console.error(parsedClient.error.flatten().fieldErrors);
-    if (!isBuild) throw new Error("Invalid client environment variables");
+    if (!isBuild && !isTest) {
+      console.error("❌ Invalid client environment variables:");
+      console.error(parsedClient.error.flatten().fieldErrors);
+      throw new Error("Invalid client environment variables");
+    }
   }
 
   return {
@@ -139,6 +142,16 @@ export const isProviderConfigured = {
     !isMockModeForced() &&
     (!!process.env.AUTH_GOOGLE_ID || !!process.env.GOOGLE_CLIENT_ID),
   openai: () => !isMockModeForced() && !!process.env.OPENAI_API_KEY,
+  gemini: () =>
+    !isMockModeForced() &&
+    (!!process.env.GEMINI_API_KEY || !!process.env.GOOGLE_GENERATIVE_AI_API_KEY),
+  anthropic: () => !isMockModeForced() && !!process.env.ANTHROPIC_API_KEY,
+  llm: () =>
+    !isMockModeForced() &&
+    (!!process.env.OPENAI_API_KEY ||
+      !!process.env.GEMINI_API_KEY ||
+      !!process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+      !!process.env.ANTHROPIC_API_KEY),
 };
 
 /**

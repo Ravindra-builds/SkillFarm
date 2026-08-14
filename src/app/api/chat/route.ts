@@ -1,5 +1,4 @@
 import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getLearningProfile } from "@/lib/learning-profile";
@@ -12,13 +11,14 @@ import { saveHandoff } from "@/lib/handoff-store";
 import type { MentorId } from "@/config/mentors";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { checkPlanLimit, incrementPlanUsage } from "@/lib/subscription";
-import { isPlaceholder } from "@/lib/env";
 import { detectScopeViolation } from "@/lib/scope-guard";
+import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
+import { formatUserFacingError } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
-// Zod schema — max 4000 chars per message (verified: already enforced via .max(4000) on content).
-// Conversation history capped at 20 messages. History window for model calls capped at last 8 below.
+// Zod schema — max 4000 chars per message.
+// Allows optional provider and model overrides for future UI/settings selection.
 const bodySchema = z.object({
   messages: z
     .array(
@@ -34,6 +34,8 @@ const bodySchema = z.object({
     .max(20),
   conversationId: z.string().uuid().optional(),
   mentorId: z.string().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -208,7 +210,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const { messages, conversationId: cid, mentorId: mid } = parsed.data;
+    const {
+      messages,
+      conversationId: cid,
+      mentorId: mid,
+      provider: requestedProvider,
+      model: requestedModel,
+    } = parsed.data;
 
     // ── Routing mode ───────────────────────────────────────────────────────
     const isManual = mid ? isValidMentorId(mid) : false;
@@ -263,8 +271,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const hasKey =
-      !!process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
+    const hasKey = isLlmConfigured(requestedProvider, requestedModel);
 
     // ══════════════════════════════════════════════════════════════════════
     // AUTO MODE — Orchestrator + Handoff detection
@@ -296,7 +303,8 @@ export async function POST(req: Request) {
         const h = await detectHandoff(
           lastUserText,
           convo.activeMentorId as MentorId,
-          history
+          history,
+          { provider: requestedProvider, model: requestedModel }
         );
         if (h.shouldHandoff && h.toMentorId) {
           handoffDecision = h;
@@ -343,7 +351,8 @@ export async function POST(req: Request) {
           lastUserText,
           profile
             ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
-            : undefined
+            : undefined,
+          { provider: requestedProvider, model: requestedModel }
         );
       }
 
@@ -372,7 +381,11 @@ export async function POST(req: Request) {
         }
 
         const result = streamText({
-          model: openai(mentor.model),
+          model: getLlmModel({
+            provider: requestedProvider,
+            model: requestedModel ?? mentor.model,
+            role: "chat",
+          }),
           system: buildSystemPrompt(
             mentor,
             profile,
@@ -414,7 +427,7 @@ export async function POST(req: Request) {
           "",
           `**Synthesized answer:** Combine ${mentorIds.join(" + ")} — e.g., validated API (Backend) + rate-limit + httpOnly (Security) + streaming (AI). Next: Build a tiny project tying them.`,
           "",
-          `*Add OPENAI_API_KEY for live synthesis.*`,
+          `*Configure an LLM provider key (${getActiveLlmProvider()}) for live synthesis.*`,
         ].join("\n");
 
         return streamTextAsSSE(
@@ -430,7 +443,8 @@ export async function POST(req: Request) {
         lastUserText,
         mentorIds as MentorId[],
         userId,
-        history
+        history,
+        { provider: requestedProvider, model: requestedModel }
       );
 
       if (paraMock) {
@@ -449,7 +463,12 @@ export async function POST(req: Request) {
         combined,
         mentorIds as MentorId[],
         userId,
-        { conversationId, saveMessage }
+        {
+          conversationId,
+          saveMessage,
+          provider: requestedProvider,
+          model: requestedModel,
+        }
       );
 
       if (Object.keys(handoffHeaders).length > 0) {
@@ -481,7 +500,11 @@ export async function POST(req: Request) {
     }
 
     const result = streamText({
-      model: openai(mentor.model),
+      model: getLlmModel({
+        provider: requestedProvider,
+        model: requestedModel ?? mentor.model,
+        role: "chat",
+      }),
       system: buildSystemPrompt(
         mentor,
         profile,
@@ -500,10 +523,21 @@ export async function POST(req: Request) {
       headers: { "X-Mentor-Id": mentorId } as unknown as Headers,
     });
   } catch (err) {
-    console.error("[api/chat] fatal:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
+    // Technical error with full stack trace logged exclusively to server terminal for debugging
+    console.error("🔴 [api/chat] Detailed server error:", err);
+    if (err instanceof Error && err.stack) {
+      console.error(err.stack);
+    }
+
+    const friendly = formatUserFacingError(err);
     return new Response(
-      JSON.stringify({ error: "Chat failed", message }),
+      JSON.stringify({
+        error: friendly.code,
+        title: friendly.title,
+        message: friendly.message,
+        suggestion: friendly.suggestion,
+        retryable: friendly.retryable,
+      }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

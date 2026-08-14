@@ -1,8 +1,8 @@
 import type { MentorId } from "@/config/mentors";
 import { mentors } from "@/config/mentors";
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
+import { getLlmModel, isLlmConfigured } from "@/lib/llm";
 
 /**
  * Handoff detection
@@ -11,7 +11,7 @@ import { z } from "zod";
  * 1. Explicit mentor-initiated: Mentor outputs [[HANDOFF:security:reason]] — we parse it.
  * 2. Orchestrator-initiated: Based on query + current active mentor + history, decide if handoff is needed.
  *
- * For MVP we implement both, with keyword fallback when no OPENAI_API_KEY.
+ * Fallback to keyword when no LLM key configured.
  */
 
 export type HandoffDecision = {
@@ -28,12 +28,6 @@ const handoffSchema = z.object({
   reason: z.string(),
   confidence: z.number().min(0).max(1),
 });
-
-function isPlaceholder(v?: string | null) {
-  if (!v) return true;
-  const s = v.trim().toLowerCase();
-  return s.includes("sk-...") || s.includes("replace-with") || s.length < 20 || !s.startsWith("sk-");
-}
 
 // Parse explicit handoff token from mentor response: [[HANDOFF:security:reason text]]
 export function parseExplicitHandoff(text: string): { toMentorId: MentorId; reason: string } | null {
@@ -77,13 +71,10 @@ export function keywordHandoff(
   }
 
   const best = sorted[0];
-  // If current mentor is not the best, and best scores at least 1 more than current, handoff
   const currentScore = scores[currentMentorId] ?? 0;
   const bestScore = best ? best[1] : 0;
   const bestId = best ? best[0] : null;
 
-  // Explicit handoff rules — make demo deterministic
-  // If the query contains strong signals for another mentor, handoff even if current also scores
   const hasSecuritySignal = q.includes("secure") || q.includes("jwt") || q.includes("owasp") || q.includes("xss") || q.includes("csrf") || q.includes("vulnerability") || q.includes("rate limit") || q.includes("httponly") || q.includes("secrets") || q.includes("sqli") || q.includes("sql injection");
   const hasInfraSignal = q.includes("docker") || q.includes("deploy") || q.includes("ci/cd") || q.includes("kubernetes") || q.includes("infra") || q.includes("monitoring");
   const hasFrontendSignal = q.includes("react") || q.includes("tailwind") || q.includes("component") || q.includes("a11y") || q.includes("accessibility");
@@ -94,7 +85,6 @@ export function keywordHandoff(
   let toMentorId: MentorId | null = null;
   let reason = "";
 
-  // Deterministic handoffs for common demo flows — prioritize security for auth+secure
   if (currentMentorId === "backend" && hasSecuritySignal) {
     shouldHandoff = true;
     toMentorId = "security";
@@ -135,16 +125,17 @@ export function keywordHandoff(
 export async function detectHandoff(
   query: string,
   currentMentorId: MentorId | null,
-  history?: { role: string; content: string }[]
+  history?: { role: string; content: string }[],
+  options?: { provider?: string; model?: string }
 ): Promise<HandoffDecision> {
-  const hasKey = process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
-  if (!hasKey) {
+  const hasConfiguredLlm = isLlmConfigured(options?.provider, options?.model);
+  if (!hasConfiguredLlm) {
     return keywordHandoff(query, currentMentorId);
   }
 
   try {
     const { object } = await generateObject({
-      model: openai("gpt-4o-mini"),
+      model: getLlmModel({ provider: options?.provider, model: options?.model, role: "fast" }),
       system: `You are the handoff detector for SkillFarm. Given the current active mentor (${currentMentorId ?? "none"}) and the user's latest message, decide if a handoff to another specialist is needed. Be conservative — only handoff when the query clearly needs different expertise. Available mentors: ai-engineer, backend, frontend, devops, security, system-design.`,
       prompt: `Current mentor: ${currentMentorId ?? "none"}\nUser query: "${query}"\nHistory: ${(history ?? []).slice(-3).map((h) => `${h.role}: ${h.content.slice(0, 80)}`).join(" | ")}\n\nDecide handoff.`,
       schema: handoffSchema,
@@ -162,7 +153,7 @@ export async function detectHandoff(
       confidence: object.confidence,
     };
   } catch (err) {
-    console.error("[handoff] LLM detect failed, fallback to keyword:", err);
+    console.error("[orchestrator/handoff] LLM handoff detect failed, falling back to keyword:", err);
     return keywordHandoff(query, currentMentorId);
   }
 }

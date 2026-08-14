@@ -1,39 +1,33 @@
 import { streamText, generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
 import { getMentor } from "@/agents/mentors";
 import type { MentorId } from "@/config/mentors";
 import { synthesizerSystemPrompt } from "./prompt";
 import { getLearningProfile } from "@/lib/learning-profile";
 import { addMemory } from "@/lib/memory/mem0";
+import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 
 /**
  * Synthesizer
  *
  * When orchestrator picks multiple mentors, we consult them in parallel
  * (generateText) and then stream a synthesized answer.
- * When no OPENAI_API_KEY, we do a deterministic mock synthesis.
+ * When no LLM key is configured, we do a deterministic mock synthesis.
  */
-
-function isPlaceholder(v?: string | null) {
-  if (!v) return true;
-  const s = v.trim().toLowerCase();
-  return s.includes("sk-...") || s.includes("replace-with") || s.length < 20 || !s.startsWith("sk-");
-}
 
 export async function synthesizeParallel(
   query: string,
   mentorIds: MentorId[],
   userId: string,
-  conversationHistory: { role: string; content: string }[]
+  conversationHistory: { role: string; content: string }[],
+  options?: { provider?: string; model?: string }
 ): Promise<{ text: string; isMock: boolean }> {
-  const hasKey = process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
-  if (!hasKey) {
-    // Mock synthesis — concatenate per-mentor mocks
+  const hasConfiguredLlm = isLlmConfigured(options?.provider);
+  if (!hasConfiguredLlm) {
     const parts = mentorIds.map((id) => {
       const m = getMentor(id);
       return `**${m?.config.name ?? id}:** Mock insight for "${query.slice(0, 80)}" — ${m?.config.expertise.slice(0, 2).join(", ")} perspective.`;
     });
-    const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis — add OPENAI_API_KEY for live)\n\n${parts.join("\n\n")}\n\n**Synthesized next step:** Build a tiny project that combines ${mentorIds.join(" + ")} — e.g., a rate-limited, validated API with auth review.`;
+    const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis — add API key for live)\n\n${parts.join("\n\n")}\n\n**Synthesized next step:** Build a tiny project that combines ${mentorIds.join(" + ")} — e.g., a rate-limited, validated API with auth review.`;
     return { text: mock, isMock: true };
   }
 
@@ -58,7 +52,7 @@ export async function synthesizeParallel(
       const mentor = getMentor(id);
       if (!mentor) return `[Missing mentor ${id}]`;
       const { text } = await generateText({
-        model: openai(mentor.model),
+        model: getLlmModel({ provider: options?.provider, model: options?.model ?? mentor.model, role: "chat" }),
         system: mentor.prompt + `\n\nUser context: ${profileCtx}`,
         messages: [...historyMessages, { role: "user" as const, content: query }],
         temperature: 0.7,
@@ -79,6 +73,8 @@ export async function streamSynthesis(
   opts?: {
     conversationId?: string;
     saveMessage?: (cid: string, role: "assistant", content: string, mentorId: string) => Promise<unknown>;
+    provider?: string;
+    model?: string;
   }
 ) {
   let profile: Awaited<ReturnType<typeof getLearningProfile>> = null;
@@ -90,10 +86,10 @@ export async function streamSynthesis(
     ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
     : "No profile";
 
-  const hasKey = process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
-  if (!hasKey) {
+  const hasConfiguredLlm = isLlmConfigured(opts?.provider);
+  if (!hasConfiguredLlm) {
     const encoder = new TextEncoder();
-    const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis)\n\n${mentorOutputs}\n\n*Add OPENAI_API_KEY for live synthesis.*`;
+    const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis)\n\n${mentorOutputs}\n\n*Configure an LLM API key (${getActiveLlmProvider()}) for live synthesis.*`;
     const chunks = mock.match(/.{1,30}/g) ?? [mock];
     const stream = new ReadableStream({
       async start(controller) {
@@ -119,11 +115,11 @@ export async function streamSynthesis(
   }
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: getLlmModel({ provider: opts?.provider, model: opts?.model, role: "synthesizer" }),
     system: synthesizerSystemPrompt + `\n\nUser context: ${profileCtx}\n\nQuery: ${query}\n\nMentor outputs:\n${mentorOutputs}`,
     prompt: `Synthesize the above specialist perspectives into one final answer for: "${query}"`,
     temperature: 0.6,
-    maxOutputTokens: 800, // Consistent with single-mentor cap; synthesis should be concise
+    maxOutputTokens: 800,
     onFinish: async ({ text }) => {
       if (opts?.conversationId && opts?.saveMessage) {
         await opts.saveMessage(opts.conversationId, "assistant", text, mentorIds.join(",")).catch(() => {});
