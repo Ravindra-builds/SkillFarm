@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch } from "lucide-react";
+import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
 
@@ -15,6 +15,12 @@ type ChatMsg = {
   role: "user" | "assistant";
   content: string;
   mentorId?: string;
+};
+
+/** Scope-violation error returned by the API (HTTP 422) */
+type ScopeError = {
+  message: string;
+  suggestion: string;
 };
 
 type Props = {
@@ -116,6 +122,52 @@ function FormattedMessage({ content }: { content: string }) {
   );
 }
 
+/**
+ * AI-generated content disclosure line.
+ * Two variants: code responses get the "review before using" copy;
+ * all other responses get the general guidance copy.
+ * Only shown on completed (non-streaming) assistant messages.
+ * Not shown on mock responses (already labeled "Mock").
+ */
+function AiDisclosure({ content, isMock }: { content: string; isMock: boolean }) {
+  if (isMock || !content.trim()) return null;
+  const hasCode = content.includes("```");
+  return (
+    <div className="mt-1.5 pt-1.5 border-t border-dashed border-muted-foreground/20 flex items-start gap-1.5">
+      <Bot className="h-3 w-3 text-muted-foreground/50 shrink-0 mt-px" />
+      <p className="text-[10px] text-muted-foreground/60 leading-tight">
+        {hasCode
+          ? "AI-generated code — review and test before using in production. Never blindly execute commands you don't understand."
+          : "AI-generated guidance — SkillFarm mentors can make mistakes. Verify important information before applying it in real systems."}
+      </p>
+    </div>
+  );
+}
+
+/** Friendly card shown when the user's request was too broad (HTTP 422 scope_too_broad) */
+function ScopeErrorCard({ error, onDismiss }: { error: ScopeError; onDismiss: () => void }) {
+  return (
+    <Card className="border-amber-500/30 bg-amber-500/5 max-w-2xl mx-auto">
+      <CardContent className="p-4 flex gap-3 items-start">
+        <Lightbulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">Question is too broad</p>
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{error.message}</p>
+          {error.suggestion && (
+            <div className="mt-2 rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2">
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Try instead:</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{error.suggestion}</p>
+            </div>
+          )}
+          <Button variant="outline" size="sm" className="mt-3" onClick={onDismiss}>
+            <RefreshCw className="h-3 w-3 mr-1.5" /> Got it
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function MentorChat({ initialMessages, conversationId: initialConv, userName, isMockUser, initialMentorId, initialHandoffs }: Props) {
   const [mentorId, setMentorId] = useState<MentorId | "auto">(initialMentorId ?? "auto");
   const isAuto = mentorId === "auto";
@@ -124,6 +176,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scopeError, setScopeError] = useState<ScopeError | null>(null);
   const [convId, setConvId] = useState<string | undefined>(() => {
     if (initialConv) return initialConv;
     if (typeof window === "undefined") return undefined;
@@ -188,6 +241,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
     const content = (text ?? input).trim();
     if (!content || isStreaming) return;
     setError(null);
+    setScopeError(null);
     setDecision(null);
     setActiveMentorHeader(null);
     setLastHandoff(null);
@@ -216,6 +270,12 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
+        // Handle scope guard (HTTP 422) separately — show friendly card, not red error
+        if (res.status === 422 && j.error === "scope_too_broad") {
+          setScopeError({ message: j.message ?? "", suggestion: j.suggestion ?? "" });
+          setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          return;
+        }
         throw new Error(j.message ?? j.error ?? `Request failed (${res.status})`);
       }
 
@@ -508,6 +568,10 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
                     </span>
                   </div>
                 )}
+                {/* AI disclosure — shown only on completed assistant messages, never on streaming or mock */}
+                {m.role === "assistant" && m.content && !isStreaming && (
+                  <AiDisclosure content={m.content} isMock={isMock} />
+                )}
               </div>
               {m.role === "user" && (
                 <div className="h-7 w-7 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-1">
@@ -542,6 +606,10 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {scopeError && (
+          <ScopeErrorCard error={scopeError} onDismiss={() => setScopeError(null)} />
         )}
       </div>
 

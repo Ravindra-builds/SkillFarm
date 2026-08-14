@@ -1,7 +1,7 @@
 import type { MentorConfig, MentorId } from "@/config/mentors";
 
 /**
- * Generic Mentor abstraction — Phase 4
+ * Generic Mentor abstraction
  *
  * Adding a new mentor should be configuration, not rewriting chat infrastructure.
  * Each mentor is a config + prompt + model + tool allowlist. The orchestrator

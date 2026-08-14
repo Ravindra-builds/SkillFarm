@@ -7,8 +7,7 @@ import type { RouteDecision } from "./types";
 import { routerSystemPrompt } from "./prompt";
 
 /**
- * Router — Phase 5
- *
+ * Router 
  * Fast/cheap model for classification, structured output.
  * Falls back to deterministic keyword router when no OPENAI_API_KEY.
  */
@@ -59,7 +58,7 @@ export function keywordRoute(query: string): RouteDecision {
 
   // Slight boost for backend on generic coding questions
   if (q.includes("how do i") || q.includes("build") || q.includes("create")) {
-    // don't over-boost
+    scores["backend"] += 0.5;
   }
 
   const sorted = (Object.entries(scores) as Array<[MentorId, number]>)

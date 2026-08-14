@@ -2,7 +2,6 @@ import type { MentorId } from "@/config/mentors";
 import { routeQuery, keywordRoute } from "./router";
 import { synthesizeParallel, streamSynthesis } from "./synthesizer";
 import { getMentor } from "@/agents/mentors";
-import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getLearningProfile } from "@/lib/learning-profile";
 import { research, formatResourcesForPrompt } from "@/agents/research/research";
@@ -11,7 +10,7 @@ import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { addMemory } from "@/lib/memory/mem0";
 
 /**
- * Orchestrator — Phase 5
+ * Orchestrator
  *
  * Entry point for chat. Decides single vs multi, runs parallel when needed,
  * and returns a streaming Response.
@@ -29,7 +28,7 @@ export async function orchestrate(
   conversationHistory: { role: string; content: string }[],
   opts?: { forceMentorId?: MentorId }
 ) {
-  // Manual override (Phase 4 compatibility): if user explicitly picked a mentor, skip routing
+  // Manual override: if user explicitly picked a mentor, skip routing
   if (opts?.forceMentorId) {
     const mentor = getMentor(opts.forceMentorId);
     if (!mentor) throw new Error(`Unknown mentor ${opts.forceMentorId}`);
@@ -147,22 +146,15 @@ export async function runOrchestratedChat(
     });
   }
 
-  // Multi — parallel + synthesis (only reached when result.mode === "multi")
-  const multiResult = result as unknown as { mode: "multi"; mentorIds: MentorId[]; decision: typeof result extends { decision: infer D } ? D : never };
+  // Multi — parallel + synthesis
+  const multiResult = result as { mode: "multi"; mentorIds: MentorId[]; decision: typeof result.decision };
   const mentorIds = multiResult.mentorIds;
-  const decisionMulti = multiResult.decision;
   const { text: combined, isMock } = await synthesizeParallel(query, mentorIds, userId, history);
   if (isMock) {
-    // Mock synthesis already done — stream it
-    return streamSynthesis(query, combined, mentorIds, userId);
+    return streamSynthesis(query, combined, mentorIds, userId, { conversationId, saveMessage });
   }
-  // Real: combined is already the parallel outputs, now stream synthesis
-  const streamRes = await streamSynthesis(query, combined, mentorIds, userId);
-  // Save synthesis on finish — we need to capture text, but streamSynthesis already handles? For mock it did, for real it will need onFinish.
-  // For simplicity, we let the caller handle saving via the Response's onFinish is inside streamSynthesis.
-  // We need to ensure synthesis saves — streamSynthesis for real currently doesn't save, so we wrap.
-  // For now, we return the stream and let the API route handle saving via header.
-  return streamRes;
+
+  return streamSynthesis(query, combined, mentorIds, userId, { conversationId, saveMessage });
 }
 
 export { routeQuery, keywordRoute };

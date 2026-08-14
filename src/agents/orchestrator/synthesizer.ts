@@ -4,9 +4,10 @@ import { getMentor } from "@/agents/mentors";
 import type { MentorId } from "@/config/mentors";
 import { synthesizerSystemPrompt } from "./prompt";
 import { getLearningProfile } from "@/lib/learning-profile";
+import { addMemory } from "@/lib/memory/mem0";
 
 /**
- * Synthesizer — Phase 5
+ * Synthesizer
  *
  * When orchestrator picks multiple mentors, we consult them in parallel
  * (generateText) and then stream a synthesized answer.
@@ -46,7 +47,12 @@ export async function synthesizeParallel(
     ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
     : "No profile";
 
-  // Parallel generation for each mentor
+  const historyMessages = conversationHistory.slice(-4).map((h) => ({
+    role: h.role as "user" | "assistant",
+    content: h.content,
+  }));
+
+  // Parallel generation for each mentor with conversation history
   const results = await Promise.all(
     mentorIds.map(async (id) => {
       const mentor = getMentor(id);
@@ -54,7 +60,7 @@ export async function synthesizeParallel(
       const { text } = await generateText({
         model: openai(mentor.model),
         system: mentor.prompt + `\n\nUser context: ${profileCtx}`,
-        prompt: query,
+        messages: [...historyMessages, { role: "user" as const, content: query }],
         temperature: 0.7,
         maxOutputTokens: 600,
       });
@@ -69,7 +75,11 @@ export async function streamSynthesis(
   query: string,
   mentorOutputs: string,
   mentorIds: MentorId[],
-  userId: string
+  userId: string,
+  opts?: {
+    conversationId?: string;
+    saveMessage?: (cid: string, role: "assistant", content: string, mentorId: string) => Promise<unknown>;
+  }
 ) {
   let profile: Awaited<ReturnType<typeof getLearningProfile>> = null;
   try {
@@ -82,7 +92,6 @@ export async function streamSynthesis(
 
   const hasKey = process.env.OPENAI_API_KEY && !isPlaceholder(process.env.OPENAI_API_KEY);
   if (!hasKey) {
-    // Should not be called in mock multi — synthesizeParallel already returned mock
     const encoder = new TextEncoder();
     const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis)\n\n${mentorOutputs}\n\n*Add OPENAI_API_KEY for live synthesis.*`;
     const chunks = mock.match(/.{1,30}/g) ?? [mock];
@@ -91,6 +100,9 @@ export async function streamSynthesis(
         for (const ch of chunks) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", text: ch })}\n\n`));
           await new Promise((r) => setTimeout(r, 10));
+        }
+        if (opts?.conversationId && opts?.saveMessage) {
+          await opts.saveMessage(opts.conversationId, "assistant", mock, mentorIds.join(",")).catch(() => {});
         }
         controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
         controller.close();
@@ -111,7 +123,13 @@ export async function streamSynthesis(
     system: synthesizerSystemPrompt + `\n\nUser context: ${profileCtx}\n\nQuery: ${query}\n\nMentor outputs:\n${mentorOutputs}`,
     prompt: `Synthesize the above specialist perspectives into one final answer for: "${query}"`,
     temperature: 0.6,
-    maxOutputTokens: 900,
+    maxOutputTokens: 800, // Consistent with single-mentor cap; synthesis should be concise
+    onFinish: async ({ text }) => {
+      if (opts?.conversationId && opts?.saveMessage) {
+        await opts.saveMessage(opts.conversationId, "assistant", text, mentorIds.join(",")).catch(() => {});
+      }
+      addMemory(userId, `Multi-mentor advice synthesized (${mentorIds.join(" + ")}) for: "${query.slice(0, 100)}"`).catch(() => {});
+    },
   });
 
   return result.toUIMessageStreamResponse({

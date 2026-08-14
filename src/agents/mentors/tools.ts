@@ -1,7 +1,7 @@
 /**
- * Mentor Tools & Allowlist Security — Phase 7
+ * Mentor Tools & Allowlist Security 
  *
- * Implements explicit tool permission boundaries per spec §21:
+ * Implements explicit tool permission boundaries per spec:
  * - Each mentor has an explicit allowlist defined in config/mentors.ts
  * - Input validation using Zod
  * - Untrusted content safety tags (<untrusted_research_data>)

@@ -5,7 +5,7 @@ import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 
 /**
- * Handoff detection — Phase 6
+ * Handoff detection
  *
  * Two modes:
  * 1. Explicit mentor-initiated: Mentor outputs [[HANDOFF:security:reason]] — we parse it.
@@ -82,7 +82,7 @@ export function keywordHandoff(
   const bestScore = best ? best[1] : 0;
   const bestId = best ? best[0] : null;
 
-  // Phase 6: Explicit handoff rules — make demo deterministic
+  // Explicit handoff rules — make demo deterministic
   // If the query contains strong signals for another mentor, handoff even if current also scores
   const hasSecuritySignal = q.includes("secure") || q.includes("jwt") || q.includes("owasp") || q.includes("xss") || q.includes("csrf") || q.includes("vulnerability") || q.includes("rate limit") || q.includes("httponly") || q.includes("secrets") || q.includes("sqli") || q.includes("sql injection");
   const hasInfraSignal = q.includes("docker") || q.includes("deploy") || q.includes("ci/cd") || q.includes("kubernetes") || q.includes("infra") || q.includes("monitoring");

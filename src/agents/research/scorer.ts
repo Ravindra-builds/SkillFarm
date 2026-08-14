@@ -1,7 +1,7 @@
 /**
- * Resource Scorer — Phase 7
+ * Resource Scorer
  *
- * Implements the weighted scoring from spec §7:
+ * Implements the weighted scoring from spec:
  * Authority 25%, Freshness 20%, Accuracy 20%, Practical 15%, BeginnerFriendly 10%, Community 10%
  *
  * Each dimension 0-10, overall weighted.

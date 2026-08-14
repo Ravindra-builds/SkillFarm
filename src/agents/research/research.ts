@@ -1,10 +1,7 @@
 /**
- * Research Engine — Phase 7 + 8
+ * Research Engine 
  *
  * Unified entry: query → search (Tavily + GitHub + YouTube in parallel) → dedupe → score → cache.
- * - Phase 7: Tavily only (mock fallback)
- * - Phase 8: + GitHub + YouTube
- *
  * Features per spec:
  * - Parallel execution for independent sources
  * - Deduplication by URL
