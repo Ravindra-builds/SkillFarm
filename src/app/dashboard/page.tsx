@@ -110,7 +110,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Learning Profile Setup */}
+      {/* Learning Profile Overview & Editor */}
       <LearningProfileForm
         initial={
           profile
@@ -127,25 +127,6 @@ export default async function DashboardPage() {
         action={saveProfileAction}
         userName={user?.name}
       />
-
-      {profile && (
-        <Card className="border-emerald-500/20 bg-emerald-500/5">
-          <CardContent className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 shrink-0">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Learning Profile Active</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Known: {profile.knownSkills.join(", ")} • Level: {profile.currentLevel} • {profile.weeklyHours}h/week • Style: {profile.learningStyle}
-                </p>
-              </div>
-            </div>
-            <Badge className="bg-emerald-600 text-white text-xs">Active Context</Badge>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Dynamic Real Metrics Row */}
       <DashboardStats

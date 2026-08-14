@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { getMemories, addMemory } from "@/lib/memory/mem0";
+import { getMemories, addMemory, deleteMemory } from "@/lib/memory/mem0";
 
 export const dynamic = "force-dynamic";
 
 const addSchema = z.object({
-  text: z.string().min(3).max(500),
+  text: z.string().min(3).max(1000),
   category: z.string().optional(),
 });
 
@@ -50,6 +50,34 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[api/settings/memory POST] error:", err);
     return new Response(JSON.stringify({ error: "Failed to add memory" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const session = (await (auth as unknown as () => Promise<unknown>)().catch(() => null)) as unknown as { user?: { email?: string; id?: string } } | null;
+    const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+
+    const { searchParams } = new URL(req.url);
+    const memoryId = searchParams.get("id");
+
+    if (!memoryId) {
+      return new Response(JSON.stringify({ error: "Missing memory ID" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    await deleteMemory(userId, memoryId);
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("[api/settings/memory DELETE] error:", err);
+    return new Response(JSON.stringify({ error: "Failed to delete memory" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

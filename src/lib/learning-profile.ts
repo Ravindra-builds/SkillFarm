@@ -16,9 +16,9 @@ export const learningProfileSchema = z.object({
     message: "Pick your current level",
   }),
   knownSkills: z
-    .array(z.string().min(1).max(30))
+    .array(z.string().min(1).max(50))
     .min(1, "Add at least one skill you know — e.g., JavaScript")
-    .max(20),
+    .transform((skills) => skills.slice(0, 20)),
   weeklyHours: z.coerce.number().min(1).max(80).default(10),
   learningStyle: z.enum(["hands-on", "visual", "reading", "mixed"]).default("mixed"),
   format: z.enum(["docs", "videos", "projects", "mixed"]).default("mixed"),

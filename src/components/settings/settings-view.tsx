@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings,
@@ -18,12 +17,16 @@ import {
   Sparkles,
   AlertCircle,
   RefreshCw,
-  Upload,
   Cpu,
   Zap,
   Check,
   ToggleLeft,
   ToggleRight,
+  Trash2,
+  FolderGit2,
+  Briefcase,
+  Code2,
+  Search,
 } from "lucide-react";
 import type { MemoryItem } from "@/lib/memory/mem0";
 import {
@@ -33,6 +36,7 @@ import {
   saveStoredLlmPreference,
   LlmPreference,
 } from "@/lib/llm-client-store";
+import { ResumeUploader } from "@/components/resume/resume-uploader";
 
 type SettingsProps = {
   user?: { name?: string | null; email?: string | null; image?: string | null } | null;
@@ -44,15 +48,8 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
   const [loadingMemories, setLoadingMemories] = useState(true);
   const [newMemory, setNewMemory] = useState("");
   const [addingMemory, setAddingMemory] = useState(false);
-
-  const [resumeText, setResumeText] = useState("");
-  const [parsingResume, setParsingResume] = useState(false);
-  const [parsedResult, setParsedResult] = useState<{
-    extractedSkills: string[];
-    experienceSummary: string;
-    keyProjects: string[];
-    suggestedLevel: string;
-  } | null>(null);
+  const [memoryFilter, setMemoryFilter] = useState<string>("all");
+  const [memorySearch, setMemorySearch] = useState<string>("");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // LLM Setup state
@@ -103,6 +100,21 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
     }
   }
 
+  async function handleDeleteMemory(id: string) {
+    try {
+      const res = await fetch(`/api/settings/memory?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setMemories((prev) => prev.filter((m) => m.id !== id));
+        setMessage({ type: "success", text: "Memory deleted from store." });
+      }
+    } catch (e) {
+      console.error("Failed to delete memory", e);
+      setMessage({ type: "error", text: "Failed to delete memory." });
+    }
+  }
+
   function handleExportMemories() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(memories, null, 2));
     const downloadAnchor = document.createElement("a");
@@ -113,45 +125,26 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
     downloadAnchor.remove();
   }
 
-  async function handleParseResume(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resumeText.trim()) return;
-    setParsingResume(true);
-    setMessage(null);
-    try {
-      const res = await fetch("/api/settings/resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeText }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setParsedResult(data.parsed);
-        setMessage({ type: "success", text: "Resume context extracted and saved to Mem0 long-term memory!" });
-        loadMemories();
-      } else {
-        throw new Error("Failed to parse resume");
-      }
-    } catch (e) {
-      setMessage({ type: "error", text: "Failed to process resume context." });
-    } finally {
-      setParsingResume(false);
-    }
-  }
-
   function handleToggleModel(modelId: string) {
-    const next = llmPref.enabledModels.includes(modelId)
-      ? llmPref.enabledModels.filter((id) => id !== modelId)
-      : [...llmPref.enabledModels, modelId];
+    const isCurrentlyEnabled = llmPref.enabledModels.includes(modelId);
+    let nextEnabled: string[];
 
-    // Ensure at least one model remains enabled
-    if (next.length === 0) return;
+    if (isCurrentlyEnabled) {
+      if (llmPref.enabledModels.length <= 1) return;
+      nextEnabled = llmPref.enabledModels.filter((id) => id !== modelId);
+    } else {
+      nextEnabled = [...llmPref.enabledModels, modelId];
+    }
+
+    let nextSelected = llmPref.selectedModel;
+    if (!nextEnabled.includes(nextSelected)) {
+      nextSelected = nextEnabled[0];
+    }
 
     const updated = {
       ...llmPref,
-      enabledModels: next,
-      // If current default was disabled, switch default to first enabled
-      selectedModel: next.includes(llmPref.selectedModel) ? llmPref.selectedModel : next[0],
+      enabledModels: nextEnabled,
+      selectedModel: nextSelected,
     };
     setLlmPref(updated);
     saveStoredLlmPreference(updated);
@@ -178,7 +171,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
       ? llmPref.activeProviders.filter((p) => p !== provider)
       : [...llmPref.activeProviders, provider];
 
-    if (next.length === 0) return; // keep at least 1 provider
+    if (next.length === 0) return;
 
     const updated = {
       ...llmPref,
@@ -197,6 +190,23 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
   const geminiModels = ALL_MODELS.filter((m) => m.provider === "gemini");
   const openAiModels = ALL_MODELS.filter((m) => m.provider === "openai");
   const anthropicModels = ALL_MODELS.filter((m) => m.provider === "anthropic");
+
+  // Filter memories
+  const filteredMemories = memories.filter((m) => {
+    const matchesCategory =
+      memoryFilter === "all"
+        ? true
+        : memoryFilter === "resume"
+        ? m.category?.startsWith("resume")
+        : m.category === memoryFilter;
+
+    const matchesSearch =
+      !memorySearch.trim() ||
+      m.memory.toLowerCase().includes(memorySearch.toLowerCase()) ||
+      (m.category && m.category.toLowerCase().includes(memorySearch.toLowerCase()));
+
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto py-2">
@@ -217,35 +227,36 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
             ) : (
               <AlertCircle className="h-4 w-4 text-red-600" />
             )}
-            <span className={message.type === "success" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}>
-              {message.text}
-            </span>
+            <span>{message.text}</span>
           </CardContent>
         </Card>
       )}
 
       {savedLlmNotice && (
-        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-700 dark:text-emerald-300 flex items-center justify-between animate-in fade-in slide-in-from-top-1">
-          <span className="flex items-center gap-1.5 font-medium">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            AI Provider & Model preferences updated! Available immediately in your chat selector.
-          </span>
+        <div className="fixed bottom-6 right-6 z-50 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur-sm p-4 shadow-xl flex items-center gap-3 text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="h-7 w-7 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
+            <Check className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-semibold text-xs text-foreground">Preferences Saved</p>
+            <p className="text-[11px] text-muted-foreground">Model configuration updated for chat & mentors.</p>
+          </div>
         </div>
       )}
 
       <Tabs defaultValue="models" className="space-y-6">
-        <TabsList className="grid grid-cols-4 w-full sm:w-[540px]">
-          <TabsTrigger value="models" className="text-xs flex items-center gap-1.5">
+        <TabsList className="bg-muted/40 p-1 rounded-2xl border flex-wrap h-auto gap-1">
+          <TabsTrigger value="models" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
             <Cpu className="h-3.5 w-3.5" /> AI & Models
           </TabsTrigger>
-          <TabsTrigger value="account" className="text-xs flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5" /> Account & Quota
-          </TabsTrigger>
-          <TabsTrigger value="memories" className="text-xs flex items-center gap-1.5">
-            <Brain className="h-3.5 w-3.5" /> Mem0 Store
-          </TabsTrigger>
-          <TabsTrigger value="resume" className="text-xs flex items-center gap-1.5">
+          <TabsTrigger value="resume" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
             <FileText className="h-3.5 w-3.5" /> Resume Context
+          </TabsTrigger>
+          <TabsTrigger value="memories" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
+            <Brain className="h-3.5 w-3.5" /> Mem0 Memories ({memories.length})
+          </TabsTrigger>
+          <TabsTrigger value="account" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
+            <User className="h-3.5 w-3.5" /> Account & Plan
           </TabsTrigger>
         </TabsList>
 
@@ -337,7 +348,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
               </div>
             </div>
 
-            {/* Anthropic Card */}
+            {/* Anthropic Claude Card */}
             <div
               className={`rounded-2xl border p-4 transition-all ${
                 llmPref.activeProviders.includes("anthropic")
@@ -352,7 +363,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm">Anthropic Claude</h3>
-                    <p className="text-[11px] text-muted-foreground">Deep reasoning & code analysis</p>
+                    <p className="text-[11px] text-muted-foreground">Sonnet 3.5 & deep reasoning</p>
                   </div>
                 </div>
                 <button
@@ -380,211 +391,361 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
             </div>
           </div>
 
-          {/* Model Catalog & Chat Selector Preferences */}
+          {/* Model Catalog Selection */}
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Cpu className="h-4 w-4 text-violet-600" /> Chat Models Catalog
-                </span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  Check models to include them in your Chat Model switcher
-                </span>
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Select which models you want active in the chat interface. You can set a default model and switch dynamically at any point during a conversation.
-              </CardDescription>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Cpu className="h-4 w-4 text-violet-600" /> Active Model Catalog for Chat
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Select which models should appear in the Chat model selector dropdown. Click &ldquo;Set Default&rdquo; to make a model the primary default.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {llmPref.enabledModels.length} models active
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Google Gemini Models */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 uppercase tracking-wider">
-                  <Sparkles className="h-3.5 w-3.5" /> Google Gemini Models
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {geminiModels.map((m) => {
-                    const isEnabled = llmPref.enabledModels.includes(m.id);
-                    const isDefault = llmPref.selectedModel === m.id;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-start justify-between rounded-xl border p-3 transition-all ${
-                          isDefault
-                            ? "border-violet-500 bg-violet-500/5 shadow-xs"
-                            : isEnabled
-                            ? "border-border bg-card"
-                            : "border-border/40 bg-muted/20 opacity-60"
-                        }`}
-                      >
-                        <div className="space-y-1 pr-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-foreground">{m.name}</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-500/5 text-blue-600 border-blue-500/20">
-                              {m.badge}
-                            </Badge>
-                            {isDefault && (
-                              <Badge className="text-[9px] px-1.5 py-0 bg-violet-600 text-white">
-                                Active Default
-                              </Badge>
-                            )}
+              {/* Gemini Models Section */}
+              {llmPref.activeProviders.includes("gemini") && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                    <Sparkles className="h-3.5 w-3.5" /> Google Gemini Models
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {geminiModels.map((model) => {
+                      const isEnabled = llmPref.enabledModels.includes(model.id);
+                      const isDefault = llmPref.selectedModel === model.id;
+                      return (
+                        <div
+                          key={model.id}
+                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                            isEnabled
+                              ? "border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10"
+                              : "border-border/60 bg-card opacity-60"
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={isEnabled}
+                                onChange={() => handleToggleModel(model.id)}
+                                className="h-4 w-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
+                                aria-label={`Enable ${model.name}`}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            {m.description}
-                          </p>
-                          <div className="pt-1 flex items-center gap-2">
-                            {!isDefault && (
-                              <button
-                                type="button"
-                                onClick={() => handleSetDefaultModel(m)}
-                                className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                            {isDefault ? (
+                              <Badge className="bg-blue-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSetDefaultModel(model)}
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
                               >
                                 Set as default
-                              </button>
+                              </Button>
                             )}
+                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
                           </div>
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={isEnabled}
-                          onChange={() => handleToggleModel(m.id)}
-                          className="h-4 w-4 rounded text-violet-600 focus:ring-violet-500 mt-1 cursor-pointer"
-                          aria-label={`Enable ${m.name}`}
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* OpenAI Models */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 uppercase tracking-wider">
-                  <Zap className="h-3.5 w-3.5" /> OpenAI Models
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {openAiModels.map((m) => {
-                    const isEnabled = llmPref.enabledModels.includes(m.id);
-                    const isDefault = llmPref.selectedModel === m.id;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-start justify-between rounded-xl border p-3 transition-all ${
-                          isDefault
-                            ? "border-violet-500 bg-violet-500/5 shadow-xs"
-                            : isEnabled
-                            ? "border-border bg-card"
-                            : "border-border/40 bg-muted/20 opacity-60"
-                        }`}
-                      >
-                        <div className="space-y-1 pr-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-foreground">{m.name}</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-emerald-500/5 text-emerald-600 border-emerald-500/20">
-                              {m.badge}
-                            </Badge>
-                            {isDefault && (
-                              <Badge className="text-[9px] px-1.5 py-0 bg-violet-600 text-white">
-                                Active Default
-                              </Badge>
-                            )}
+              {/* OpenAI Models Section */}
+              {llmPref.activeProviders.includes("openai") && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                    <Zap className="h-3.5 w-3.5" /> OpenAI Models
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {openAiModels.map((model) => {
+                      const isEnabled = llmPref.enabledModels.includes(model.id);
+                      const isDefault = llmPref.selectedModel === model.id;
+                      return (
+                        <div
+                          key={model.id}
+                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                            isEnabled
+                              ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10"
+                              : "border-border/60 bg-card opacity-60"
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={isEnabled}
+                                onChange={() => handleToggleModel(model.id)}
+                                className="h-4 w-4 rounded text-emerald-600 accent-emerald-600 cursor-pointer"
+                                aria-label={`Enable ${model.name}`}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            {m.description}
-                          </p>
-                          <div className="pt-1 flex items-center gap-2">
-                            {!isDefault && (
-                              <button
-                                type="button"
-                                onClick={() => handleSetDefaultModel(m)}
-                                className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                            {isDefault ? (
+                              <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSetDefaultModel(model)}
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
                               >
                                 Set as default
-                              </button>
+                              </Button>
                             )}
+                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
                           </div>
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={isEnabled}
-                          onChange={() => handleToggleModel(m.id)}
-                          className="h-4 w-4 rounded text-violet-600 focus:ring-violet-500 mt-1 cursor-pointer"
-                          aria-label={`Enable ${m.name}`}
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Anthropic Models */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 uppercase tracking-wider">
-                  <Brain className="h-3.5 w-3.5" /> Anthropic Claude Models
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  {anthropicModels.map((m) => {
-                    const isEnabled = llmPref.enabledModels.includes(m.id);
-                    const isDefault = llmPref.selectedModel === m.id;
-                    return (
-                      <div
-                        key={m.id}
-                        className={`flex items-start justify-between rounded-xl border p-3 transition-all ${
-                          isDefault
-                            ? "border-violet-500 bg-violet-500/5 shadow-xs"
-                            : isEnabled
-                            ? "border-border bg-card"
-                            : "border-border/40 bg-muted/20 opacity-60"
-                        }`}
-                      >
-                        <div className="space-y-1 pr-2 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-xs text-foreground">{m.name}</span>
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/5 text-amber-600 border-amber-500/20">
-                              {m.badge}
-                            </Badge>
-                            {isDefault && (
-                              <Badge className="text-[9px] px-1.5 py-0 bg-violet-600 text-white">
-                                Active Default
-                              </Badge>
-                            )}
+              {/* Anthropic Models Section */}
+              {llmPref.activeProviders.includes("anthropic") && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                    <Brain className="h-3.5 w-3.5" /> Anthropic Claude Models
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {anthropicModels.map((model) => {
+                      const isEnabled = llmPref.enabledModels.includes(model.id);
+                      const isDefault = llmPref.selectedModel === model.id;
+                      return (
+                        <div
+                          key={model.id}
+                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                            isEnabled
+                              ? "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10"
+                              : "border-border/60 bg-card opacity-60"
+                          }`}
+                        >
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={isEnabled}
+                                onChange={() => handleToggleModel(model.id)}
+                                className="h-4 w-4 rounded text-amber-600 accent-amber-600 cursor-pointer"
+                                aria-label={`Enable ${model.name}`}
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
                           </div>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            {m.description}
-                          </p>
-                          <div className="pt-1 flex items-center gap-2">
-                            {!isDefault && (
-                              <button
-                                type="button"
-                                onClick={() => handleSetDefaultModel(m)}
-                                className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline font-medium"
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                            {isDefault ? (
+                              <Badge className="bg-amber-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleSetDefaultModel(model)}
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
                               >
                                 Set as default
-                              </button>
+                              </Button>
                             )}
+                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
                           </div>
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={isEnabled}
-                          onChange={() => handleToggleModel(m.id)}
-                          className="h-4 w-4 rounded text-violet-600 focus:ring-violet-500 mt-1 cursor-pointer"
-                          aria-label={`Enable ${m.name}`}
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Tab 1: Account & Quota */}
+        {/* Tab 1: Resume Context Extractor */}
+        <TabsContent value="resume" className="space-y-4">
+          <ResumeUploader onProfileExtracted={() => loadMemories()} />
+        </TabsContent>
+
+        {/* Tab 2: Mem0 Memory Manager */}
+        <TabsContent value="memories" className="space-y-4">
+          <Card className="rounded-2xl">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-violet-600" /> Mem0 Long-Term Memory Store
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Key background facts, skills, work history, and engineering preferences stored across sessions.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1" onClick={loadMemories} disabled={loadingMemories}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${loadingMemories ? "animate-spin" : ""}`} /> Refresh
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1" onClick={handleExportMemories} disabled={memories.length === 0}>
+                  <Download className="h-3.5 w-3.5" /> Export JSON
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {/* Add Custom Fact */}
+              <form onSubmit={handleAddMemory} className="flex gap-2">
+                <Input
+                  placeholder="Add a custom long-term fact (e.g. 'Prefer microservices with Go and PostgreSQL')"
+                  value={newMemory}
+                  onChange={(e) => setNewMemory(e.target.value)}
+                  className="text-xs h-9 rounded-xl"
+                />
+                <Button size="sm" type="submit" className="text-xs h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 shrink-0" disabled={addingMemory || !newMemory.trim()}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Fact
+                </Button>
+              </form>
+
+              {/* Filters & Search */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+                {/* Category Chips */}
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "resume_summary", label: "Summary" },
+                    { id: "skills", label: "Skills" },
+                    { id: "projects", label: "Projects" },
+                    { id: "experience", label: "Experience" },
+                    { id: "interests", label: "Interests" },
+                    { id: "user-defined", label: "Custom" },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setMemoryFilter(cat.id)}
+                      className={`text-[11px] rounded-lg px-2.5 py-1 font-medium transition-all ${
+                        memoryFilter === cat.id
+                          ? "bg-violet-600 text-white"
+                          : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative w-full sm:w-48">
+                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search memories..."
+                    value={memorySearch}
+                    onChange={(e) => setMemorySearch(e.target.value)}
+                    className="h-8 pl-8 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {/* Memory List */}
+              {loadingMemories ? (
+                <div className="py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                  <RefreshCw className="h-4 w-4 animate-spin" /> Loading memory store...
+                </div>
+              ) : filteredMemories.length === 0 ? (
+                <div className="py-8 text-center border border-dashed rounded-xl bg-muted/20">
+                  <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+                  <p className="text-xs font-medium">No memories found</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Upload a resume in the &ldquo;Resume Context&rdquo; tab or add a fact above.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {filteredMemories.map((m) => {
+                    const cat = m.category || "general";
+                    const isResume = cat.includes("resume") || cat === "skills" || cat === "projects" || cat === "experience";
+
+                    return (
+                      <div
+                        key={m.id}
+                        className="rounded-xl border bg-card/60 p-3.5 text-xs flex items-start justify-between gap-3 hover:border-violet-500/30 transition-colors shadow-2xs"
+                      >
+                        <div className="space-y-1.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] px-2 py-0 font-medium capitalize ${
+                                cat === "skills"
+                                  ? "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20"
+                                  : cat === "projects"
+                                  ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
+                                  : cat === "experience"
+                                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+                                  : cat.includes("resume")
+                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
+                                  : "bg-muted text-foreground"
+                              }`}
+                            >
+                              {cat === "resume_summary" ? (
+                                <FileText className="h-2.5 w-2.5 mr-1 inline" />
+                              ) : cat === "skills" ? (
+                                <Code2 className="h-2.5 w-2.5 mr-1 inline" />
+                              ) : cat === "projects" ? (
+                                <FolderGit2 className="h-2.5 w-2.5 mr-1 inline" />
+                              ) : cat === "experience" ? (
+                                <Briefcase className="h-2.5 w-2.5 mr-1 inline" />
+                              ) : (
+                                <Brain className="h-2.5 w-2.5 mr-1 inline" />
+                              )}
+                              {cat.replace("_", " ")}
+                            </Badge>
+
+                            {isResume && (
+                              <span className="text-[10px] text-emerald-600 font-medium">● AI Synced</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-foreground leading-relaxed font-normal">{m.memory}</p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "Saved"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMemory(m.id)}
+                            className="rounded-lg p-1 text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                            title="Delete memory"
+                            aria-label="Delete memory"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 3: Account & Plan Tier */}
         <TabsContent value="account" className="space-y-4">
           <Card className="rounded-2xl">
             <CardHeader>
-              <CardTitle className="text-base">Profile & Plan Tier</CardTitle>
-              <CardDescription className="text-xs">Your current active user session and subscription status.</CardDescription>
+              <CardTitle className="text-base flex items-center gap-2">
+                <User className="h-4 w-4 text-violet-600" /> Account Profile & Plan Limits
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4 rounded-xl border p-4 bg-muted/30">
@@ -617,114 +778,6 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1">Free tier includes 20 messages/day. Upgrade to Pro for unlimited messages & research.</p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 2: Mem0 Memory Manager */}
-        <TabsContent value="memories" className="space-y-4">
-          <Card className="rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-violet-600" /> Mem0 Long-Term Memory Store
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  Key facts, known weak areas, and architectural decisions stored across chat turns.
-                </CardDescription>
-              </div>
-              <Button size="sm" variant="outline" className="text-xs gap-1" onClick={handleExportMemories} disabled={memories.length === 0}>
-                <Download className="h-3.5 w-3.5" /> Export JSON
-              </Button>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <form onSubmit={handleAddMemory} className="flex gap-2">
-                <Input
-                  placeholder="Add a custom long-term fact (e.g. 'Prefer TypeScript with strict mode')"
-                  value={newMemory}
-                  onChange={(e) => setNewMemory(e.target.value)}
-                  className="text-xs h-9"
-                />
-                <Button size="sm" type="submit" className="text-xs h-9 bg-violet-600 hover:bg-violet-500" disabled={addingMemory}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                </Button>
-              </form>
-
-              {loadingMemories ? (
-                <div className="py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin" /> Loading memory store...
-                </div>
-              ) : memories.length === 0 ? (
-                <div className="py-8 text-center border border-dashed rounded-xl bg-muted/20">
-                  <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-                  <p className="text-xs font-medium">No long-term memories stored yet</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">Start chatting with mentors or add a memory above.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {memories.map((m) => (
-                    <div key={m.id} className="rounded-lg border bg-muted/40 p-3 text-xs flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <p className="font-medium text-foreground">{m.memory}</p>
-                        {m.category && (
-                          <Badge variant="outline" className="text-[10px] capitalize">
-                            {m.category}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "Saved"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 3: Resume Context Extractor */}
-        <TabsContent value="resume" className="space-y-4">
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4 text-violet-600" /> Resume & Background Context Extractor
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Upload or paste your resume text. Our background worker extracts your skills, experience, and past projects directly into Mem0 long-term memory for hyper-personalized responses.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <form onSubmit={handleParseResume} className="space-y-3">
-                <Textarea
-                  placeholder="Paste your resume text here (skills, experience, past projects)..."
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  rows={6}
-                  className="text-xs font-mono"
-                />
-                <Button size="sm" type="submit" className="text-xs h-9 bg-violet-600 hover:bg-violet-500" disabled={parsingResume || !resumeText.trim()}>
-                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Parse & Extract Context
-                </Button>
-              </form>
-
-              {parsedResult && (
-                <div className="rounded-xl border bg-violet-500/5 p-4 space-y-3 border-violet-500/20">
-                  <p className="text-xs font-semibold flex items-center gap-1.5 text-violet-600">
-                    <Sparkles className="h-4 w-4" /> Extracted Background Profile
-                  </p>
-                  <p className="text-xs leading-relaxed">{parsedResult.experienceSummary}</p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {parsedResult.extractedSkills.map((sk) => (
-                      <Badge key={sk} variant="secondary" className="text-[11px]">
-                        {sk}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
