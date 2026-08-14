@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Send, Sparkles, Loader2, AlertTriangle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
+import { ConversationHistory } from "@/components/chat/conversation-history";
 
 type ChatMsg = {
   id: string;
@@ -169,6 +172,7 @@ function ScopeErrorCard({ error, onDismiss }: { error: ScopeError; onDismiss: ()
 }
 
 export function MentorChat({ initialMessages, conversationId: initialConv, userName, isMockUser, initialMentorId, initialHandoffs }: Props) {
+  const router = useRouter();
   const [mentorId, setMentorId] = useState<MentorId | "auto">(initialMentorId ?? "auto");
   const isAuto = mentorId === "auto";
   const mentor = !isAuto ? (mentorRegistry as Record<MentorId, (typeof mentorRegistry)[MentorId]>)[mentorId as MentorId] : null;
@@ -177,6 +181,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scopeError, setScopeError] = useState<ScopeError | null>(null);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [convId, setConvId] = useState<string | undefined>(() => {
     if (initialConv) return initialConv;
     if (typeof window === "undefined") return undefined;
@@ -387,6 +392,19 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="border-b bg-card/50 backdrop-blur px-4 sm:px-6 py-3 flex items-center gap-3">
+        {/* Mobile: history drawer trigger */}
+        <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
+          <SheetTrigger
+            className="md:hidden h-8 w-8 inline-flex items-center justify-center shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            title="Conversation history"
+            aria-label="Open conversation history"
+          >
+            <History className="h-4 w-4" />
+          </SheetTrigger>
+          <SheetContent side="left" className="p-0 w-[280px] flex flex-col">
+            <ConversationHistory activeConversationId={convId} />
+          </SheetContent>
+        </Sheet>
         <div className="h-9 w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold" style={{ background: headerColor }}>
           {isAuto ? <Network className="h-4 w-4" /> : (mentor?.config.shortName[0] ?? "M")}
         </div>

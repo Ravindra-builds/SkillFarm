@@ -272,3 +272,50 @@ export async function saveMessage(
   }
   return msg;
 }
+
+export async function deleteConversation(
+  conversationId: string,
+  userId: string
+): Promise<boolean> {
+  const mem = memConversations.get(conversationId);
+  if (mem && mem.userId === userId) {
+    memConversations.delete(conversationId);
+    memMessages.delete(conversationId);
+  }
+  if (!isDbAvailable()) return true;
+  try {
+    const db = getDb();
+    await db.delete(conversations).where(eq(conversations.id, conversationId));
+    return true;
+  } catch (err) {
+    console.error("[chat-store] deleteConversation failed:", err);
+    return false;
+  }
+}
+
+export async function updateConversationTitle(
+  conversationId: string,
+  title: string,
+  userId: string
+): Promise<boolean> {
+  const trimmed = title.trim().slice(0, 100);
+  const mem = memConversations.get(conversationId);
+  if (mem && mem.userId === userId) {
+    memConversations.set(conversationId, { ...mem, title: trimmed, updatedAt: new Date() });
+  }
+  if (!isDbAvailable()) return true;
+  try {
+    const db = getDb();
+    await (
+      db.update(conversations) as unknown as {
+        set: (v: Record<string, unknown>) => { where: (c: unknown) => Promise<void> };
+      }
+    )
+      .set({ title: trimmed, updatedAt: new Date() } as Record<string, unknown>)
+      .where(eq(conversations.id, conversationId) as unknown as never);
+    return true;
+  } catch (err) {
+    console.error("[chat-store] updateConversationTitle failed:", err);
+    return false;
+  }
+}

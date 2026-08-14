@@ -3,6 +3,7 @@ import { auth, isAuthConfigured } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { MentorChat } from "@/components/chat/chat";
+import { ConversationHistory } from "@/components/chat/conversation-history";
 import { ensureConversation, getMessages } from "@/lib/chat-store";
 import { getHandoffs } from "@/lib/handoff-store";
 import { isValidMentorId, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
@@ -51,7 +52,6 @@ export default async function ChatPage({ searchParams }: Props) {
   let initialHandoffs: { id: string; fromMentorId: string; toMentorId: string; reason: string | null; createdAt: Date }[] = [];
 
   try {
-    // For auto, don't set activeMentorId yet — orchestrator will decide per message
     const convo = await ensureConversation(userId, conversationId, initialMentorId === "auto" ? undefined : initialMentorId);
     conversationId = convo.id;
     const [msgs, handoffs] = await Promise.all([getMessages(conversationId), getHandoffs(conversationId)]);
@@ -72,18 +72,30 @@ export default async function ChatPage({ searchParams }: Props) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* App sidebar — navigation */}
       <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
+
+      {/* Main area */}
       <div className="flex flex-1 flex-col min-w-0 min-h-0">
         <Header user={user} authConfigured={configured} />
-        <main className="flex-1 min-h-0 flex flex-col bg-background overflow-hidden">
-          <MentorChat
-            initialMessages={initialMessages}
-            conversationId={conversationId ?? null}
-            userName={userName}
-            isMockUser={isMockUser}
-            initialMentorId={initialMentorId}
-            initialHandoffs={initialHandoffs}
-          />
+
+        <main className="flex-1 min-h-0 flex overflow-hidden">
+          {/* Conversation history panel — only shown on md+ */}
+          <div className="hidden md:flex">
+            <ConversationHistory activeConversationId={conversationId ?? null} />
+          </div>
+
+          {/* Chat interface */}
+          <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+            <MentorChat
+              initialMessages={initialMessages}
+              conversationId={conversationId ?? null}
+              userName={userName}
+              isMockUser={isMockUser}
+              initialMentorId={initialMentorId}
+              initialHandoffs={initialHandoffs}
+            />
+          </div>
         </main>
       </div>
     </div>
