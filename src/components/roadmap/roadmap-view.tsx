@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,13 +18,18 @@ import {
   AlertTriangle,
   RotateCcw,
   Edit3,
-  Calendar,
-  Layers,
   Search,
   Check,
   X,
   PlayCircle,
   HelpCircle,
+  FolderGit2,
+  ArrowRight,
+  BookOpen,
+  Layers,
+  Target,
+  BrainCircuit,
+  Lightbulb,
 } from "lucide-react";
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
 
@@ -170,7 +176,7 @@ export function RoadmapView() {
 
   function startEditing(node: RoadmapNode) {
     setEditForm({
-      title: node.title,
+      title: node.topic || node.title,
       description: node.description,
       practicalTask: node.practicalTask,
       projectBrief: node.projectBrief,
@@ -241,11 +247,14 @@ export function RoadmapView() {
   const filteredNodes = useMemo(() => {
     if (!roadmap) return [];
     return roadmap.nodes.filter((n) => {
+      const q = searchQuery.toLowerCase();
       const matchesSearch =
         searchQuery.trim() === "" ||
-        n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        n.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        n.relatedConcepts.some((c) => c.toLowerCase().includes(searchQuery.toLowerCase()));
+        n.title.toLowerCase().includes(q) ||
+        (n.topic && n.topic.toLowerCase().includes(q)) ||
+        n.description.toLowerCase().includes(q) ||
+        (n.concepts && n.concepts.some((c) => c.toLowerCase().includes(q))) ||
+        (n.relatedConcepts && n.relatedConcepts.some((c) => c.toLowerCase().includes(q)));
 
       const matchesStatus =
         statusFilter === "all" ||
@@ -308,6 +317,7 @@ export function RoadmapView() {
   const totalCount = roadmap.nodes.length;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const totalHours = roadmap.nodes.reduce((acc, curr) => acc + (curr.estimatedHours ?? 4), 0);
+  const mainProject = roadmap.capstoneProject;
 
   return (
     <div className="space-y-6">
@@ -332,17 +342,17 @@ export function RoadmapView() {
               <Sparkles className="h-6 w-6 text-violet-600 shrink-0" /> {roadmap.title}
             </h1>
             <Badge variant="outline" className="text-xs bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20">
-              {weekGroups.length} Weeks Curriculum
+              Concept-First Curriculum • {weekGroups.length} Weeks
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">{roadmap.description}</p>
           <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1 flex-wrap">
             <span className="flex items-center gap-1 font-medium text-foreground">
-              <Layers className="h-3.5 w-3.5 text-violet-500" /> {totalCount} Total Milestones
+              <Layers className="h-3.5 w-3.5 text-violet-500" /> {totalCount} Modules
             </span>
             <span>•</span>
             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-              <CheckCircle2 className="h-3.5 w-3.5" /> {completedCount} Done ({progressPercent}%)
+              <CheckCircle2 className="h-3.5 w-3.5" /> {completedCount} Mastered ({progressPercent}%)
             </span>
             <span>•</span>
             <span className="flex items-center gap-1">
@@ -373,12 +383,61 @@ export function RoadmapView() {
         </div>
       </div>
 
+      {/* Main-Project Application Showcase Hero */}
+      {mainProject && (
+        <Card className="rounded-2xl border-2 border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 shadow-sm overflow-hidden">
+          <CardHeader className="p-4 sm:p-6 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-violet-600 text-white text-[10px] uppercase tracking-wider">
+                    Primary Main-Project
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">The practical vehicle where you apply each week's lessons</span>
+                </div>
+                <CardTitle className="text-lg sm:text-xl font-bold mt-1.5 flex items-center gap-2">
+                  <Hammer className="h-5 w-5 text-violet-600 shrink-0" /> {mainProject.name}
+                </CardTitle>
+                <CardDescription className="text-xs text-foreground/80 mt-1 leading-relaxed max-w-3xl">
+                  {mainProject.description}
+                </CardDescription>
+              </div>
+
+              <Link href="/projects" className="shrink-0 self-start sm:self-center">
+                <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs gap-1.5 shadow-sm">
+                  <FolderGit2 className="h-3.5 w-3.5" /> Open Main-Project Hub <ArrowRight className="h-3 w-3" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-3">
+            {mainProject.goalAlignment && (
+              <p className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Target Outcome:</span> {mainProject.goalAlignment}
+              </p>
+            )}
+
+            {mainProject.stack && mainProject.stack.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[11px] font-semibold text-foreground mr-1">Tech Stack:</span>
+                {mainProject.stack.map((tech, idx) => (
+                  <Badge key={idx} variant="outline" className="text-[10px] bg-background/80 py-0.5 px-2">
+                    {tech}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border/80">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search topics, skills, tools..."
+            placeholder="Search topics, concepts, mental models..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9 text-xs rounded-xl"
@@ -388,10 +447,10 @@ export function RoadmapView() {
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
           {(
             [
-              { id: "all", label: "All Milestones" },
+              { id: "all", label: "All Modules" },
               { id: "current", label: "In Progress / Next" },
-              { id: "completed", label: "Completed" },
-              { id: "locked", label: "Upcoming / Locked" },
+              { id: "completed", label: "Mastered" },
+              { id: "locked", label: "Upcoming" },
             ] as const
           ).map((tab) => (
             <button
@@ -425,20 +484,27 @@ export function RoadmapView() {
                     <span className="flex items-center justify-center h-6 w-6 rounded-lg bg-violet-600/10 text-violet-600 dark:text-violet-400 font-bold text-xs">
                       W{group.weekNumber}
                     </span>
-                    <h2 className="font-heading text-sm sm:text-base font-semibold text-foreground">
-                      Week {group.weekNumber}
-                    </h2>
-                    <span className="text-xs text-muted-foreground">({group.totalHours}h estimated)</span>
+                    <div>
+                      <h2 className="font-heading text-sm sm:text-base font-semibold text-foreground flex items-center gap-2">
+                        Week {group.weekNumber}: {group.nodes[0]?.topic || group.nodes[0]?.title}
+                      </h2>
+                    </div>
                   </div>
-                  <Badge variant="outline" className="text-[11px] font-normal">
-                    {group.doneCount}/{group.nodes.length} Completed
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground hidden sm:inline">({group.totalHours}h estimated)</span>
+                    <Badge variant="outline" className="text-[11px] font-normal">
+                      {group.doneCount}/{group.nodes.length} Completed
+                    </Badge>
+                  </div>
                 </div>
 
                 {/* Week Milestone Cards */}
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {visibleNodesInWeek.map((node) => {
                     const isSelected = selected?.id === node.id;
+                    const nodeTopic = node.topic || node.title;
+                    const conceptsList = node.concepts && node.concepts.length > 0 ? node.concepts : node.relatedConcepts;
+
                     return (
                       <div
                         key={node.id}
@@ -446,7 +512,7 @@ export function RoadmapView() {
                           setSelected(node);
                           setIsEditing(false);
                         }}
-                        className={`rounded-2xl border p-4 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        className={`rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
                           isSelected
                             ? "border-violet-600 bg-violet-500/5 dark:bg-violet-500/10 shadow-sm ring-1 ring-violet-500/30"
                             : node.status === "completed"
@@ -456,52 +522,96 @@ export function RoadmapView() {
                             : "border-border/60 bg-card hover:bg-muted/40"
                         }`}
                       >
-                        <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                          <div className="shrink-0 mt-0.5">
-                            {node.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                            {node.status === "current" && (
-                              <div className="h-5 w-5 rounded-full border-2 border-violet-600 flex items-center justify-center">
-                                <div className="h-2 w-2 rounded-full bg-violet-600 animate-pulse" />
-                              </div>
-                            )}
-                            {node.status === "next" && <Circle className="h-5 w-5 text-violet-500" />}
-                            {node.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
-                          </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div className="shrink-0 mt-0.5">
+                              {node.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                              {node.status === "current" && (
+                                <div className="h-5 w-5 rounded-full border-2 border-violet-600 flex items-center justify-center">
+                                  <div className="h-2 w-2 rounded-full bg-violet-600 animate-pulse" />
+                                </div>
+                              )}
+                              {node.status === "next" && <Circle className="h-5 w-5 text-violet-500" />}
+                              {node.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
+                            </div>
 
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className={`text-sm font-semibold leading-tight ${isSelected ? "text-violet-600 dark:text-violet-400" : "text-foreground"}`}>
-                                {node.title}
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <p className={`text-sm sm:text-base font-bold leading-tight ${isSelected ? "text-violet-600 dark:text-violet-400" : "text-foreground"}`}>
+                                {nodeTopic}
+                              </p>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {node.description}
                               </p>
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                              {node.description}
-                            </p>
-                            <div className="flex items-center gap-2 pt-1 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] py-0 px-2 capitalize">
-                                {node.difficulty}
-                              </Badge>
-                              <Badge variant="secondary" className="text-[10px] py-0 px-2 capitalize">
-                                {node.mentorId}
-                              </Badge>
-                              {node.estimatedHours && (
-                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {node.estimatedHours}h
-                                </span>
-                              )}
-                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            {node.status === "completed" ? (
+                              <Badge className="bg-emerald-600 text-white text-[10px]">Mastered</Badge>
+                            ) : node.status === "current" ? (
+                              <Badge className="bg-violet-600 text-white text-[10px]">In Progress</Badge>
+                            ) : node.status === "next" ? (
+                              <Badge variant="secondary" className="text-[10px]">Up Next</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground">Upcoming</Badge>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          {node.status === "completed" ? (
-                            <Badge className="bg-emerald-600 text-white text-xs">Done</Badge>
-                          ) : node.status === "current" ? (
-                            <Badge className="bg-violet-600 text-white text-xs">In Progress</Badge>
-                          ) : node.status === "next" ? (
-                            <Badge variant="secondary" className="text-xs">Up Next</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs text-muted-foreground">Locked</Badge>
+                        {/* Concept-First Hierarchy: Learn -> Understand -> Practice -> Apply */}
+                        <div className="space-y-2 pt-2 border-t border-border/40 text-xs">
+                          {/* 1. Learn Concepts */}
+                          {conceptsList && conceptsList.length > 0 && (
+                            <div className="flex items-start gap-2">
+                              <span className="font-semibold text-foreground flex items-center gap-1 shrink-0">
+                                <BookOpen className="h-3.5 w-3.5 text-blue-500" /> Learn:
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {conceptsList.map((concept, idx) => (
+                                  <Badge key={idx} variant="secondary" className="text-[10px] py-0 px-1.5">
+                                    {concept}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 2. Understand / Mental Model */}
+                          {node.mentalModels && node.mentalModels.length > 0 && (
+                            <div className="flex items-start gap-2">
+                              <span className="font-semibold text-foreground flex items-center gap-1 shrink-0">
+                                <BrainCircuit className="h-3.5 w-3.5 text-amber-500" /> Understand:
+                              </span>
+                              <p className="text-muted-foreground text-[11px] leading-snug line-clamp-2">
+                                {node.mentalModels[0]}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* 3. Apply to Main-Project */}
+                          <div className="flex items-start gap-2">
+                            <span className="font-semibold text-foreground flex items-center gap-1 shrink-0">
+                              <Hammer className="h-3.5 w-3.5 text-violet-500" /> Apply to Main-Project:
+                            </span>
+                            <p className="text-muted-foreground text-[11px] truncate">
+                              {node.featureCompleted || node.capstoneApplication?.[0] || node.projectWork?.[0]}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground border-t border-border/20">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">
+                              {node.difficulty}
+                            </Badge>
+                            <Badge variant="secondary" className="text-[10px] py-0 px-1.5 capitalize">
+                              {node.mentorId} Mentor
+                            </Badge>
+                          </div>
+                          {node.estimatedHours && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {node.estimatedHours}h study
+                            </span>
                           )}
                         </div>
                       </div>
@@ -515,7 +625,7 @@ export function RoadmapView() {
           {filteredNodes.length === 0 && (
             <div className="rounded-2xl border border-dashed p-10 text-center space-y-2">
               <HelpCircle className="h-8 w-8 text-muted-foreground mx-auto" />
-              <p className="text-sm font-medium text-foreground">No milestones match your search</p>
+              <p className="text-sm font-medium text-foreground">No modules match your search</p>
               <p className="text-xs text-muted-foreground">Try clearing the search query or changing your status filter.</p>
               <Button size="sm" variant="outline" onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="rounded-xl text-xs mt-2">
                 Clear Filters
@@ -542,7 +652,7 @@ export function RoadmapView() {
                         {selected.mentorId} Mentor
                       </Badge>
                     </div>
-                    <CardTitle className="text-base font-bold">{selected.title}</CardTitle>
+                    <CardTitle className="text-base font-bold">{selected.topic || selected.title}</CardTitle>
                   </div>
                   <Button
                     size="sm"
@@ -561,7 +671,7 @@ export function RoadmapView() {
                   /* Edit Form */
                   <form onSubmit={saveNodeEdit} className="space-y-3">
                     <div>
-                      <label className="text-[11px] font-semibold text-foreground">Milestone Title</label>
+                      <label className="text-[11px] font-semibold text-foreground">Topic Title</label>
                       <Input
                         value={editForm.title}
                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
@@ -579,19 +689,11 @@ export function RoadmapView() {
                       />
                     </div>
                     <div>
-                      <label className="text-[11px] font-semibold text-foreground">Practical Task</label>
+                      <label className="text-[11px] font-semibold text-foreground">30-Min Practice Drill</label>
                       <Textarea
                         value={editForm.practicalTask}
                         onChange={(e) => setEditForm({ ...editForm, practicalTask: e.target.value })}
                         className="text-xs rounded-lg mt-1 min-h-[50px]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-semibold text-foreground">Project Brief</label>
-                      <Input
-                        value={editForm.projectBrief}
-                        onChange={(e) => setEditForm({ ...editForm, projectBrief: e.target.value })}
-                        className="text-xs h-8 rounded-lg mt-1"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -629,21 +731,47 @@ export function RoadmapView() {
                     </div>
                   </form>
                 ) : (
-                  /* Display Details */
+                  /* Display Concept-First Details */
                   <>
-                    {selected.whyItMatters && (
-                      <div className="rounded-xl border p-3 bg-muted/20 space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-                          Why This Matters
+                    {/* 1. Learning Objectives */}
+                    {selected.learningObjectives && selected.learningObjectives.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                          <BookOpen className="h-3.5 w-3.5" /> Learning Objectives
                         </p>
-                        <p className="text-muted-foreground leading-relaxed">{selected.whyItMatters}</p>
+                        <ul className="space-y-1 bg-card p-3 rounded-xl border">
+                          {selected.learningObjectives.map((obj, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-muted-foreground text-xs">
+                              <span className="text-blue-500 font-bold">•</span>
+                              <span className="leading-snug">{obj}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     )}
 
+                    {/* 2. Mental Models & Architectural Trade-offs */}
+                    {selected.mentalModels && selected.mentalModels.length > 0 && (
+                      <div className="space-y-1.5">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <BrainCircuit className="h-3.5 w-3.5" /> Understand & Mental Models
+                        </p>
+                        <ul className="space-y-1.5 bg-amber-500/5 dark:bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                          {selected.mentalModels.map((mm, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-muted-foreground text-xs">
+                              <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                              <span className="leading-snug">{mm}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* 3. 30-Min Practice Drill */}
                     {selected.practicalTask && (
                       <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
-                          Practical Task
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                          <Target className="h-3 w-3 text-emerald-500" /> 30-Min Practice Drill
                         </p>
                         <p className="text-muted-foreground leading-relaxed bg-card p-2.5 rounded-xl border">
                           {selected.practicalTask}
@@ -651,50 +779,25 @@ export function RoadmapView() {
                       </div>
                     )}
 
-                    {selected.projectBrief && (
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground">
-                          Deliverable Project
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed flex items-start gap-2 bg-card p-2.5 rounded-xl border">
-                          <Hammer className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
-                          <span>{selected.projectBrief}</span>
-                        </p>
-                      </div>
-                    )}
-
-                    {selected.commonMistakes && selected.commonMistakes.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Common Pitfalls
-                        </p>
-                        <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                          {selected.commonMistakes.map((m, idx) => (
-                            <li key={idx}>{m}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {selected.relatedConcepts && selected.relatedConcepts.length > 0 && (
-                      <div className="space-y-1 pt-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Related Skills & Tools
-                        </p>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {selected.relatedConcepts.map((rc, idx) => (
-                            <Badge key={idx} variant="outline" className="text-[10px] py-0 px-2">
-                              {rc}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* 4. Apply to Main-Project */}
+                    <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-3 space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                        <Hammer className="h-3.5 w-3.5" /> Apply to Main-Project: {selected.featureCompleted}
+                      </p>
+                      <ul className="space-y-1">
+                        {(selected.capstoneApplication || selected.projectWork || []).map((item, idx) => (
+                          <li key={idx} className="flex items-start gap-1.5 text-xs text-foreground/90">
+                            <span className="text-violet-600 font-bold">✓</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
                     {/* Milestone State Actions */}
                     <div className="pt-3 border-t space-y-2">
                       <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Milestone Status
+                        Module Status
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         {selected.status !== "completed" ? (
@@ -703,7 +806,7 @@ export function RoadmapView() {
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs h-8 cursor-pointer"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Mark Done
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Mark Mastered
                           </Button>
                         ) : (
                           <Button
@@ -723,7 +826,7 @@ export function RoadmapView() {
                             variant="outline"
                             className="rounded-xl text-xs h-8 cursor-pointer"
                           >
-                            <PlayCircle className="h-3.5 w-3.5 mr-1 text-violet-600" /> Set Current
+                            <PlayCircle className="h-3.5 w-3.5 mr-1 text-violet-600" /> Set Active
                           </Button>
                         ) : (
                           <Button
@@ -732,10 +835,16 @@ export function RoadmapView() {
                             variant="ghost"
                             className="rounded-xl text-xs h-8 text-muted-foreground cursor-pointer"
                           >
-                            <Lock className="h-3.5 w-3.5 mr-1" /> Reset to Todo
+                            <Lock className="h-3.5 w-3.5 mr-1" /> Reset to Upcoming
                           </Button>
                         )}
                       </div>
+
+                      <Link href="/projects" className="block pt-1">
+                        <Button variant="outline" size="sm" className="w-full text-xs h-8 rounded-xl gap-1">
+                          <FolderGit2 className="h-3.5 w-3.5" /> View Main-Project Tasks Hub
+                        </Button>
+                      </Link>
                     </div>
                   </>
                 )}
@@ -743,7 +852,7 @@ export function RoadmapView() {
             </Card>
           ) : (
             <Card className="rounded-2xl border border-dashed p-6 text-center text-xs text-muted-foreground">
-              Select a milestone from the list to view tasks, deliverables, and engineering rationale.
+              Select a module from the timeline to view learning objectives, mental models, and project tasks.
             </Card>
           )}
         </div>

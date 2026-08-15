@@ -25,7 +25,7 @@ export const RATE_LIMITS: Record<RateLimitAction, { prod: RateLimitRule; dev: Ra
   },
   resume: {
     prod: { limit: 2, windowSec: 86400, description: "2 resume uploads per day" },
-    dev: { limit: 2, windowSec: 86400, description: "2 resume uploads per day (dev)" },
+    dev: { limit: 10, windowSec: 86400, description: "10 resume uploads per day (dev)" },
   },
   chat: {
     prod: { limit: 30, windowSec: 60, description: "30 messages per minute" },

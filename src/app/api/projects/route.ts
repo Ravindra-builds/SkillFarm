@@ -1,15 +1,26 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { getProjects, saveProjects, updateProject, type ProjectStatus } from "@/lib/project-store";
+import {
+  getCapstoneProject,
+  saveCapstoneProject,
+  syncCapstoneFromRoadmap,
+  toggleCapstoneTask,
+  updateCapstoneRepo,
+  setCurrentCapstoneWeek,
+} from "@/lib/project-store";
 import { getRoadmap } from "@/lib/roadmap-store";
-import { generateProjectsFromRoadmap } from "@/agents/projects/generator";
 
 export const dynamic = "force-dynamic";
 
-const updateSchema = z.object({
-  projectId: z.string().min(1),
-  status: z.enum(["not-started", "in-progress", "completed"]).optional(),
+const bodySchema = z.object({
+  action: z.enum(["toggle-task", "set-week", "update-repo", "sync", "update"]).optional().default("update"),
+  taskId: z.string().optional(),
+  completed: z.boolean().optional(),
+  week: z.number().int().optional(),
   repoUrl: z.string().url().or(z.literal("")).optional(),
+  // Legacy fields
+  projectId: z.string().optional(),
+  status: z.enum(["not-started", "in-progress", "completed"]).optional(),
 });
 
 export async function GET() {
@@ -17,21 +28,26 @@ export async function GET() {
     const session = await auth();
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
-    let projects = await getProjects(userId);
-    if (projects.length === 0) {
-      const roadmap = await getRoadmap(userId);
-      if (roadmap && roadmap.nodes.length > 0) {
-        projects = generateProjectsFromRoadmap(userId, roadmap.nodes);
-        await saveProjects(userId, projects);
-      }
+    const roadmap = await getRoadmap(userId);
+    let capstone = await getCapstoneProject(userId);
+
+    // If no capstone or if roadmap was updated, auto-sync
+    if (roadmap && (!capstone || capstone.tasks.length === 0)) {
+      capstone = syncCapstoneFromRoadmap(userId, roadmap, capstone);
+      await saveCapstoneProject(userId, capstone);
     }
 
-    return new Response(JSON.stringify({ projects }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        capstone,
+        roadmapTitle: roadmap?.title ?? "Active Learning Roadmap",
+        roadmapCapstone: roadmap?.capstoneProject,
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
   } catch (err) {
     console.error("[api/projects GET] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to load projects" }), {
+    return new Response(JSON.stringify({ error: "Failed to load capstone project" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
@@ -44,7 +60,7 @@ export async function POST(req: Request) {
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
     const json = await req.json().catch(() => ({}));
-    const parsed = updateSchema.safeParse(json);
+    const parsed = bodySchema.safeParse(json);
     if (!parsed.success) {
       return new Response(JSON.stringify({ error: "Invalid payload", details: parsed.error.flatten() }), {
         status: 400,
@@ -52,20 +68,60 @@ export async function POST(req: Request) {
       });
     }
 
-    const { projectId, status, repoUrl } = parsed.data;
-    const updated = await updateProject(userId, projectId, {
-      status: status as ProjectStatus | undefined,
-      repoUrl,
-    });
+    const { action, taskId, completed, week, repoUrl } = parsed.data;
 
-    if (!updated) {
-      return new Response(JSON.stringify({ error: "Project not found" }), {
-        status: 404,
+    // Toggle a task in current week
+    if (action === "toggle-task" && taskId !== undefined && completed !== undefined) {
+      const updated = await toggleCapstoneTask(userId, taskId, completed);
+      return new Response(JSON.stringify({ capstone: updated }), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ project: updated }), {
+    // Set active view week
+    if (action === "set-week" && week !== undefined) {
+      const updated = await setCurrentCapstoneWeek(userId, week);
+      return new Response(JSON.stringify({ capstone: updated }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Update GitHub repo URL
+    if (action === "update-repo" && repoUrl !== undefined) {
+      const updated = await updateCapstoneRepo(userId, repoUrl);
+      return new Response(JSON.stringify({ capstone: updated }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Force Re-sync from active Roadmap
+    if (action === "sync") {
+      const roadmap = await getRoadmap(userId);
+      if (!roadmap || roadmap.nodes.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "No active roadmap found to sync with." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const existing = await getCapstoneProject(userId);
+      const synced = syncCapstoneFromRoadmap(userId, roadmap, existing);
+      await saveCapstoneProject(userId, synced);
+      return new Response(
+        JSON.stringify({ success: true, capstone: synced }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Legacy update fallback
+    if (repoUrl !== undefined) {
+      const updated = await updateCapstoneRepo(userId, repoUrl);
+      return new Response(JSON.stringify({ capstone: updated }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: "Unrecognized action" }), {
+      status: 400,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {

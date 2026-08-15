@@ -31,7 +31,9 @@ export async function saveProfileAction(
 
       // Regenerate practical projects based on updated roadmap
       if (newRoadmap.nodes.length > 0) {
-        const newProjects = generateProjectsFromRoadmap(userId, newRoadmap.nodes);
+        const { getProjects } = await import("@/lib/project-store");
+        const existingProjects = await getProjects(userId);
+        const newProjects = generateProjectsFromRoadmap(userId, newRoadmap.nodes, existingProjects);
         await saveProjects(userId, newProjects);
       }
     }

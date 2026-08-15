@@ -1,40 +1,35 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  jsonb,
-  boolean,
-  integer,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, uuid, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./users";
-
-/**
- * Learning-specific tables — purposely decoupled from auth `users`.
- * This lets us iterate on mentorship features without migrating auth.
- */
 
 export const learningProfiles = pgTable("learning_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("userId")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" })
-    .unique(),
-  // What the user wants to become (e.g., "production-ready backend engineer")
-  goal: text("goal"),
-  // Self-assessed level
-  currentLevel: text("currentLevel"), // beginner | intermediate | advanced
-  knownSkills: jsonb("knownSkills").$type<string[]>().default([]),
+    .references(() => users.id, { onDelete: "cascade" }),
+  goal: text("goal").notNull(),
+  currentLevel: text("currentLevel").notNull(), // beginner | intermediate | advanced
+  knownSkills: jsonb("knownSkills").$type<string[]>().default([]).notNull(),
   weakSkills: jsonb("weakSkills").$type<string[]>().default([]),
-  completedTopics: jsonb("completedTopics").$type<string[]>().default([]),
-  activeProjects: jsonb("activeProjects").$type<string[]>().default([]),
   preferences: jsonb("preferences").$type<{
-    learningStyle?: string;
+    format?: "docs" | "videos" | "projects" | "mixed";
+    learningStyle?: "hands-on" | "visual" | "reading" | "mixed";
     weeklyHours?: number;
-    format?: string;
+    dailyGoalMinutes?: number;
   }>(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const mentors = pgTable("mentors", {
+  id: text("id").primaryKey(), // "backend", "ai-engineer", "frontend", etc.
+  name: text("name").notNull(),
+  role: text("role").notNull(),
+  persona: text("persona").notNull(),
+  systemPrompt: text("systemPrompt").notNull(),
+  specialties: jsonb("specialties").$type<string[]>().default([]).notNull(),
+  avatarUrl: text("avatarUrl"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const roadmaps = pgTable("roadmaps", {
@@ -44,8 +39,6 @@ export const roadmaps = pgTable("roadmaps", {
     .references(() => users.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   description: text("description"),
-  // Full roadmap as structured JSON so the UI can render without extra joins.
-  // Nodes are also persisted individually in roadmap_nodes for querying/progress.
   status: text("status").default("active"), // active | archived
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
@@ -115,11 +108,24 @@ export const projects = pgTable("projects", {
     requirements?: string[];
     stretchGoals?: string[];
     commonMistakes?: string[];
+    isCapstone?: boolean;
+    goalAlignment?: string;
+    stack?: string[];
+    features?: string[];
+    currentWeek?: number;
+    unlockedWeeks?: number[];
+    tasks?: Array<{
+      id: string;
+      week: number;
+      title: string;
+      completed: boolean;
+    }>;
+    roadmapNodeId?: string;
+    week?: number;
   }>(),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
-
 
 export const userMemories = pgTable("user_memories", {
   id: uuid("id").defaultRandom().primaryKey(),
