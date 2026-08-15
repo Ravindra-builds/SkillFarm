@@ -27,6 +27,14 @@ import {
   Briefcase,
   Code2,
   Search,
+  ShieldCheck,
+  CreditCard,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Flame,
+  Clock,
 } from "lucide-react";
 import type { MemoryItem } from "@/lib/memory/mem0";
 import {
@@ -44,19 +52,22 @@ type SettingsProps = {
 };
 
 export function SettingsView({ user, authConfigured }: SettingsProps) {
+  const [activeTab, setActiveTab] = useState<string>("models");
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loadingMemories, setLoadingMemories] = useState(true);
   const [newMemory, setNewMemory] = useState("");
   const [addingMemory, setAddingMemory] = useState(false);
-  const [memoryFilter, setMemoryFilter] = useState<string>("all");
+  const [memoryFilter, setMemoryFilter] = useState<string>("recent");
   const [memorySearch, setMemorySearch] = useState<string>("");
+  const [showAllMemories, setShowAllMemories] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // LLM Setup state
   const [llmPref, setLlmPref] = useState<LlmPreference>(() => getStoredLlmPreference());
   const [savedLlmNotice, setSavedLlmNotice] = useState(false);
 
-  async function loadMemories() {
+  async function refreshMemories() {
     setLoadingMemories(true);
     try {
       const res = await fetch("/api/settings/memory");
@@ -65,14 +76,36 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
         setMemories(data.memories ?? []);
       }
     } catch (e) {
-      console.error("Failed to load memories", e);
+      console.error("Failed to refresh memories", e);
     } finally {
       setLoadingMemories(false);
     }
   }
 
   useEffect(() => {
-    loadMemories();
+    let ignore = false;
+    async function fetchInitial() {
+      try {
+        const res = await fetch("/api/settings/memory");
+        if (res.ok) {
+          const data = await res.json();
+          if (!ignore) {
+            setMemories(data.memories ?? []);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load initial memories", e);
+      } finally {
+        if (!ignore) {
+          setLoadingMemories(false);
+        }
+      }
+    }
+    fetchInitial();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   async function handleAddMemory(e: React.FormEvent) {
@@ -89,7 +122,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
       if (res.ok) {
         setNewMemory("");
         setMessage({ type: "success", text: "Memory added successfully to long-term store!" });
-        loadMemories();
+        refreshMemories();
       } else {
         throw new Error("Failed to add memory");
       }
@@ -123,6 +156,13 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+  }
+
+  function handleCopyUserId() {
+    const id = user?.email ?? "guest-preview-user";
+    navigator.clipboard?.writeText(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
   }
 
   function handleToggleModel(modelId: string) {
@@ -191,10 +231,16 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
   const openAiModels = ALL_MODELS.filter((m) => m.provider === "openai");
   const anthropicModels = ALL_MODELS.filter((m) => m.provider === "anthropic");
 
-  // Filter memories
-  const filteredMemories = memories.filter((m) => {
+  // Filter & sort memories by recent creation date
+  const sortedMemories = [...memories].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const filteredMemories = sortedMemories.filter((m) => {
     const matchesCategory =
-      memoryFilter === "all"
+      memoryFilter === "recent"
         ? true
         : memoryFilter === "resume"
         ? m.category?.startsWith("resume")
@@ -208,24 +254,78 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
     return matchesCategory && matchesSearch;
   });
 
+  // Strict Capping: If "recent" is active, strictly display top 10 most recently added items
+  const maxDisplayLimit =
+    memoryFilter === "recent"
+      ? 10
+      : memoryFilter === "resume_summary"
+      ? 3
+      : memoryFilter === "skills"
+      ? 2
+      : memoryFilter === "projects"
+      ? 5
+      : memoryFilter === "experience"
+      ? 5
+      : memoryFilter === "interests"
+      ? 3
+      : 5;
+
+  const displayedMemories =
+    memoryFilter === "recent"
+      ? filteredMemories.slice(0, 10)
+      : showAllMemories
+      ? filteredMemories
+      : filteredMemories.slice(0, maxDisplayLimit);
+
+  const hasHiddenMemories = memoryFilter !== "recent" && filteredMemories.length > maxDisplayLimit;
+
+  // Tab definitions
+  const tabsList = [
+    {
+      id: "models",
+      title: "AI & Models",
+      badge: `${llmPref.enabledModels.length} Active`,
+      icon: Cpu,
+    },
+    {
+      id: "resume",
+      title: "Resume Context",
+      badge: "PDF / TXT",
+      icon: FileText,
+    },
+    {
+      id: "memories",
+      title: "AI Memory",
+      badge: `${memories.length} Facts`,
+      icon: Brain,
+    },
+    {
+      id: "account",
+      title: "Account & Plan",
+      badge: "Free Tier",
+      icon: User,
+    },
+  ];
+
   return (
-    <div className="space-y-8 max-w-5xl mx-auto py-2">
-      <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Settings className="h-5 w-5 text-violet-600" /> Settings & Context Management
+    <div className="space-y-6 max-w-5xl mx-auto py-2 px-1 sm:px-4">
+      {/* Header */}
+      <div className="space-y-1">
+        <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+          <Settings className="h-5 w-5 text-violet-600 shrink-0" /> Settings & Configuration
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Configure AI LLM models, provider credentials, personal profile, plan limits, and resume memory.
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          Manage AI LLM models, resume background, Mem0 long-term memory, and subscription quotas.
         </p>
       </div>
 
       {message && (
-        <Card className={message.type === "success" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}>
-          <CardContent className="p-4 flex items-center gap-2 text-sm font-medium">
+        <Card className={`rounded-xl ${message.type === "success" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}>
+          <CardContent className="p-3.5 flex items-center gap-2 text-xs sm:text-sm font-medium">
             {message.type === "success" ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             ) : (
-              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
             )}
             <span>{message.text}</span>
           </CardContent>
@@ -233,53 +333,102 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
       )}
 
       {savedLlmNotice && (
-        <div className="fixed bottom-6 right-6 z-50 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur-sm p-4 shadow-xl flex items-center gap-3 text-sm font-medium animate-in fade-in slide-in-from-bottom-4 duration-200">
-          <div className="h-7 w-7 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center">
-            <Check className="h-4 w-4" />
+        <div className="fixed bottom-4 right-4 z-50 rounded-2xl border border-emerald-500/40 bg-card/95 backdrop-blur-sm p-3.5 shadow-xl flex items-center gap-2.5 text-xs font-medium animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="h-6 w-6 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0">
+            <Check className="h-3.5 w-3.5" />
           </div>
           <div>
-            <p className="font-semibold text-xs text-foreground">Preferences Saved</p>
+            <p className="font-semibold text-foreground">Preferences Saved</p>
             <p className="text-[11px] text-muted-foreground">Model configuration updated for chat & mentors.</p>
           </div>
         </div>
       )}
 
-      <Tabs defaultValue="models" className="space-y-6">
-        <TabsList className="bg-muted/40 p-1 rounded-2xl border flex-wrap h-auto gap-1">
-          <TabsTrigger value="models" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
-            <Cpu className="h-3.5 w-3.5" /> AI & Models
-          </TabsTrigger>
-          <TabsTrigger value="resume" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
-            <FileText className="h-3.5 w-3.5" /> Resume Context
-          </TabsTrigger>
-          <TabsTrigger value="memories" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
-            <Brain className="h-3.5 w-3.5" /> Mem0 Memories ({memories.length})
-          </TabsTrigger>
-          <TabsTrigger value="account" className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3">
-            <User className="h-3.5 w-3.5" /> Account & Plan
-          </TabsTrigger>
+      {/* Tabs Layout */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+        {/* Mobile: Compact 2 rows x 2 columns badge cards (< sm) */}
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          {tabsList.map((tab) => {
+            const isSelected = activeTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between cursor-pointer ${
+                  isSelected
+                    ? "border-violet-600 bg-violet-600 text-white shadow-sm ring-2 ring-violet-500/20"
+                    : "border-border/70 bg-card hover:bg-muted/40 text-card-foreground shadow-2xs"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-1 w-full">
+                  <div
+                    className={`h-6 w-6 rounded-lg flex items-center justify-center ${
+                      isSelected ? "bg-white/20 text-white" : "bg-muted text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                  </div>
+                  <span
+                    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-muted/80 text-muted-foreground"
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                </div>
+
+                <div className="mt-2">
+                  <p className={`text-xs font-semibold tracking-tight ${isSelected ? "text-white" : "text-foreground"}`}>
+                    {tab.title}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop: Standard sleek 1-row TabsList (>= sm) */}
+        <TabsList className="hidden sm:flex bg-muted/40 p-1 rounded-2xl border w-full h-auto gap-1">
+          {tabsList.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="rounded-xl text-xs flex items-center gap-1.5 py-2 px-3 flex-1 justify-center cursor-pointer"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{tab.title}</span>
+                <span className="text-[10px] text-muted-foreground ml-1">({tab.badge})</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         {/* Tab 0: AI Providers & Model Selection */}
-        <TabsContent value="models" className="space-y-6">
+        <TabsContent value="models" className="space-y-5">
           {/* Provider Selection Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Google Gemini Card */}
             <div
-              className={`rounded-2xl border p-4 transition-all ${
+              className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
                 llmPref.activeProviders.includes("gemini")
-                  ? "border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 shadow-sm"
+                  ? "border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10 shadow-2xs"
                   : "border-border/60 bg-card/40 opacity-70"
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm">Google Gemini</h3>
-                    <p className="text-[11px] text-muted-foreground">Ultra fast multimodal models</p>
+                    <h3 className="font-semibold text-xs sm:text-sm">Google Gemini</h3>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground">Ultra-fast multimodal models</p>
                   </div>
                 </div>
                 <button
@@ -295,12 +444,12 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </button>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px]">
-                <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-600">
-                  {geminiModels.length} models available
+                <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20">
+                  {geminiModels.length} models
                 </Badge>
                 {llmPref.provider === "gemini" && (
                   <span className="text-[10px] text-blue-600 font-semibold flex items-center gap-0.5">
-                    <Check className="h-3 w-3" /> Default Provider
+                    <Check className="h-3 w-3" /> Default
                   </span>
                 )}
               </div>
@@ -308,20 +457,20 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
             {/* OpenAI Card */}
             <div
-              className={`rounded-2xl border p-4 transition-all ${
+              className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
                 llmPref.activeProviders.includes("openai")
-                  ? "border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-sm"
+                  ? "border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-2xs"
                   : "border-border/60 bg-card/40 opacity-70"
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
                     <Zap className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm">OpenAI</h3>
-                    <p className="text-[11px] text-muted-foreground">GPT-4o & Omni models</p>
+                    <h3 className="font-semibold text-xs sm:text-sm">OpenAI</h3>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground">GPT-4o & Omni models</p>
                   </div>
                 </div>
                 <button
@@ -337,12 +486,12 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </button>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px]">
-                <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600">
-                  {openAiModels.length} models available
+                <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                  {openAiModels.length} models
                 </Badge>
                 {llmPref.provider === "openai" && (
                   <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                    <Check className="h-3 w-3" /> Default Provider
+                    <Check className="h-3 w-3" /> Default
                   </span>
                 )}
               </div>
@@ -350,20 +499,20 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
             {/* Anthropic Claude Card */}
             <div
-              className={`rounded-2xl border p-4 transition-all ${
+              className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
                 llmPref.activeProviders.includes("anthropic")
-                  ? "border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 shadow-sm"
+                  ? "border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 shadow-2xs"
                   : "border-border/60 bg-card/40 opacity-70"
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
                     <Brain className="h-4 w-4" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm">Anthropic Claude</h3>
-                    <p className="text-[11px] text-muted-foreground">Sonnet 3.5 & deep reasoning</p>
+                    <h3 className="font-semibold text-xs sm:text-sm">Anthropic Claude</h3>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground">Sonnet 3.5 & reasoning</p>
                   </div>
                 </div>
                 <button
@@ -379,12 +528,12 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </button>
               </div>
               <div className="mt-3 flex items-center justify-between text-[11px]">
-                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600">
-                  {anthropicModels.length} models available
+                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  {anthropicModels.length} models
                 </Badge>
                 {llmPref.provider === "anthropic" && (
                   <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-0.5">
-                    <Check className="h-3 w-3" /> Default Provider
+                    <Check className="h-3 w-3" /> Default
                   </span>
                 )}
               </div>
@@ -392,15 +541,15 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
           </div>
 
           {/* Model Catalog Selection */}
-          <Card className="rounded-2xl">
-            <CardHeader className="pb-3">
+          <Card className="rounded-2xl border border-border/80">
+            <CardHeader className="p-4 sm:p-6 pb-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-base flex items-center gap-2">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
                     <Cpu className="h-4 w-4 text-violet-600" /> Active Model Catalog for Chat
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
-                    Select which models should appear in the Chat model selector dropdown. Click &ldquo;Set Default&rdquo; to make a model the primary default.
+                    Toggle which models appear in the Chat input dropdown. Click &ldquo;Set Default&rdquo; to choose your primary model.
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="text-xs">
@@ -408,11 +557,11 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-4 sm:p-6 space-y-6">
               {/* Gemini Models Section */}
               {llmPref.activeProviders.includes("gemini") && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 uppercase tracking-wider">
                     <Sparkles className="h-3.5 w-3.5" /> Google Gemini Models
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -422,13 +571,13 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                       return (
                         <div
                           key={model.id}
-                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
                             isEnabled
                               ? "border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10"
                               : "border-border/60 bg-card opacity-60"
                           }`}
                         >
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="font-semibold text-xs text-foreground">{model.name}</span>
                               <input
@@ -439,22 +588,22 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                                 aria-label={`Enable ${model.name}`}
                               />
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
+                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
                           </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
                             {isDefault ? (
-                              <Badge className="bg-blue-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                              <Badge className="bg-blue-600 text-white text-[10px] py-0 px-2">Default</Badge>
                             ) : (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
                               >
-                                Set as default
+                                Set default
                               </Button>
                             )}
-                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
+                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
                           </div>
                         </div>
                       );
@@ -465,8 +614,8 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
               {/* OpenAI Models Section */}
               {llmPref.activeProviders.includes("openai") && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 uppercase tracking-wider">
                     <Zap className="h-3.5 w-3.5" /> OpenAI Models
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -476,13 +625,13 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                       return (
                         <div
                           key={model.id}
-                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
                             isEnabled
                               ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10"
                               : "border-border/60 bg-card opacity-60"
                           }`}
                         >
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="font-semibold text-xs text-foreground">{model.name}</span>
                               <input
@@ -493,22 +642,22 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                                 aria-label={`Enable ${model.name}`}
                               />
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
+                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
                           </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
                             {isDefault ? (
-                              <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                              <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">Default</Badge>
                             ) : (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
                               >
-                                Set as default
+                                Set default
                               </Button>
                             )}
-                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
+                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
                           </div>
                         </div>
                       );
@@ -519,8 +668,8 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
               {/* Anthropic Models Section */}
               {llmPref.activeProviders.includes("anthropic") && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 uppercase tracking-wider">
                     <Brain className="h-3.5 w-3.5" /> Anthropic Claude Models
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -530,13 +679,13 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                       return (
                         <div
                           key={model.id}
-                          className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
                             isEnabled
                               ? "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10"
                               : "border-border/60 bg-card opacity-60"
                           }`}
                         >
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="font-semibold text-xs text-foreground">{model.name}</span>
                               <input
@@ -547,22 +696,22 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                                 aria-label={`Enable ${model.name}`}
                               />
                             </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">{model.description}</p>
+                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
                           </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between">
+                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
                             {isDefault ? (
-                              <Badge className="bg-amber-600 text-white text-[10px] py-0 px-2">Default Model</Badge>
+                              <Badge className="bg-amber-600 text-white text-[10px] py-0 px-2">Default</Badge>
                             ) : (
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
                               >
-                                Set as default
+                                Set default
                               </Button>
                             )}
-                            <span className="text-[10px] font-mono text-muted-foreground">{model.id}</span>
+                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
                           </div>
                         </div>
                       );
@@ -576,75 +725,82 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
         {/* Tab 1: Resume Context Extractor */}
         <TabsContent value="resume" className="space-y-4">
-          <ResumeUploader onProfileExtracted={() => loadMemories()} />
+          <ResumeUploader onProfileExtracted={() => refreshMemories()} />
         </TabsContent>
 
         {/* Tab 2: Mem0 Memory Manager */}
         <TabsContent value="memories" className="space-y-4">
-          <Card className="rounded-2xl">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 flex-wrap gap-3">
+          <Card className="rounded-2xl border border-border/80">
+            <CardHeader className="p-4 sm:p-6 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-violet-600" /> Mem0 Long-Term Memory Store
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Brain className="h-4 w-4 text-violet-600 shrink-0" /> Mem0 Long-Term Memory Store
                 </CardTitle>
-                <CardDescription className="text-xs">
+                <CardDescription className="text-xs mt-0.5">
                   Key background facts, skills, work history, and engineering preferences stored across sessions.
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" className="text-xs h-8 gap-1" onClick={loadMemories} disabled={loadingMemories}>
-                  <RefreshCw className={`h-3.5 w-3.5 ${loadingMemories ? "animate-spin" : ""}`} /> Refresh
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer" onClick={refreshMemories} disabled={loadingMemories}>
+                  <RefreshCw className={`h-3 w-3 ${loadingMemories ? "animate-spin" : ""}`} /> Refresh
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs h-8 gap-1" onClick={handleExportMemories} disabled={memories.length === 0}>
-                  <Download className="h-3.5 w-3.5" /> Export JSON
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer" onClick={handleExportMemories} disabled={memories.length === 0}>
+                  <Download className="h-3 w-3" /> Export JSON
                 </Button>
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 sm:p-6 space-y-4">
               {/* Add Custom Fact */}
-              <form onSubmit={handleAddMemory} className="flex gap-2">
+              <form onSubmit={handleAddMemory} className="flex flex-col sm:flex-row gap-2">
                 <Input
                   placeholder="Add a custom long-term fact (e.g. 'Prefer microservices with Go and PostgreSQL')"
                   value={newMemory}
                   onChange={(e) => setNewMemory(e.target.value)}
-                  className="text-xs h-9 rounded-xl"
+                  className="text-xs h-9 rounded-xl flex-1"
                 />
-                <Button size="sm" type="submit" className="text-xs h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 shrink-0" disabled={addingMemory || !newMemory.trim()}>
+                <Button size="sm" type="submit" className="text-xs h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 shrink-0 cursor-pointer" disabled={addingMemory || !newMemory.trim()}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Fact
                 </Button>
               </form>
 
-              {/* Filters & Search */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+              {/* Filters & Search with 'recent' as top 10 */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
                 {/* Category Chips */}
                 <div className="flex flex-wrap gap-1">
                   {[
-                    { id: "all", label: "All" },
-                    { id: "resume_summary", label: "Summary" },
-                    { id: "skills", label: "Skills" },
-                    { id: "projects", label: "Projects" },
-                    { id: "experience", label: "Experience" },
-                    { id: "interests", label: "Interests" },
-                    { id: "user-defined", label: "Custom" },
-                  ].map((cat) => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => setMemoryFilter(cat.id)}
-                      className={`text-[11px] rounded-lg px-2.5 py-1 font-medium transition-all ${
-                        memoryFilter === cat.id
-                          ? "bg-violet-600 text-white"
-                          : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
+                    { id: "recent", label: "Recent (Top 10)", icon: Clock },
+                    { id: "resume_summary", label: "Summary", icon: FileText },
+                    { id: "skills", label: "Skills", icon: Code2 },
+                    { id: "projects", label: "Projects", icon: FolderGit2 },
+                    { id: "experience", label: "Experience", icon: Briefcase },
+                    { id: "interests", label: "Interests", icon: Sparkles },
+                    { id: "user-defined", label: "Custom", icon: Brain },
+                  ].map((cat) => {
+                    const ChipIcon = cat.icon;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setMemoryFilter(cat.id);
+                          setShowAllMemories(false);
+                        }}
+                        className={`text-[11px] rounded-lg px-2.5 py-1 font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                          memoryFilter === cat.id
+                            ? "bg-violet-600 text-white shadow-2xs"
+                            : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <ChipIcon className="h-3 w-3" />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Search Bar */}
-                <div className="relative w-full sm:w-48">
+                <div className="relative w-full sm:w-56">
                   <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                   <Input
                     placeholder="Search memories..."
@@ -670,14 +826,14 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {filteredMemories.map((m) => {
+                  {displayedMemories.map((m) => {
                     const cat = m.category || "general";
                     const isResume = cat.includes("resume") || cat === "skills" || cat === "projects" || cat === "experience";
 
                     return (
                       <div
                         key={m.id}
-                        className="rounded-xl border bg-card/60 p-3.5 text-xs flex items-start justify-between gap-3 hover:border-violet-500/30 transition-colors shadow-2xs"
+                        className="rounded-xl border bg-card/60 p-3 sm:p-3.5 text-xs flex items-start justify-between gap-2.5 hover:border-violet-500/30 transition-colors shadow-2xs overflow-hidden"
                       >
                         <div className="space-y-1.5 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -713,17 +869,17 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                               <span className="text-[10px] text-emerald-600 font-medium">● AI Synced</span>
                             )}
                           </div>
-                          <p className="text-xs text-foreground leading-relaxed font-normal">{m.memory}</p>
+                          <p className="text-xs text-foreground leading-relaxed font-normal break-words">{m.memory}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                          <span className="text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                          <span className="text-[10px] text-muted-foreground hidden sm:inline">
                             {m.createdAt ? new Date(m.createdAt).toLocaleDateString() : "Saved"}
                           </span>
                           <button
                             type="button"
                             onClick={() => handleDeleteMemory(m.id)}
-                            className="rounded-lg p-1 text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                            className="rounded-lg p-1 text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer"
                             title="Delete memory"
                             aria-label="Delete memory"
                           >
@@ -733,6 +889,33 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                       </div>
                     );
                   })}
+
+                  {/* Clean Capping Footer */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-2 border-t border-border/40">
+                    <span>
+                      {memoryFilter === "recent"
+                        ? `Showing top ${displayedMemories.length} recently added memories`
+                        : `Showing top ${displayedMemories.length} of ${filteredMemories.length} memories`}
+                    </span>
+                    {hasHiddenMemories && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllMemories(!showAllMemories)}
+                        className="h-7 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500 gap-1 cursor-pointer"
+                      >
+                        {showAllMemories ? (
+                          <>
+                            Show Less <ChevronUp className="h-3 w-3" />
+                          </>
+                        ) : (
+                          <>
+                            View All ({filteredMemories.length}) <ChevronDown className="h-3 w-3" />
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -740,43 +923,143 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
         </TabsContent>
 
         {/* Tab 3: Account & Plan Tier */}
-        <TabsContent value="account" className="space-y-4">
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4 text-violet-600" /> Account Profile & Plan Limits
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4 rounded-xl border p-4 bg-muted/30">
-                {user?.image ? (
-                  <img src={user.image} alt="User" className="h-12 w-12 rounded-full object-cover ring-2 ring-violet-500/20" />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-violet-600 text-white flex items-center justify-center font-bold text-lg">
-                    {user?.name?.[0] ?? user?.email?.[0]?.toUpperCase() ?? "G"}
+        <TabsContent value="account" className="space-y-5">
+          {/* User Profile Card */}
+          <Card className="rounded-2xl border border-border/80 overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 pb-4 bg-muted/20 border-b border-border/40">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  {user?.image ? (
+                    <img src={user.image} alt="User" className="h-12 w-12 rounded-2xl object-cover ring-2 ring-violet-500/30 shrink-0" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-2xl bg-violet-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+                      {user?.name?.[0] ?? user?.email?.[0]?.toUpperCase() ?? "D"}
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-sm sm:text-base text-foreground">{user?.name ?? "Developer User"}</h3>
+                      <Badge className="text-[10px] bg-emerald-600 text-white">Free Developer Tier</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{user?.email ?? "developer@skillfarm.local"}</p>
                   </div>
-                )}
-                <div>
-                  <p className="font-semibold text-sm">{user?.name ?? "Guest Preview User"}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email ?? "guest@skillfarm.local"}</p>
-                  <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px] bg-violet-500/10 text-violet-600 border-violet-500/20">
-                      {authConfigured ? "Authenticated" : "Guest Mode"}
-                    </Badge>
-                    <Badge className="text-[10px] bg-emerald-600 text-white">Free Plan Tier</Badge>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyUserId}
+                  className="h-8 px-3 rounded-xl text-xs gap-1.5 border-border/80 cursor-pointer"
+                >
+                  {copiedId ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                  <span>{copiedId ? "Copied ID" : "Copy User ID"}</span>
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-4 sm:p-6 space-y-6">
+              {/* Account Meta Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Auth Status
+                  </span>
+                  <p className="font-semibold text-xs sm:text-sm text-foreground">
+                    {authConfigured ? "Authenticated Session" : "Guest Sandbox"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5 text-violet-500" /> Active Plan
+                  </span>
+                  <p className="font-semibold text-xs sm:text-sm text-foreground">Developer (Free)</p>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
+                  <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
+                    <Brain className="h-3.5 w-3.5 text-amber-500" /> Mem0 Memories
+                  </span>
+                  <p className="font-semibold text-xs sm:text-sm text-foreground">{memories.length} Active Records</p>
+                </div>
+              </div>
+
+              {/* Subscription Usage & Quotas */}
+              <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
+                    <Flame className="h-4 w-4 text-violet-600" /> Daily Feature Quotas
+                  </h4>
+                  <span className="text-[11px] text-muted-foreground">Rolling 24-hour cycle</span>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Quota 1 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-foreground">Mentor Chat Messages</span>
+                      <span className="text-muted-foreground font-mono">Unlimited (Dev Mode)</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-violet-600 w-[12%]" />
+                    </div>
+                  </div>
+
+                  {/* Quota 2 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-foreground">Deep Web Research Runs</span>
+                      <span className="text-muted-foreground font-mono">Included</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-blue-600 w-[8%]" />
+                    </div>
+                  </div>
+
+                  {/* Quota 3 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-foreground">Multi-Mentor Parallel Synthesis</span>
+                      <span className="text-emerald-600 font-medium">Active</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-emerald-600 w-[100%]" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2 rounded-xl border p-4 bg-card">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium">Daily Mentor Messages Usage</span>
-                  <span className="text-muted-foreground">3 / 20 messages used</span>
+              {/* Plan Comparison Table */}
+              <div className="space-y-3">
+                <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Layers className="h-4 w-4 text-violet-600" /> Plan Features & Entitlements
+                </h4>
+                <div className="rounded-xl border border-border/60 overflow-hidden divide-y divide-border/40 text-xs">
+                  <div className="p-3 bg-muted/20 flex items-center justify-between font-semibold">
+                    <span>Feature</span>
+                    <span>Free vs Pro</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-muted-foreground">AI Engineering Mentors</span>
+                    <span className="font-medium text-foreground">All 6 Specialists (Full Access)</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-muted-foreground">Multi-Mentor Parallel Synthesis</span>
+                    <span className="font-medium text-foreground">Included</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-muted-foreground">Mem0 Long-Term Memory</span>
+                    <span className="font-medium text-foreground">PostgreSQL & Semantic Sync</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-muted-foreground">Resume PDF & Text Extraction</span>
+                    <span className="font-medium text-foreground">Included (1MB limit)</span>
+                  </div>
+                  <div className="p-3 flex items-center justify-between">
+                    <span className="text-muted-foreground">Interactive Roadmap & Graph</span>
+                    <span className="font-medium text-foreground">Dynamic & Real-time</span>
+                  </div>
                 </div>
-                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full bg-violet-600 w-[15%]" />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">Free tier includes 20 messages/day. Upgrade to Pro for unlimited messages & research.</p>
               </div>
             </CardContent>
           </Card>
