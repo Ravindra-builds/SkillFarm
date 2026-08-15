@@ -1,20 +1,18 @@
 /**
- * Rate Limiter Engine — Phase 12
+ * Rate Limiter Engine
  *
  * Protects API routes from abuse using Upstash Redis sliding window counters
  * with in-memory sliding window fallback when Redis is unconfigured.
- *
- * ⚠️ The in-memory fallback is NOT effective in serverless/multi-worker environments
- * (Vercel, Lambda) because each worker has its own counter. For production rate
- * limiting, configure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.
  */
 import { getRedis } from "@/lib/redis";
+import { getRateLimitRule, RateLimitAction, RateLimitRule } from "@/config/rate-limits";
 
-type RateLimitResult = {
+export type RateLimitResult = {
   success: boolean;
   limit: number;
   remaining: number;
   resetSec: number;
+  description?: string;
 };
 
 type WindowEntry = {
@@ -74,5 +72,20 @@ export async function checkRateLimit(
     limit,
     remaining,
     resetSec,
+  };
+}
+
+/**
+ * Checks rate limit for a specific configured action (e.g. "roadmap", "resume", "chat", "research").
+ */
+export async function checkFeatureRateLimit(
+  userId: string,
+  action: RateLimitAction
+): Promise<RateLimitResult> {
+  const rule: RateLimitRule = getRateLimitRule(action);
+  const result = await checkRateLimit(`${action}:${userId}`, rule.limit, rule.windowSec);
+  return {
+    ...result,
+    description: rule.description,
   };
 }

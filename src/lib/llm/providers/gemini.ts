@@ -42,6 +42,10 @@ export const geminiProvider: LlmProviderConfig = {
     synthesizer: isValidGeminiModel(process.env.SYNTHESIZER_MODEL)
       ? process.env.SYNTHESIZER_MODEL!
       : defaultGeminiModel,
+    roadmap: isValidGeminiModel(process.env.ROADMAP_LLM_MODEL)
+      ? process.env.ROADMAP_LLM_MODEL!
+      : defaultGeminiModel,
+    extractor: defaultGeminiModel,
   },
 
   availableModels: GEMINI_MODELS.map((m) => ({
@@ -60,6 +64,7 @@ export const geminiProvider: LlmProviderConfig = {
 
     const targetModel =
       validExplicitModel ||
+      (role === "roadmap" && isValidGeminiModel(process.env.ROADMAP_LLM_MODEL) && process.env.ROADMAP_LLM_MODEL) ||
       (role === "router" && isValidGeminiModel(process.env.ROUTER_MODEL) && process.env.ROUTER_MODEL) ||
       (role === "synthesizer" && isValidGeminiModel(process.env.SYNTHESIZER_MODEL) && process.env.SYNTHESIZER_MODEL) ||
       (isValidGeminiModel(process.env.GEMINI_MODEL) && process.env.GEMINI_MODEL) ||

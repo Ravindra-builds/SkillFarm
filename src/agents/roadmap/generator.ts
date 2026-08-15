@@ -1,18 +1,50 @@
 /**
  * Personalized Roadmap Generator
  *
- * Dynamically constructs a structured learning roadmap based on the user's
- * learning profile (goal, current level, known skills, and weekly hours).
+ * Dynamically constructs a structured, week-by-week learning roadmap based on the user's
+ * learning profile (goal, current level, known skills, weekly hours, style) and Mem0 long-term memory.
+ * Uses LLM structured output (`generateObject`) when active, with deterministic fallback for mock mode.
  */
 
+import { generateObject } from "ai";
+import { z } from "zod";
+import { randomUUID } from "crypto";
 import type { LearningProfileInput } from "@/lib/learning-profile";
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
-import { randomUUID } from "crypto";
+import { getLlmModel, isLlmConfigured } from "@/lib/llm";
+import { isMockModeForced } from "@/lib/env";
+import { getMemories } from "@/lib/memory/mem0";
 
 type GenerateOpts = {
   userId: string;
   profile: LearningProfileInput;
+  provider?: string;
+  model?: string;
 };
+
+// Zod Schema for structured LLM generation
+const roadmapSchema = z.object({
+  title: z.string().describe("Concise title of the customized engineering roadmap"),
+  description: z.string().describe("Two-sentence overview of the learning journey tailored to the user's pace"),
+  totalWeeks: z.number().int().min(2).max(12).describe("Total number of structured weeks"),
+  nodes: z.array(
+    z.object({
+      slug: z.string().describe("URL-friendly unique identifier like 'docker-multi-stage'"),
+      title: z.string().describe("Clear topic or milestone title"),
+      description: z.string().describe("Specific concepts, tools, and technical focus covered"),
+      whyItMatters: z.string().describe("Real-world production rationale and engineering trade-offs"),
+      difficulty: z.enum(["beginner", "intermediate", "advanced"]),
+      prerequisites: z.array(z.string()).default([]),
+      relatedConcepts: z.array(z.string()).default([]),
+      mentorId: z.enum(["backend", "frontend", "ai-engineer", "devops", "security", "system-design"]),
+      week: z.number().int().min(1).max(12).describe("Week number (1, 2, 3...)"),
+      estimatedHours: z.number().min(1).max(30).describe("Estimated hours for this milestone based on weekly pace"),
+      practicalTask: z.string().describe("Concrete coding exercise or hands-on task"),
+      projectBrief: z.string().describe("Deliverable micro-project or verifiable artifact"),
+      commonMistakes: z.array(z.string()).default([]),
+    })
+  ).min(4).max(20),
+});
 
 const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> = {
   backend: [
@@ -28,6 +60,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Write a tiny HTTP server with only node:http and handle backpressure on a stream.",
       projectBrief: "CLI that streams a 100MB file with progress and proper error handling",
       commonMistakes: ["Blocking the event loop with sync fs", "Ignoring stream errors"],
+      week: 1,
+      estimatedHours: 4,
     },
     {
       slug: "http-rest",
@@ -41,6 +75,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Design a REST resource for /users with correct codes (201, 400, 404, 409).",
       projectBrief: "Spec a Todo API with OpenAPI and mock it",
       commonMistakes: ["200 for errors", "No validation"],
+      week: 1,
+      estimatedHours: 4,
     },
     {
       slug: "express-fastify",
@@ -54,6 +90,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Add Zod validation to POST /users and return flattened errors.",
       projectBrief: "Build a validated CRUD API with middleware logging",
       commonMistakes: ["Putting logic in route handlers", "No error middleware"],
+      week: 2,
+      estimatedHours: 5,
     },
     {
       slug: "postgres-drizzle",
@@ -67,6 +105,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Add a unique index on email and handle 409 correctly.",
       projectBrief: "Design a SaaS schema with users, orgs, and audit logs",
       commonMistakes: ["Missing indexes on FKs", "Giant transactions"],
+      week: 2,
+      estimatedHours: 6,
     },
     {
       slug: "auth-sessions-jwt",
@@ -80,6 +120,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Implement httpOnly refresh + short-lived access JWT with rotation.",
       projectBrief: "Auth service with login, refresh, and logout",
       commonMistakes: ["JWT in localStorage", "No refresh rotation", "No rate limiting"],
+      week: 3,
+      estimatedHours: 5,
     },
     {
       slug: "caching-redis",
@@ -93,6 +135,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Cache GET /users/:id with 60s TTL and invalidate on update.",
       projectBrief: "Rate-limited API with Redis (100 req/min)",
       commonMistakes: ["Caching everything", "No invalidation"],
+      week: 3,
+      estimatedHours: 5,
     },
     {
       slug: "testing-integration",
@@ -106,6 +150,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Write an integration test asserting 400 on bad POST payload.",
       projectBrief: "Add 80% coverage to your API with integration tests",
       commonMistakes: ["Only unit tests", "No integration for DB"],
+      week: 4,
+      estimatedHours: 4,
     },
     {
       slug: "docker-deploy",
@@ -119,6 +165,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Dockerize API with multi-stage build and health check.",
       projectBrief: "Deploy to Vercel + Neon with preview envs and logs",
       commonMistakes: ["Leaking secrets", "No health check", "No logs"],
+      week: 4,
+      estimatedHours: 6,
     },
     {
       slug: "system-design-saas",
@@ -132,6 +180,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Sketch your SaaS architecture: client → API → DB → cache, mark bottlenecks.",
       projectBrief: "Design review: is your SaaS production ready? Present to the team",
       commonMistakes: ["Premature microservices", "Caching everything"],
+      week: 5,
+      estimatedHours: 6,
     },
   ],
   frontend: [
@@ -147,6 +197,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Build a form with controlled inputs and Zod validation.",
       projectBrief: "Interactive UI component library with state management",
       commonMistakes: ["Prop drilling without context", "Effects for derived state"],
+      week: 1,
+      estimatedHours: 4,
     },
     {
       slug: "nextjs-app-router",
@@ -160,6 +212,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Convert a page to a Server Component with dynamic data fetching.",
       projectBrief: "Dashboard UI with Server Actions and optimistic UI updates",
       commonMistakes: ["Marking everything 'use client'", "No loading/error boundaries"],
+      week: 2,
+      estimatedHours: 6,
     },
     {
       slug: "tailwind-design-system",
@@ -173,6 +227,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Build a responsive dark-mode hero component using CSS variable tokens.",
       projectBrief: "Themeable component library with shadcn/ui primitives",
       commonMistakes: ["Hardcoded hex colors everywhere", "Ignoring mobile breakpoints"],
+      week: 2,
+      estimatedHours: 4,
     },
     {
       slug: "state-form-validation",
@@ -186,6 +242,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Build a multi-step onboarding wizard with full Zod error feedback.",
       projectBrief: "Production settings panel with client and server validation",
       commonMistakes: ["Client-only validation", "Uninformative error messages"],
+      week: 3,
+      estimatedHours: 5,
     },
     {
       slug: "frontend-performance",
@@ -199,6 +257,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Audit Next.js bundle sizes and implement dynamic imports for heavy dialogs.",
       projectBrief: "Optimize lighthouse score to 95+ on a media-heavy dashboard",
       commonMistakes: ["Unoptimized images", "Large third-party script bundles"],
+      week: 4,
+      estimatedHours: 6,
     },
   ],
   ai: [
@@ -214,6 +274,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Implement structured object generation with Vercel AI SDK generateObject.",
       projectBrief: "Structured resume analyzer producing JSON feedback and scores",
       commonMistakes: ["Free-text parsing without schema", "No error fallbacks"],
+      week: 1,
+      estimatedHours: 4,
     },
     {
       slug: "rag-vector-search",
@@ -227,6 +289,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Write a document chunking script and query vectors using cosine similarity.",
       projectBrief: "Knowledge base Q&A tool with source citations and confidence scores",
       commonMistakes: ["Naïve character chunking", "No similarity threshold filtering"],
+      week: 2,
+      estimatedHours: 6,
     },
     {
       slug: "ai-agents-tools",
@@ -240,6 +304,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Build an autonomous agent with 3 restricted tools and input safety validation.",
       projectBrief: "Autonomous web research agent with multi-step synthesis",
       commonMistakes: ["Infinite agent execution loops", "Unsanitized tool inputs"],
+      week: 3,
+      estimatedHours: 6,
     },
     {
       slug: "evals-observability",
@@ -253,6 +319,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Build an assertion pipeline testing LLM outputs against 10 test cases.",
       projectBrief: "LLM telemetry dashboard tracking latency, token cost, and quality scores",
       commonMistakes: ["No automated evals", "Ignoring token cost accumulation"],
+      week: 4,
+      estimatedHours: 5,
     },
   ],
   security: [
@@ -268,6 +336,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Audit an API route for prompt injection and SSRF vulnerabilities.",
       projectBrief: "Security scanner CLI that audits HTTP headers and input payloads",
       commonMistakes: ["Trusting client inputs", "Ignoring CORS policies"],
+      week: 1,
+      estimatedHours: 4,
     },
     {
       slug: "authz-secrets",
@@ -281,6 +351,8 @@ const TEMPLATES: Record<string, Omit<RoadmapNode, "id" | "status" | "order">[]> 
       practicalTask: "Implement sliding window rate limiting with Upstash Redis.",
       projectBrief: "Multi-tenant API auth system with audit logs and rate limits",
       commonMistakes: ["Hardcoded secrets in git", "Missing tenant isolation"],
+      week: 2,
+      estimatedHours: 5,
     },
   ],
 };
@@ -293,13 +365,15 @@ function pickTemplate(goal: string): typeof TEMPLATES.backend {
   return TEMPLATES.backend;
 }
 
-export function generateRoadmap(opts: GenerateOpts): Roadmap {
+/**
+ * Deterministic template-based fallback generator for offline or mock mode.
+ */
+export function generateStaticRoadmap(opts: GenerateOpts): Roadmap {
   const { userId, profile } = opts;
   const template = pickTemplate(profile.goal);
   const known = profile.knownSkills.map((s) => s.toLowerCase().trim());
 
   const rawNodes: RoadmapNode[] = template.map((t, idx) => {
-    // Check if user already knows this topic (or any related concept)
     const matchesKnown = known.some((k) =>
       k.length > 1 && (
         t.title.toLowerCase().includes(k) ||
@@ -327,10 +401,12 @@ export function generateRoadmap(opts: GenerateOpts): Roadmap {
       practicalTask: t.practicalTask,
       projectBrief: t.projectBrief,
       commonMistakes: t.commonMistakes,
+      week: t.week ?? Math.floor(idx / 2) + 1,
+      estimatedHours: t.estimatedHours ?? 4,
     };
   });
 
-  // Find the first non-completed node and set it to 'current'
+  // Find first uncompleted node
   const firstUncompletedIdx = rawNodes.findIndex((n) => n.status !== "completed");
   if (firstUncompletedIdx !== -1) {
     rawNodes[firstUncompletedIdx].status = "current";
@@ -338,7 +414,6 @@ export function generateRoadmap(opts: GenerateOpts): Roadmap {
       rawNodes[firstUncompletedIdx + 1].status = "next";
     }
   } else if (rawNodes.length > 0) {
-    // All completed? Set last node as current for revision
     rawNodes[rawNodes.length - 1].status = "current";
   }
 
@@ -353,4 +428,160 @@ export function generateRoadmap(opts: GenerateOpts): Roadmap {
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+}
+
+/**
+ * Dynamic LLM-Powered Roadmap Generator
+ * Batches learning curriculum into consecutive weeks based on user pace and background.
+ */
+export async function generateDynamicRoadmap(opts: GenerateOpts): Promise<Roadmap> {
+  const { userId, profile, provider, model } = opts;
+
+  // Retrieve user memories for context (resume stack, projects, prior background)
+  let memoriesSummary = "";
+  try {
+    const mems = await getMemories(userId);
+    if (mems.length > 0) {
+      memoriesSummary = `\n- Stored Background & Resume Facts: ${mems.slice(0, 8).map((m) => m.memory).join("; ")}`;
+    }
+  } catch {}
+
+  const targetHours = profile.weeklyHours || 10;
+  const userLevel = profile.currentLevel || "intermediate";
+
+  const systemPrompt = `You are the Lead Curriculum Architect for SkillFarm, an elite software engineering mentorship platform.
+Your job is to generate a comprehensive, highly personalized, week-by-week engineering roadmap for a developer based on their specific profile, skill level, and background.
+
+CRITICAL PEDAGOGICAL SEQUENCING RULES:
+1. PROGRESSIVE DIFFICULTY (FOUNDATIONS & BEGINNER TOPICS FIRST):
+   - Week 1 MUST ALWAYS start with Beginner Foundations and fundamental mental models:
+     * Core syntax, basic runtime execution, directory structures, fundamental tools, essential HTTP/DOM protocols, and development setup.
+     * DO NOT jump straight into advanced topics (such as distributed caching, complex microservices, RAG pipelines, or multi-cloud Kubernetes) in Week 1.
+   - Weeks 2-3: Transition smoothly into Intermediate Applied Engineering:
+     * Practical API/UI development, database CRUD & relational modeling, schema validation, state management, and foundational unit/integration testing.
+   - Week 4+: Advance into Production-Grade Engineering (Advanced):
+     * Security hardening, performance profiling, auth flows, caching strategies, CI/CD pipelines, and high-scale system design trade-offs.
+
+2. USER PROFILE LEVEL ADAPTATION:
+   - If User Level is "beginner":
+     * Weeks 1 to 3 MUST BE strictly beginner-friendly, accessible, and grounded in core coding principles with zero unnecessary complexity.
+     * Break down tasks into small, approachable steps.
+   - If User Level is "intermediate":
+     * Week 1 reinforces core fundamentals & architecture mental models.
+     * Weeks 2 to 4 dive deep into intermediate production engineering.
+     * Subsequent weeks introduce advanced scale and reliability.
+   - If User Level is "advanced":
+     * Week 1 bridges architectural fundamentals and deep internals before rapidly advancing to distributed systems and optimizations.
+
+3. PACING & WEEKLY HOURS:
+   - Divide into consecutive chronological weeks (Week 1, Week 2, Week 3, etc.).
+   - Ensure the total estimated hours per week sum up to approximately the user's weekly study budget (~${targetHours} hours/week).
+
+4. SPECIALIST MENTOR ASSIGNMENT:
+   - "backend": Node, Go, APIs, databases, query optimization, caching.
+   - "frontend": React, Next.js, CSS architecture, web vitals, state.
+   - "ai-engineer": LLM prompt engineering, embeddings, vector stores, agents, evals.
+   - "devops": Containers, Docker, CI/CD, deployment, logging.
+   - "security": OWASP Top 10, Auth/JWT, RBAC, input sanitization.
+   - "system-design": Architectural trade-offs, scaling, queues, data pipelines.
+
+5. ACTIONABLE DELIVERABLES:
+   - 'practicalTask': A concrete 30-minute coding task.
+   - 'projectBrief': A realistic mini-project or portfolio deliverable.`;
+
+  const userPrompt = `User Profile:
+- Target Goal: "${profile.goal}"
+- Current Self-Assessed Level: "${userLevel}" (Follow rule: Start with beginner foundations first!)
+- Known Skills: ${profile.knownSkills.join(", ") || "None specified"}
+- Weekly Study/Build Time: ${targetHours} hours/week
+- Preferred Learning Style: "${profile.learningStyle}"${memoriesSummary}
+
+Generate a clear, step-by-step roadmap batched into consecutive chronological weeks. Start with beginner-friendly core foundations in Week 1, and progress systematically to mastery.`;
+
+  const { object } = await generateObject({
+    model: getLlmModel({
+      provider,
+      model,
+      role: "roadmap",
+    }),
+    schema: roadmapSchema,
+    system: systemPrompt,
+    prompt: userPrompt,
+    temperature: 0.4,
+  });
+
+  const known = profile.knownSkills.map((s) => s.toLowerCase().trim());
+
+  const rawNodes: RoadmapNode[] = object.nodes.map((n, idx) => {
+    const matchesKnown = known.some((k) =>
+      k.length > 1 && (
+        n.title.toLowerCase().includes(k) ||
+        n.slug.toLowerCase().includes(k.replace(/\s+/g, "-")) ||
+        n.relatedConcepts.some((rc) => rc.toLowerCase() === k || k.includes(rc.toLowerCase()))
+      )
+    );
+
+    const isCompleted = matchesKnown || (profile.currentLevel === "advanced" && idx === 0);
+
+    return {
+      id: randomUUID(),
+      slug: n.slug,
+      title: n.title,
+      description: n.description,
+      whyItMatters: matchesKnown
+        ? `Prerequisite matching your verified background (${n.relatedConcepts.slice(0, 2).join(", ")}) — baseline marked as mastered.`
+        : n.whyItMatters,
+      difficulty: n.difficulty,
+      prerequisites: n.prerequisites,
+      relatedConcepts: n.relatedConcepts,
+      mentorId: n.mentorId,
+      order: idx,
+      status: isCompleted ? "completed" : "locked",
+      practicalTask: n.practicalTask,
+      projectBrief: n.projectBrief,
+      commonMistakes: n.commonMistakes,
+      week: n.week,
+      estimatedHours: n.estimatedHours,
+    };
+  });
+
+  // Activate first uncompleted node
+  const firstUncompletedIdx = rawNodes.findIndex((n) => n.status !== "completed");
+  if (firstUncompletedIdx !== -1) {
+    rawNodes[firstUncompletedIdx].status = "current";
+    if (firstUncompletedIdx + 1 < rawNodes.length) {
+      rawNodes[firstUncompletedIdx + 1].status = "next";
+    }
+  } else if (rawNodes.length > 0) {
+    rawNodes[rawNodes.length - 1].status = "current";
+  }
+
+  return {
+    id: randomUUID(),
+    userId,
+    title: object.title,
+    description: object.description,
+    nodes: rawNodes,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+/**
+ * Main entry point: Generates a dynamic LLM roadmap when configured,
+ * or gracefully falls back to the deterministic static template in mock mode.
+ */
+export async function generateRoadmap(opts: GenerateOpts): Promise<Roadmap> {
+  const hasKey = isLlmConfigured(opts.provider, opts.model);
+  const isMock = isMockModeForced();
+
+  if (!isMock && hasKey) {
+    try {
+      return await generateDynamicRoadmap(opts);
+    } catch (err) {
+      console.error("[roadmap/generator] LLM dynamic generation failed, using static fallback:", err);
+    }
+  }
+
+  return generateStaticRoadmap(opts);
 }

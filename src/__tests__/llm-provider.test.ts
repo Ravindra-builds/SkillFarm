@@ -214,6 +214,8 @@ describe("Multi-LLM Provider Architecture", () => {
           fast: "llama3.2",
           router: "llama3.2",
           synthesizer: "llama3.2",
+          roadmap: "llama3.2",
+          extractor: "llama3.2",
         },
         availableModels: [{ id: "llama3.2", name: "Llama 3.2" }],
         getModel: (modelId) => {

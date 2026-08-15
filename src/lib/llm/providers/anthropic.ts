@@ -34,6 +34,10 @@ export const anthropicProvider: LlmProviderConfig = {
     synthesizer: isValidAnthropicModel(process.env.SYNTHESIZER_MODEL)
       ? process.env.SYNTHESIZER_MODEL!
       : defaultAnthropicModel,
+    roadmap: isValidAnthropicModel(process.env.ROADMAP_LLM_MODEL)
+      ? process.env.ROADMAP_LLM_MODEL!
+      : defaultAnthropicModel,
+    extractor: "claude-3-5-haiku-latest",
   },
 
   availableModels: ANTHROPIC_MODELS.map((m) => ({
@@ -53,6 +57,7 @@ export const anthropicProvider: LlmProviderConfig = {
 
     const targetModel =
       validExplicitModel ||
+      (role === "roadmap" && isValidAnthropicModel(process.env.ROADMAP_LLM_MODEL) && process.env.ROADMAP_LLM_MODEL) ||
       (role === "router" && isValidAnthropicModel(process.env.ROUTER_MODEL) && process.env.ROUTER_MODEL) ||
       (role === "synthesizer" && isValidAnthropicModel(process.env.SYNTHESIZER_MODEL) && process.env.SYNTHESIZER_MODEL) ||
       (isValidAnthropicModel(process.env.ANTHROPIC_MODEL) && process.env.ANTHROPIC_MODEL) ||

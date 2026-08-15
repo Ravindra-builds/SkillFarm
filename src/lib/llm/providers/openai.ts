@@ -40,6 +40,10 @@ export const openaiProvider: LlmProviderConfig = {
     synthesizer: isValidOpenAiModel(process.env.SYNTHESIZER_MODEL)
       ? process.env.SYNTHESIZER_MODEL!
       : defaultOpenAiModel,
+    roadmap: isValidOpenAiModel(process.env.ROADMAP_LLM_MODEL)
+      ? process.env.ROADMAP_LLM_MODEL!
+      : defaultOpenAiModel,
+    extractor: defaultOpenAiModel,
   },
 
   availableModels: OPENAI_MODELS.map((m) => ({
@@ -59,6 +63,7 @@ export const openaiProvider: LlmProviderConfig = {
 
     const targetModel =
       validExplicitModel ||
+      (role === "roadmap" && isValidOpenAiModel(process.env.ROADMAP_LLM_MODEL) && process.env.ROADMAP_LLM_MODEL) ||
       (role === "router" && isValidOpenAiModel(process.env.ROUTER_MODEL) && process.env.ROUTER_MODEL) ||
       (role === "synthesizer" && isValidOpenAiModel(process.env.SYNTHESIZER_MODEL) && process.env.SYNTHESIZER_MODEL) ||
       (isValidOpenAiModel(process.env.OPENAI_MODEL) && process.env.OPENAI_MODEL) ||

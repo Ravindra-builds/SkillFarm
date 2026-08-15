@@ -1,12 +1,18 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { updateNodeStatus, getRoadmap } from "@/lib/roadmap-store";
+import { updateNodeStatus, updateNodeDetails, getRoadmap } from "@/lib/roadmap-store";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   nodeId: z.string().min(1),
-  status: z.enum(["locked", "current", "completed", "next"]).optional().default("completed"),
+  status: z.enum(["locked", "current", "completed", "next"]).optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  practicalTask: z.string().optional(),
+  projectBrief: z.string().optional(),
+  estimatedHours: z.number().optional(),
+  difficulty: z.enum(["beginner", "intermediate", "advanced"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -23,8 +29,26 @@ export async function POST(req: Request) {
       });
     }
 
-    const { nodeId, status } = parsed.data;
-    const updated = await updateNodeStatus(userId, nodeId, status);
+    const { nodeId, status, title, description, practicalTask, projectBrief, estimatedHours, difficulty } = parsed.data;
+
+    let updated = null;
+
+    // If editing metadata
+    if (title !== undefined || description !== undefined || practicalTask !== undefined || projectBrief !== undefined || estimatedHours !== undefined || difficulty !== undefined) {
+      updated = await updateNodeDetails(userId, nodeId, {
+        title,
+        description,
+        practicalTask,
+        projectBrief,
+        estimatedHours,
+        difficulty,
+        status,
+      });
+    } else if (status) {
+      // Just updating status
+      updated = await updateNodeStatus(userId, nodeId, status);
+    }
+
     if (!updated) {
       const existing = await getRoadmap(userId);
       return new Response(JSON.stringify(existing ?? { error: "Roadmap node not found" }), {

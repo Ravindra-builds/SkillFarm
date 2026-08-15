@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { processAndStoreResume } from "@/lib/resume";
+import { checkFeatureRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -7,6 +8,27 @@ export async function POST(req: Request) {
   try {
     const session = (await (auth as unknown as () => Promise<unknown>)().catch(() => null)) as unknown as { user?: { email?: string; id?: string } } | null;
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+
+    // ── Centralized Rate Limiting (2/day prod, 10/day dev) ─────────────────────
+    const rateCheck = await checkFeatureRateLimit(userId, "resume");
+    if (!rateCheck.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          message: `Daily resume upload & analysis limit reached (${rateCheck.limit} per 24h). Please try again later.`,
+          retryAfter: rateCheck.resetSec,
+          limit: rateCheck.limit,
+          remaining: rateCheck.remaining,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.resetSec),
+          },
+        }
+      );
+    }
 
     const contentType = req.headers.get("content-type") || "";
 
@@ -67,6 +89,10 @@ export async function POST(req: Request) {
           structured: result.structured,
         },
         memoriesStored: result.memoriesStored,
+        rateLimit: {
+          remaining: rateCheck.remaining,
+          limit: rateCheck.limit,
+        },
       }),
       { headers: { "Content-Type": "application/json" } }
     );

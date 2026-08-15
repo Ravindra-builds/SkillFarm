@@ -26,7 +26,7 @@ export async function saveProfileAction(
 
     if (result.ok && result.profile) {
       // Regenerate personalized roadmap based on updated profile
-      const newRoadmap = generateRoadmap({ userId, profile: result.profile });
+      const newRoadmap = await generateRoadmap({ userId, profile: result.profile });
       await saveRoadmap(userId, newRoadmap);
 
       // Regenerate practical projects based on updated roadmap

@@ -4,7 +4,7 @@ export type LlmModel = Parameters<typeof streamText>[0]["model"];
 
 export type LlmProviderId = "openai" | "gemini" | "anthropic" | string;
 
-export type LlmModelRole = "chat" | "fast" | "router" | "synthesizer";
+export type LlmModelRole = "chat" | "fast" | "router" | "synthesizer" | "roadmap" | "extractor";
 
 export type LlmModelOptions = {
   provider?: LlmProviderId;

@@ -18,6 +18,8 @@ export type RoadmapNode = {
   practicalTask: string;
   projectBrief: string;
   commonMistakes: string[];
+  week?: number;
+  estimatedHours?: number;
 };
 
 export type Roadmap = {
@@ -66,22 +68,28 @@ async function loadFromDb(userId: string): Promise<Roadmap | null> {
       .where(eq(roadmapNodes.roadmapId, row.id))
       .orderBy(roadmapNodes.order);
 
-    const nodes: RoadmapNode[] = nodeRows.map((n) => ({
-      id: n.id,
-      slug: n.slug,
-      title: n.title,
-      description: n.description ?? "",
-      whyItMatters: n.whyItMatters ?? "",
-      difficulty: (n.difficulty as RoadmapNode["difficulty"]) ?? "intermediate",
-      prerequisites: (n.prerequisites as string[]) ?? [],
-      relatedConcepts: (n.relatedConcepts as string[]) ?? [],
-      mentorId: n.mentorId ?? "backend",
-      order: n.order,
-      status: (n.status as RoadmapNode["status"]) ?? "locked",
-      practicalTask: n.practicalTask ?? "",
-      projectBrief: n.projectBrief ?? "",
-      commonMistakes: (n.commonMistakes as string[]) ?? [],
-    }));
+    const nodes: RoadmapNode[] = nodeRows.map((n, idx) => {
+      // If week isn't stored in DB, derive logically from order (approx 2-3 topics per week)
+      const week = Math.floor(idx / 3) + 1;
+      return {
+        id: n.id,
+        slug: n.slug,
+        title: n.title,
+        description: n.description ?? "",
+        whyItMatters: n.whyItMatters ?? "",
+        difficulty: (n.difficulty as RoadmapNode["difficulty"]) ?? "intermediate",
+        prerequisites: (n.prerequisites as string[]) ?? [],
+        relatedConcepts: (n.relatedConcepts as string[]) ?? [],
+        mentorId: n.mentorId ?? "backend",
+        order: n.order,
+        status: (n.status as RoadmapNode["status"]) ?? "locked",
+        practicalTask: n.practicalTask ?? "",
+        projectBrief: n.projectBrief ?? "",
+        commonMistakes: (n.commonMistakes as string[]) ?? [],
+        week,
+        estimatedHours: n.difficulty === "advanced" ? 6 : n.difficulty === "intermediate" ? 4 : 3,
+      };
+    });
 
     const roadmap: Roadmap = {
       id: row.id,
@@ -171,14 +179,15 @@ async function persistToDb(userId: string, roadmap: Roadmap): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getRoadmap(userId: string): Promise<Roadmap | null> {
-  // Check memory cache first
+  // Load from DB first if available to guarantee real-time sync across Server Components and API routes
+  if (isDbAvailable()) {
+    const fromDb = await loadFromDb(userId);
+    if (fromDb) return fromDb;
+  }
+
+  // Fallback to memory cache
   const cached = memRoadmaps.get(userId);
   if (cached) return cached;
-
-  // Load from DB if available
-  if (isDbAvailable()) {
-    return loadFromDb(userId);
-  }
 
   return null;
 }
@@ -201,14 +210,14 @@ export async function updateNodeStatus(
   status: RoadmapNode["status"]
 ): Promise<Roadmap | null> {
   // Update in-memory first
-  const roadmap = memRoadmaps.get(userId);
-  if (!roadmap) {
+  let current = memRoadmaps.get(userId);
+  if (!current) {
     // Try loading from DB if not in memory
     const fromDb = isDbAvailable() ? await loadFromDb(userId) : null;
     if (!fromDb) return null;
+    current = fromDb;
   }
 
-  const current = memRoadmaps.get(userId)!;
   const node = current.nodes.find((n) => n.id === nodeId);
   if (!node) return null;
 
@@ -235,6 +244,54 @@ export async function updateNodeStatus(
         .where(eq(roadmapNodes.id, nodeId));
     } catch (err) {
       console.error("[roadmap-store] node status update failed:", err);
+    }
+  }
+
+  return current;
+}
+
+export async function updateNodeDetails(
+  userId: string,
+  nodeId: string,
+  patch: Partial<Pick<RoadmapNode, "title" | "description" | "practicalTask" | "projectBrief" | "status" | "estimatedHours" | "difficulty">>
+): Promise<Roadmap | null> {
+  let current = memRoadmaps.get(userId);
+  if (!current) {
+    const fromDb = isDbAvailable() ? await loadFromDb(userId) : null;
+    if (!fromDb) return null;
+    current = fromDb;
+  }
+
+  const node = current.nodes.find((n) => n.id === nodeId);
+  if (!node) return null;
+
+  if (patch.title !== undefined) node.title = patch.title;
+  if (patch.description !== undefined) node.description = patch.description;
+  if (patch.practicalTask !== undefined) node.practicalTask = patch.practicalTask;
+  if (patch.projectBrief !== undefined) node.projectBrief = patch.projectBrief;
+  if (patch.status !== undefined) node.status = patch.status;
+  if (patch.estimatedHours !== undefined) node.estimatedHours = patch.estimatedHours;
+  if (patch.difficulty !== undefined) node.difficulty = patch.difficulty;
+
+  current.updatedAt = new Date();
+  memRoadmaps.set(userId, current);
+
+  if (isDbAvailable()) {
+    try {
+      const db = getDb();
+      await db
+        .update(roadmapNodes)
+        .set({
+          ...(patch.title !== undefined ? { title: patch.title } : {}),
+          ...(patch.description !== undefined ? { description: patch.description } : {}),
+          ...(patch.practicalTask !== undefined ? { practicalTask: patch.practicalTask } : {}),
+          ...(patch.projectBrief !== undefined ? { projectBrief: patch.projectBrief } : {}),
+          ...(patch.status !== undefined ? { status: patch.status } : {}),
+          ...(patch.difficulty !== undefined ? { difficulty: patch.difficulty } : {}),
+        })
+        .where(eq(roadmapNodes.id, nodeId));
+    } catch (err) {
+      console.error("[roadmap-store] node details update failed:", err);
     }
   }
 

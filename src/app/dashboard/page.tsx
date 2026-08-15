@@ -59,8 +59,9 @@ export default async function DashboardPage() {
 
   // Load or auto-generate real roadmap from profile
   let roadmap = await getRoadmap(userId);
-  if (!roadmap && profile) {
-    roadmap = generateRoadmap({ userId, profile });
+  const isStale = profile && roadmap && new Date(profile.updatedAt).getTime() > new Date(roadmap.updatedAt).getTime();
+  if ((!roadmap || isStale) && profile) {
+    roadmap = await generateRoadmap({ userId, profile });
     await saveRoadmap(userId, roadmap);
   }
 
@@ -157,24 +158,32 @@ export default async function DashboardPage() {
             projectHref={currentNode ? `/projects` : "/dashboard"}
           />
 
-          {/* Active Roadmap Progress — Dynamic Real Data */}
+          {/* Active Roadmap Progress — Clickable Interactive Track */}
           <Card className="border-muted/50">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-violet-500" /> Active Roadmap Track
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">{nodesTotal} Total Nodes</Badge>
+                <Link href="/roadmap">
+                  <Badge variant="secondary" className="text-xs hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer">
+                    {nodesTotal} Milestones →
+                  </Badge>
+                </Link>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Personalized path based on goal: “{goalText}”
+                Personalized path based on goal: “{goalText}” • Click any track to open interactive roadmap
               </p>
             </CardHeader>
 
             <CardContent className="space-y-3">
               {nodes.length > 0 ? (
-                nodes.map((n) => (
-                  <div key={n.id} className="flex items-center gap-4 rounded-xl border p-4 bg-card hover:bg-muted/40 transition-colors">
+                nodes.slice(0, 6).map((n) => (
+                  <Link
+                    key={n.id}
+                    href="/roadmap"
+                    className="flex items-center gap-3.5 rounded-xl border p-3.5 bg-card hover:bg-muted/50 hover:border-violet-500/40 transition-all shadow-2xs group cursor-pointer"
+                  >
                     <div className="shrink-0">
                       {n.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
                       {n.status === "current" && (
@@ -186,14 +195,19 @@ export default async function DashboardPage() {
                       {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium leading-tight">{n.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-sm">
+                          Week {n.week ?? 1}
+                        </span>
+                        <p className="text-sm font-medium leading-tight group-hover:text-violet-500 transition-colors">{n.title}</p>
+                      </div>
                       <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{n.description}</p>
                     </div>
-                    <Badge variant="outline" className="hidden sm:inline-flex text-xs">{n.mentorId}</Badge>
+                    <Badge variant="outline" className="hidden sm:inline-flex text-xs capitalize">{n.mentorId}</Badge>
                     {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-xs">Done</Badge>}
                     {n.status === "current" && <Badge className="bg-violet-600 text-white text-xs">Current</Badge>}
                     {n.status === "next" && <Badge variant="secondary" className="text-xs">Up next</Badge>}
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="rounded-xl border border-dashed p-6 text-center">
@@ -208,8 +222,8 @@ export default async function DashboardPage() {
                 <span className="text-muted-foreground flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5" /> Pace: {weeklyHours}h / week
                 </span>
-                <Link href="/roadmap" className="font-semibold text-violet-500 hover:underline">
-                  Full Roadmap →
+                <Link href="/roadmap" className="font-semibold text-violet-500 hover:underline flex items-center gap-1">
+                  Manage & Edit Roadmap <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </CardContent>

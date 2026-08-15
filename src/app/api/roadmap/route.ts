@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { getLearningProfile } from "@/lib/learning-profile";
 import { generateRoadmap } from "@/agents/roadmap/generator";
 import { getRoadmap, saveRoadmap } from "@/lib/roadmap-store";
+import { checkFeatureRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -22,33 +23,85 @@ export async function GET() {
       format: "mixed" as const,
     };
 
-    // Auto-regenerate if no roadmap exists OR if profile was updated after the roadmap
+    // Auto-generate if no roadmap exists OR if profile was updated after the roadmap
     const isStale = profile && roadmap && new Date(profile.updatedAt).getTime() > new Date(roadmap.updatedAt).getTime();
     if (!roadmap || isStale) {
-      roadmap = generateRoadmap({ userId, profile: activeProfile });
+      roadmap = await generateRoadmap({ userId, profile: activeProfile });
       await saveRoadmap(userId, roadmap);
     }
 
-    return new Response(JSON.stringify(roadmap), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(roadmap), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("[api/roadmap GET] fatal", err);
-    return new Response(JSON.stringify({ error: "Failed to load roadmap" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "Failed to load roadmap" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const session = await auth();
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+
+    // ── Centralized Rate Limiting (2/day prod, 10/day dev) ─────────────────────
+    const rateCheck = await checkFeatureRateLimit(userId, "roadmap");
+    if (!rateCheck.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          message: `Daily roadmap generation limit reached (${rateCheck.limit} per 24h). Please try again later.`,
+          retryAfter: rateCheck.resetSec,
+          limit: rateCheck.limit,
+          remaining: rateCheck.remaining,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.resetSec),
+          },
+        }
+      );
+    }
+
+    const body = await req.json().catch(() => ({}));
     const profile = await getLearningProfile(userId);
     if (!profile) {
-      return new Response(JSON.stringify({ error: "No profile" }), { status: 400, headers: { "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({ error: "Please complete your learning profile on the dashboard before generating a roadmap." }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
-    const roadmap = generateRoadmap({ userId, profile });
+
+    const roadmap = await generateRoadmap({
+      userId,
+      profile,
+      provider: body.provider,
+      model: body.model,
+    });
+
     await saveRoadmap(userId, roadmap);
-    return new Response(JSON.stringify(roadmap), { headers: { "Content-Type": "application/json" } });
+
+    return new Response(
+      JSON.stringify({
+        ...roadmap,
+        rateLimit: {
+          remaining: rateCheck.remaining,
+          limit: rateCheck.limit,
+        },
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
   } catch (err) {
     console.error("[api/roadmap POST] fatal", err);
-    return new Response(JSON.stringify({ error: "Failed to generate" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    const msg = err instanceof Error ? err.message : "Failed to generate roadmap";
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
