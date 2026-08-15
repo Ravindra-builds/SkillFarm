@@ -14,6 +14,8 @@ import { checkPlanLimit, incrementPlanUsage } from "@/lib/subscription";
 import { detectScopeViolation } from "@/lib/scope-guard";
 import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 import { formatUserFacingError } from "@/lib/friendly-errors";
+import { getDeepUserContext } from "@/lib/memory/ingestion";
+import { addMemory } from "@/lib/memory/mem0";
 
 export const dynamic = "force-dynamic";
 
@@ -145,15 +147,16 @@ function streamTextAsSSE(
 function buildSystemPrompt(
   mentor: ReturnType<typeof getMentor>,
   profile: Awaited<ReturnType<typeof getLearningProfile>>,
+  deepContext?: Awaited<ReturnType<typeof getDeepUserContext>> | null,
   suffix?: string
 ): string {
-  return [
-    mentor!.prompt,
-    profile
-      ? `\n\nUser context:\n- Goal: ${profile.goal}\n- Level: ${profile.currentLevel}\n- Known: ${profile.knownSkills.join(", ")}\n- Weekly hours: ${profile.weeklyHours}\n- Style: ${profile.learningStyle}`
-      : "",
-    suffix ? `\n\n${suffix}` : "",
-  ].join("");
+  const contextBlock = deepContext?.fullPromptContext
+    ? `\n\n${deepContext.fullPromptContext}`
+    : profile
+    ? `\n\nUser context:\n- Goal: ${profile.goal}\n- Level: ${profile.currentLevel}\n- Known: ${profile.knownSkills.join(", ")}\n- Weekly hours: ${profile.weeklyHours}\n- Style: ${profile.learningStyle}`
+    : "";
+
+  return [mentor!.prompt, contextBlock, suffix ? `\n\n${suffix}` : ""].join("");
 }
 
 // ---------------------------------------------------------------------------
@@ -246,12 +249,16 @@ export async function POST(req: Request) {
       await saveMessage(conversationId, "user", lastUserText, null).catch(() => {});
     }
 
-    // ── Learning profile ───────────────────────────────────────────────────
+    // ── Learning profile & Mem0 Long-term Context ───────────────────────────
     let profile: Awaited<ReturnType<typeof getLearningProfile>> = null;
+    let deepContext: Awaited<ReturnType<typeof getDeepUserContext>> | null = null;
     try {
-      profile = await getLearningProfile(userId);
+      [profile, deepContext] = await Promise.all([
+        getLearningProfile(userId).catch(() => null),
+        getDeepUserContext(userId, lastUserText).catch(() => null),
+      ]);
     } catch {
-      // Non-fatal — chat works without a profile, just loses personalization
+      // Non-fatal — chat works without profile/memories, just loses deep personalization
     }
 
     // ── Scope guard — reject unbounded generation requests ───────────────────
@@ -349,7 +356,9 @@ export async function POST(req: Request) {
       } else {
         decision = await routeQuery(
           lastUserText,
-          profile
+          deepContext
+            ? `${deepContext.profileSummary}\n${deepContext.memoriesSummary}`
+            : profile
             ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
             : undefined,
           { provider: requestedProvider, model: requestedModel }
@@ -389,6 +398,7 @@ export async function POST(req: Request) {
           system: buildSystemPrompt(
             mentor,
             profile,
+            deepContext,
             `You are ${mentor.config.name} — routed by orchestrator (reason: ${decision.reasoning}). Stay in scope.`
           ),
           // Cap history to last 8 messages to control context window size and cost.
@@ -397,6 +407,11 @@ export async function POST(req: Request) {
           maxOutputTokens: 800,
           onFinish: async ({ text }) => {
             await saveMessage(conversationId!, "assistant", text, mentorId).catch(() => {});
+            addMemory(
+              userId,
+              `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
+              "chat_interaction"
+            ).catch(() => {});
           },
         });
 
@@ -508,6 +523,7 @@ export async function POST(req: Request) {
       system: buildSystemPrompt(
         mentor,
         profile,
+        deepContext,
         `You are ${mentor.config.name} — stay in scope.`
       ),
       // Cap history to last 8 messages to control context window size and cost.
@@ -516,6 +532,11 @@ export async function POST(req: Request) {
       maxOutputTokens: 800,
       onFinish: async ({ text }) => {
         await saveMessage(conversationId!, "assistant", text, mentorId).catch(() => {});
+        addMemory(
+          userId,
+          `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
+          "chat_interaction"
+        ).catch(() => {});
       },
     });
 

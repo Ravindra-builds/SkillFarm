@@ -1,5 +1,5 @@
 /**
- * Deep Context Ingestion Engine — Phase 10
+ * Deep Context Ingestion Engine
  *
  * Synthesizes complete user learning state:
  * Profile + Roadmap Progress + Active Projects + Mem0 Long-Term Memories

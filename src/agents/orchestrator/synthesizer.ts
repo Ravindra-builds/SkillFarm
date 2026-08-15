@@ -4,6 +4,7 @@ import type { MentorId } from "@/config/mentors";
 import { synthesizerSystemPrompt } from "./prompt";
 import { getLearningProfile } from "@/lib/learning-profile";
 import { addMemory } from "@/lib/memory/mem0";
+import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 
 /**
@@ -21,7 +22,7 @@ export async function synthesizeParallel(
   conversationHistory: { role: string; content: string }[],
   options?: { provider?: string; model?: string }
 ): Promise<{ text: string; isMock: boolean }> {
-  const hasConfiguredLlm = isLlmConfigured(options?.provider);
+  const hasConfiguredLlm = isLlmConfigured(options?.provider, options?.model);
   if (!hasConfiguredLlm) {
     const parts = mentorIds.map((id) => {
       const m = getMentor(id);
@@ -31,29 +32,33 @@ export async function synthesizeParallel(
     return { text: mock, isMock: true };
   }
 
-  // Load profile for context
-  let profile: Awaited<ReturnType<typeof getLearningProfile>> = null;
+  // Load deep context (Profile + Mem0 Long-Term Memories + Active Projects)
+  let deepContextPrompt = "";
   try {
-    profile = await getLearningProfile(userId);
-  } catch {}
-
-  const profileCtx = profile
-    ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
-    : "No profile";
+    const deep = await getDeepUserContext(userId, query);
+    deepContextPrompt = `\n\n${deep.fullPromptContext}`;
+  } catch {
+    try {
+      const profile = await getLearningProfile(userId);
+      if (profile) {
+        deepContextPrompt = `\n\nUser context: Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`;
+      }
+    } catch {}
+  }
 
   const historyMessages = conversationHistory.slice(-4).map((h) => ({
     role: h.role as "user" | "assistant",
     content: h.content,
   }));
 
-  // Parallel generation for each mentor with conversation history
+  // Parallel generation for each mentor with conversation history and deep context
   const results = await Promise.all(
     mentorIds.map(async (id) => {
       const mentor = getMentor(id);
       if (!mentor) return `[Missing mentor ${id}]`;
       const { text } = await generateText({
         model: getLlmModel({ provider: options?.provider, model: options?.model ?? mentor.model, role: "chat" }),
-        system: mentor.prompt + `\n\nUser context: ${profileCtx}`,
+        system: mentor.prompt + deepContextPrompt,
         messages: [...historyMessages, { role: "user" as const, content: query }],
         temperature: 0.7,
         maxOutputTokens: 600,
@@ -77,16 +82,20 @@ export async function streamSynthesis(
     model?: string;
   }
 ) {
-  let profile: Awaited<ReturnType<typeof getLearningProfile>> = null;
+  let deepContextPrompt = "";
   try {
-    profile = await getLearningProfile(userId);
-  } catch {}
+    const deep = await getDeepUserContext(userId, query);
+    deepContextPrompt = `\n\n${deep.fullPromptContext}`;
+  } catch {
+    try {
+      const profile = await getLearningProfile(userId);
+      if (profile) {
+        deepContextPrompt = `\n\nUser context: Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`;
+      }
+    } catch {}
+  }
 
-  const profileCtx = profile
-    ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
-    : "No profile";
-
-  const hasConfiguredLlm = isLlmConfigured(opts?.provider);
+  const hasConfiguredLlm = isLlmConfigured(opts?.provider, opts?.model);
   if (!hasConfiguredLlm) {
     const encoder = new TextEncoder();
     const mock = `**Consulted: ${mentorIds.join(" + ")}** (mock synthesis)\n\n${mentorOutputs}\n\n*Configure an LLM API key (${getActiveLlmProvider()}) for live synthesis.*`;
@@ -116,7 +125,7 @@ export async function streamSynthesis(
 
   const result = streamText({
     model: getLlmModel({ provider: opts?.provider, model: opts?.model, role: "synthesizer" }),
-    system: synthesizerSystemPrompt + `\n\nUser context: ${profileCtx}\n\nQuery: ${query}\n\nMentor outputs:\n${mentorOutputs}`,
+    system: synthesizerSystemPrompt + deepContextPrompt + `\n\nQuery: ${query}\n\nMentor outputs:\n${mentorOutputs}`,
     prompt: `Synthesize the above specialist perspectives into one final answer for: "${query}"`,
     temperature: 0.6,
     maxOutputTokens: 800,

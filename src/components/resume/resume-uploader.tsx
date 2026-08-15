@@ -44,6 +44,11 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
+      if (selected.size > 1024 * 1024) {
+        setError("File size exceeds 1MB limit. Please upload a smaller PDF or TXT resume file under 1MB.");
+        setFile(null);
+        return;
+      }
       setFile(selected);
       setError(null);
     }
@@ -206,7 +211,7 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
                 <p className="text-xs sm:text-sm font-medium text-foreground">
                   Click to browse or drop your resume (.pdf or .txt)
                 </p>
-                <p className="text-[11px] text-muted-foreground">PDFs up to 10MB supported</p>
+                <p className="text-[11px] text-muted-foreground">PDFs and TXT up to 1MB supported</p>
               </div>
             )}
           </div>

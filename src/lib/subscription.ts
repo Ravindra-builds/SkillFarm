@@ -1,26 +1,26 @@
 /**
- * Subscription Architecture & Feature Gate — Phase 14
+ * Subscription Architecture & Feature Gate
  *
  * Plan limits:
- * - Free tier : 20 mentor messages, 5 research runs (per rolling 24h window)
+ * - Free tier : Generous limits in dev/preview (500 messages), 50 mentor messages in prod
  * - Pro tier  : Unlimited
  *
  * Storage strategy:
  * - Redis (Upstash): preferred in production — usage counters persist across
  *   serverless cold starts and Vercel worker restarts. Keys expire daily.
  * - In-memory Map : fallback when Redis is not configured (local dev / preview).
- *   ⚠️  In-memory does NOT persist across restarts — plan limits are effectively
- *   reset on each cold start. This is acceptable for local dev only.
  */
 
 import { getRedis } from "@/lib/redis";
 
 export type UserPlanTier = "free" | "pro";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 export const PLAN_LIMITS = {
   free: {
-    mentorMessages: 20,
-    researchRuns: 5,
+    mentorMessages: isDev ? 500 : 20,
+    researchRuns: isDev ? 100 : 10,
   },
   pro: {
     mentorMessages: Infinity,
@@ -38,18 +38,18 @@ const memPlanStore = new Map<string, UserPlanTier>();
 const usageKey = (userId: string) => `skillfarm:usage:${userId}`;
 const planKey = (userId: string) => `skillfarm:plan:${userId}`;
 
-/** Get the plan tier for a user. Defaults to "free". */
+/** Get the plan tier for a user. Defaults to "free" (or "pro" for preview testing in dev). */
 export async function getUserPlan(userId: string): Promise<UserPlanTier> {
   const redis = await getRedis();
   if (redis) {
     try {
       const tier = await redis.get<string>(planKey(userId));
-      return (tier === "pro" ? "pro" : "free") as UserPlanTier;
+      if (tier) return (tier === "pro" ? "pro" : "free") as UserPlanTier;
     } catch {
       // fall through to memory
     }
   }
-  return memPlanStore.get(userId) ?? "free";
+  return memPlanStore.get(userId) ?? (isDev ? "pro" : "free");
 }
 
 /** Set the plan tier for a user (called when they upgrade/downgrade). */
@@ -57,7 +57,6 @@ export async function setUserPlan(userId: string, plan: UserPlanTier): Promise<v
   const redis = await getRedis();
   if (redis) {
     try {
-      // Plan tier never expires automatically — manual change required
       await redis.set(planKey(userId), plan);
       return;
     } catch {
@@ -65,6 +64,17 @@ export async function setUserPlan(userId: string, plan: UserPlanTier): Promise<v
     }
   }
   memPlanStore.set(userId, plan);
+}
+
+/** Reset usage counter for a user (useful for testing or daily reset). */
+export async function resetPlanUsage(userId: string): Promise<void> {
+  const redis = await getRedis();
+  if (redis) {
+    try {
+      await redis.del(usageKey(userId));
+    } catch {}
+  }
+  memUsageStore.delete(userId);
 }
 
 /** Check whether a user is within their plan's limit for a given feature. */
@@ -103,11 +113,8 @@ export async function incrementPlanUsage(userId: string, feature: FeatureKey): P
     try {
       const key = usageKey(userId);
       await redis.hincrby(key, feature, 1);
-      // Reset usage counters daily (86400 seconds). Only set TTL on first increment.
-      // Use NX (set only if not exists) so existing TTL isn't reset on every call.
       const ttl = await redis.ttl(key);
       if (ttl < 0) {
-        // Key exists but has no TTL — set it (or it was just created)
         await redis.expire(key, 86400);
       }
       return;
@@ -122,18 +129,12 @@ export async function incrementPlanUsage(userId: string, feature: FeatureKey): P
   memUsageStore.set(userId, userUsage);
 }
 
-// ---------------------------------------------------------------------------
-// Sync wrappers for call sites that haven't been updated to async yet.
-// These use the memory store only — callers in API routes should use the
-// async versions above which properly use Redis.
-// ---------------------------------------------------------------------------
-
 /** @deprecated Use async checkPlanLimit() instead */
 export function checkPlanLimitSync(
   userId: string,
   feature: FeatureKey
 ): { allowed: boolean; plan: UserPlanTier; currentUsage: number; maxLimit: number } {
-  const plan = memPlanStore.get(userId) ?? "free";
+  const plan = memPlanStore.get(userId) ?? (isDev ? "pro" : "free");
   const maxLimit = PLAN_LIMITS[plan][feature];
   const userUsage = memUsageStore.get(userId) ?? { mentorMessages: 0, researchRuns: 0 };
   const currentUsage = userUsage[feature] ?? 0;

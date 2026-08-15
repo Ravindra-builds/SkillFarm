@@ -20,6 +20,12 @@ export async function POST(req: Request) {
       const textParam = formData.get("resumeText") as string | null;
 
       if (file && file.size > 0) {
+        if (file.size > 1024 * 1024) {
+          return new Response(
+            JSON.stringify({ error: "File size exceeds 1MB limit. Please upload a smaller resume file." }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
         const arrayBuffer = await file.arrayBuffer();
         if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
           pdfBuffer = Buffer.from(arrayBuffer);
