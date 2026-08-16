@@ -592,19 +592,28 @@ export function RoadmapView() {
                         </div>
 
                         <div className="flex items-center justify-between pt-1.5 text-xs text-muted-foreground border-t border-border/40 flex-wrap gap-2">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <Badge variant="outline" className="text-[11px] py-0.5 px-2 capitalize rounded-md">
                               {node.difficulty}
                             </Badge>
                             <Badge variant="secondary" className="text-[11px] py-0.5 px-2 capitalize rounded-md">
                               {node.mentorId} Mentor
                             </Badge>
+                            {node.estimatedHours && (
+                              <span className="flex items-center gap-1 font-medium text-[11px]">
+                                <Clock className="h-3 w-3" /> {node.estimatedHours}h study
+                              </span>
+                            )}
                           </div>
-                          {node.estimatedHours && (
-                            <span className="flex items-center gap-1 font-medium text-[11px]">
-                              <Clock className="h-3 w-3" /> {node.estimatedHours}h study
-                            </span>
-                          )}
+
+                          <Link
+                            href={`/resources?topic=${encodeURIComponent(node.topic || node.title)}&week=${node.week ?? 1}&concepts=${encodeURIComponent((node.concepts || node.relatedConcepts || []).join(","))}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs font-semibold rounded-lg gap-1 border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer shadow-xs">
+                              <BookOpen className="h-3 w-3" /> Learn from Resources
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     );
@@ -832,11 +841,22 @@ export function RoadmapView() {
                         )}
                       </div>
 
-                      <Link href="/projects" className="block pt-0.5">
-                        <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-8.5 rounded-xl gap-1.5">
-                          <FolderGit2 className="h-3.5 w-3.5" /> View Main-Project Tasks Hub
-                        </Button>
-                      </Link>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <Link
+                          href={`/resources?topic=${encodeURIComponent(selected.topic || selected.title)}&week=${selected.week ?? 1}&concepts=${encodeURIComponent((selected.concepts || selected.relatedConcepts || []).join(","))}`}
+                          className="block"
+                        >
+                          <Button size="sm" className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold h-8.5 rounded-xl gap-1.5 shadow-xs cursor-pointer">
+                            <BookOpen className="h-3.5 w-3.5" /> Learn Resources
+                          </Button>
+                        </Link>
+
+                        <Link href="/projects" className="block">
+                          <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-8.5 rounded-xl gap-1.5 cursor-pointer">
+                            <FolderGit2 className="h-3.5 w-3.5" /> Project Tasks
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   </>
                 )}

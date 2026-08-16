@@ -3,6 +3,7 @@ import { getLearningProfile } from "@/lib/learning-profile";
 import { generateRoadmap } from "@/agents/roadmap/generator";
 import { getRoadmap, saveRoadmap } from "@/lib/roadmap-store";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
+import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,11 @@ export async function GET() {
     if (!roadmap || isStale) {
       roadmap = await generateRoadmap({ userId, profile: activeProfile });
       await saveRoadmap(userId, roadmap);
+    }
+
+    if (roadmap) {
+      // Non-blocking rolling 2-week resource discovery
+      scheduleRoadmapResearch(roadmap, activeProfile.currentLevel).catch(() => {});
     }
 
     return new Response(JSON.stringify(roadmap), {
@@ -85,6 +91,9 @@ export async function POST(req: Request) {
     });
 
     await saveRoadmap(userId, roadmap);
+
+    // Non-blocking rolling 2-week resource discovery
+    scheduleRoadmapResearch(roadmap, profile.currentLevel).catch(() => {});
 
     return new Response(
       JSON.stringify({

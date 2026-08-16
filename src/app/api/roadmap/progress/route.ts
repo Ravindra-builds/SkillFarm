@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { updateNodeStatus, updateNodeDetails, getRoadmap } from "@/lib/roadmap-store";
+import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +56,10 @@ export async function POST(req: Request) {
         status: existing ? 200 : 404,
         headers: { "Content-Type": "application/json" },
       });
+    }
+
+    if (updated) {
+      scheduleRoadmapResearch(updated).catch(() => {});
     }
 
     return new Response(JSON.stringify(updated), {

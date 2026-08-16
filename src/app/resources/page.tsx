@@ -7,7 +7,12 @@ import { getLearningProfile } from "@/lib/learning-profile";
 
 export const dynamic = "force-dynamic";
 
-export default async function ResourcesPage() {
+export default async function ResourcesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ topic?: string; week?: string; concepts?: string; query?: string }>;
+}) {
+  const resolvedParams = searchParams ? await searchParams : {};
   let session: unknown = null;
   try {
     session = await (auth as unknown as () => Promise<unknown>)();
@@ -24,20 +29,28 @@ export default async function ResourcesPage() {
 
   const userId = (user?.email as string) ?? (user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
-  let initialQuery = "Best resources to learn Node.js, PostgreSQL and AI Engineering";
-  try {
-    const roadmap = await getRoadmap(userId);
-    const currentNode = roadmap?.nodes.find((n) => n.status === "current") ?? roadmap?.nodes.find((n) => n.status === "next");
-    if (currentNode) {
-      initialQuery = `Learn ${currentNode.title}: ${currentNode.description}`;
-    } else {
-      const profile = await getLearningProfile(userId);
-      if (profile?.goal) {
-        initialQuery = `Best resources to learn ${profile.goal}`;
+  let initialTopic = resolvedParams.topic;
+  let initialWeek = resolvedParams.week ? parseInt(resolvedParams.week, 10) : undefined;
+  let initialConcepts = resolvedParams.concepts ? resolvedParams.concepts.split(",").map((c) => c.trim()).filter(Boolean) : undefined;
+  let fallbackQuery = resolvedParams.query || "Best resources to learn Node.js, PostgreSQL and AI Engineering";
+
+  if (!initialTopic) {
+    try {
+      const roadmap = await getRoadmap(userId);
+      const currentNode = roadmap?.nodes.find((n) => n.status === "current") ?? roadmap?.nodes.find((n) => n.status === "next") ?? roadmap?.nodes[0];
+      if (currentNode) {
+        initialTopic = currentNode.topic || currentNode.theme || currentNode.title;
+        initialWeek = currentNode.week ?? 1;
+        initialConcepts = currentNode.concepts && currentNode.concepts.length > 0 ? currentNode.concepts : currentNode.relatedConcepts;
+      } else {
+        const profile = await getLearningProfile(userId);
+        if (profile?.goal) {
+          fallbackQuery = `Best resources to learn ${profile.goal}`;
+        }
       }
+    } catch (err) {
+      console.error("[resources/page] failed to build dynamic topic/query:", err);
     }
-  } catch (err) {
-    console.error("[resources/page] failed to build dynamic query:", err);
   }
 
   return (
@@ -47,7 +60,12 @@ export default async function ResourcesPage() {
         <Header user={user} authConfigured={configured} />
         <main className="flex-1 bg-muted/30 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl">
-            <ResearchPanel initialQuery={initialQuery} />
+            <ResearchPanel
+              initialTopic={initialTopic}
+              initialWeek={initialWeek}
+              initialConcepts={initialConcepts}
+              initialQuery={fallbackQuery}
+            />
           </div>
         </main>
       </div>
