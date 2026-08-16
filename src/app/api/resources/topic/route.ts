@@ -1,4 +1,6 @@
 import { getTopicResourcePack } from "@/agents/research/topic-research";
+import { auth } from "@/lib/auth";
+import { checkFeatureRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,27 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   try {
+    const session = await auth().catch(() => null);
+    const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+
+    // Rate-limit check using centralized config
+    const rateCheck = await checkFeatureRateLimit(userId, "topicResources");
+    if (!rateCheck.success) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded. Please wait a moment before requesting more resources.",
+          retryAfter: rateCheck.resetSec,
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": String(rateCheck.resetSec),
+          },
+        }
+      );
+    }
+
     const url = new URL(req.url);
     const topic = url.searchParams.get("topic");
 

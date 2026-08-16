@@ -12,8 +12,8 @@ describe("Centralized Rate Limiting Configuration", () => {
 
     expect(RATE_LIMITS.roadmap.prod.limit).toBe(2);
     expect(RATE_LIMITS.resume.prod.limit).toBe(2);
-    expect(RATE_LIMITS.roadmap.dev.limit).toBe(10);
-    expect(RATE_LIMITS.resume.dev.limit).toBe(10);
+    expect(RATE_LIMITS.roadmap.dev.limit).toBe(20);
+    expect(RATE_LIMITS.resume.dev.limit).toBe(20);
   });
 
   it("returns effective rule based on environment", () => {

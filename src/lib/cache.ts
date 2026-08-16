@@ -5,6 +5,7 @@
  * Used for research results, resource scores, etc.
  */
 import { getRedis } from "@/lib/redis";
+import { CACHE_TTL } from "@/config/rate-limits";
 
 type CacheEntry = { value: unknown; expiresAt: number };
 const memCache = new Map<string, CacheEntry>();

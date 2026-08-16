@@ -6,13 +6,12 @@ import { generateRoadmap } from "@/agents/roadmap/generator";
 import { saveProfileAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DashboardStats, NextActionCard } from "@/components/dashboard/stats";
 import { MentorTeamCompact } from "@/components/dashboard/mentor-team";
 import { ResourceCard } from "@/components/resources/resource-card";
 import { LearningProfileForm } from "@/components/profile/learning-profile-form";
-import { isMockModeForced } from "@/lib/env";
-import { MOCK_RESOURCES } from "@/data/mock/resources";
+import { getTopicResourcePack, type TopicResourcePack } from "@/agents/research/topic-research";
 import {
   MessageSquare,
   ArrowRight,
@@ -24,6 +23,8 @@ import {
   Flame,
   Brain,
   Zap,
+  BookOpen,
+  Sparkles,
 } from "lucide-react";
 
 import { getUserStreak } from "@/lib/streak";
@@ -72,40 +73,59 @@ export default async function DashboardPage() {
   const nodesTotal = nodes.length;
   const nodesCompleted = nodes.filter((n) => n.status === "completed").length;
   const progressPercent = nodesTotal > 0 ? Math.round((nodesCompleted / nodesTotal) * 100) : 0;
-  const currentNode = nodes.find((n) => n.status === "current") ?? nodes.find((n) => n.status === "next");
+  const currentNode = nodes.find((n) => n.status === "current") ?? nodes.find((n) => n.status === "next") ?? nodes[0];
+
+  // Fetch evaluated resources for the current ongoing topic
+  const currentTopic = currentNode?.topic || currentNode?.title;
+  const currentConcepts = currentNode?.concepts && currentNode.concepts.length > 0 ? currentNode.concepts : currentNode?.relatedConcepts ?? [];
+  let currentTopicPack: TopicResourcePack | null = null;
+
+  if (currentTopic) {
+    try {
+      currentTopicPack = await getTopicResourcePack({
+        topic: currentTopic,
+        concepts: currentConcepts,
+        level: profile?.currentLevel || "intermediate",
+        useCache: true,
+      });
+    } catch (err) {
+      console.error("[dashboard/page] getTopicResourcePack failed:", err);
+    }
+  }
 
   const greetingName = user?.name?.split(" ")[0] ?? (user ? "there" : "Developer");
   const goalText = profile?.goal ?? "Become a production-ready software engineer";
   const weeklyHours = profile?.weeklyHours ?? 10;
 
   return (
-    <div className="mx-auto max-w-6xl p-6 lg:p-8 space-y-8">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
       {/* Header Greeting & Actions */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between border-b pb-6">
-        <div className="space-y-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-5">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">
               Good day, {greetingName} 👋
             </h1>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium">
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium rounded-md">
               <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> {streak.streakDays} Day Streak
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {profile
               ? `Goal: “${goalText}” • ${weeklyHours}h/week • ${profile.currentLevel}`
               : "Your AI engineering team is ready to guide your learning journey."}
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <Link href="/chat">
-            <Button className="bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/20">
-              <MessageSquare className="h-4 w-4 mr-2" /> Ask Mentors
+
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap w-full sm:w-auto">
+          <Link href="/chat" className="flex-1 sm:flex-initial">
+            <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white shadow-xs rounded-xl text-xs sm:text-sm font-semibold h-9 px-4">
+              <MessageSquare className="h-4 w-4 mr-1.5" /> Ask Mentors
             </Button>
           </Link>
-          <Link href="/roadmap">
-            <Button variant="outline" className="border-white/10">
-              Roadmap <ArrowRight className="h-4 w-4 ml-2" />
+          <Link href="/roadmap" className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm font-semibold h-9 px-4">
+              Roadmap <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>
           </Link>
         </div>
@@ -145,70 +165,83 @@ export default async function DashboardPage() {
         streakHistory={streak.streakHistory}
       />
 
-      {/* Main Grid with Spacing */}
-      <div className="grid lg:grid-cols-[1.7fr_1fr] gap-8">
+      {/* Main Grid: Left (Roadmap & Actions) + Right (Mentors & Ongoing Topic Resources) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
         {/* Left Column */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           <NextActionCard
             mentorLabel={currentNode?.mentorId ? `${currentNode.mentorId} Mentor` : "Tech Lead"}
-            title={currentNode ? `Current Topic: ${currentNode.title}` : "Complete your learning profile"}
+            title={currentNode ? `Current Topic: ${currentNode.topic || currentNode.title}` : "Complete your learning profile"}
             description={currentNode?.description ?? "Set your goal and skills to generate your roadmap."}
-            tags={currentNode?.relatedConcepts ?? []}
+            tags={currentConcepts}
             estimatedTime={currentNode ? `${currentNode.difficulty}` : ""}
             projectHref={currentNode ? `/projects` : "/dashboard"}
           />
 
           {/* Active Roadmap Progress — Clickable Interactive Track */}
-          <Card className="border-muted/50">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-violet-500" /> Active Roadmap Track
+          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <CardHeader className="p-4 sm:p-5 pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-violet-500 shrink-0" /> Active Roadmap Track
                 </CardTitle>
                 <Link href="/roadmap">
-                  <Badge variant="secondary" className="text-xs hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer">
+                  <Badge variant="secondary" className="text-xs px-2.5 py-0.5 hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer rounded-md">
                     {nodesTotal} Milestones →
                   </Badge>
                 </Link>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Personalized path based on goal: “{goalText}” • Click any track to open interactive roadmap
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                Personalized curriculum based on “{goalText}” • Click any milestone to study details
               </p>
             </CardHeader>
 
-            <CardContent className="space-y-3">
+            <CardContent className="p-4 sm:p-5 pt-0 space-y-2.5">
               {nodes.length > 0 ? (
-                nodes.slice(0, 6).map((n) => (
-                  <Link
-                    key={n.id}
-                    href="/roadmap"
-                    className="flex items-center gap-3.5 rounded-xl border p-3.5 bg-card hover:bg-muted/50 hover:border-violet-500/40 transition-all shadow-2xs group cursor-pointer"
-                  >
-                    <div className="shrink-0">
-                      {n.status === "completed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
-                      {n.status === "current" && (
-                        <div className="h-5 w-5 rounded-full border-2 border-violet-500 flex items-center justify-center">
-                          <div className="h-2 w-2 rounded-full bg-violet-500 animate-pulse" />
+                nodes.slice(0, 6).map((n) => {
+                  const nodeTopic = n.topic || n.title;
+                  return (
+                    <Link
+                      key={n.id}
+                      href="/roadmap"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border p-3 bg-card hover:bg-muted/40 hover:border-violet-500/40 transition-all shadow-xs group cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <div className="shrink-0 mt-0.5">
+                          {n.status === "completed" && <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />}
+                          {n.status === "current" && (
+                            <div className="h-4.5 w-4.5 rounded-full border-2 border-violet-500 flex items-center justify-center">
+                              <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                            </div>
+                          )}
+                          {n.status === "next" && <Circle className="h-4.5 w-4.5 text-violet-500" />}
+                          {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
                         </div>
-                      )}
-                      {n.status === "next" && <Circle className="h-5 w-5 text-violet-500" />}
-                      {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-sm">
-                          Week {n.week ?? 1}
-                        </span>
-                        <p className="text-sm font-medium leading-tight group-hover:text-violet-500 transition-colors">{n.title}</p>
+
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-md">
+                              Week {n.week ?? 1}
+                            </span>
+                            <p className="text-xs sm:text-sm font-semibold leading-snug group-hover:text-violet-600 transition-colors text-foreground">
+                              {nodeTopic}
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed">{n.description}</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{n.description}</p>
-                    </div>
-                    <Badge variant="outline" className="hidden sm:inline-flex text-xs capitalize">{n.mentorId}</Badge>
-                    {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-xs">Done</Badge>}
-                    {n.status === "current" && <Badge className="bg-violet-600 text-white text-xs">Current</Badge>}
-                    {n.status === "next" && <Badge variant="secondary" className="text-xs">Up next</Badge>}
-                  </Link>
-                ))
+
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        <Badge variant="outline" className="text-[10px] capitalize rounded-md">
+                          {n.mentorId}
+                        </Badge>
+                        {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-[10px] rounded-md">Done</Badge>}
+                        {n.status === "current" && <Badge className="bg-violet-600 text-white text-[10px] rounded-md">Current</Badge>}
+                        {n.status === "next" && <Badge variant="secondary" className="text-[10px] rounded-md">Next</Badge>}
+                      </div>
+                    </Link>
+                  );
+                })
               ) : (
                 <div className="rounded-xl border border-dashed p-6 text-center">
                   <p className="text-sm font-medium text-foreground">No active roadmap track yet</p>
@@ -218,12 +251,12 @@ export default async function DashboardPage() {
                 </div>
               )}
 
-              <div className="pt-3 flex items-center justify-between text-xs">
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-t border-border/50">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" /> Pace: {weeklyHours}h / week
+                  <Clock className="h-3.5 w-3.5 text-violet-500" /> Pace: {weeklyHours}h / week
                 </span>
-                <Link href="/roadmap" className="font-semibold text-violet-500 hover:underline flex items-center gap-1">
-                  Manage & Edit Roadmap <ArrowRight className="h-3 w-3" />
+                <Link href="/roadmap" className="font-semibold text-violet-600 hover:underline flex items-center gap-1">
+                  Manage & Edit Full Roadmap <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
             </CardContent>
@@ -231,43 +264,81 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Active AI Mentors */}
-          <Card className="border-muted/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Brain className="h-4 w-4 text-violet-500" /> Your AI Engineering Team
+          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <CardHeader className="p-4 sm:p-5 pb-3">
+              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                <Brain className="h-4 w-4 text-violet-500 shrink-0" /> Your AI Engineering Team
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
               <MentorTeamCompact />
-              <div className="rounded-xl border p-3 bg-muted/30 text-xs space-y-1">
-                <p className="font-medium flex items-center gap-1 text-foreground">
+              <div className="rounded-xl border border-amber-500/20 p-3 bg-amber-500/5 text-xs space-y-1">
+                <p className="font-semibold flex items-center gap-1 text-foreground">
                   <Zap className="h-3.5 w-3.5 text-amber-500" /> Tech Lead Orchestrator
                 </p>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed text-[11px]">
                   Automatically routes queries, consults specialists in parallel, and synthesizes unified engineering answers.
                 </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Recommended Resources */}
-          <Card className="border-muted/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Recommended Resources</CardTitle>
+          {/* Recommended Resources for Current Ongoing Topic */}
+          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <CardHeader className="p-4 sm:p-5 pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="space-y-0.5">
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" /> Topic Resources
+                  </CardTitle>
+                  {currentNode && (
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Week {currentNode.week ?? 1}: <strong className="text-foreground">{currentTopic}</strong>
+                    </CardDescription>
+                  )}
+                </div>
+
+                {currentNode && (
+                  <Link
+                    href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
+                  >
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 rounded-lg border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer">
+                      View All →
+                    </Button>
+                  </Link>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {isMockModeForced() ? (
-                MOCK_RESOURCES.slice(0, 3).map((r) => (
-                  <ResourceCard key={r.id} r={r} />
-                ))
+
+            <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
+              {currentTopicPack && currentTopicPack.allResources.length > 0 ? (
+                <div className="space-y-2.5">
+                  {currentTopicPack.allResources.slice(0, 3).map((r) => (
+                    <ResourceCard key={r.url} r={r} compact />
+                  ))}
+
+                  <Link
+                    href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode?.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
+                    className="block pt-1"
+                  >
+                    <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-8 rounded-xl gap-1.5 shadow-xs">
+                      <Sparkles className="h-3 w-3 text-violet-600" /> Explore All {currentTopicPack.allResources.length} Evaluated Resources
+                    </Button>
+                  </Link>
+                </div>
               ) : (
-                <div className="rounded-xl border border-dashed p-6 text-center">
-                  <p className="text-sm font-medium text-foreground">No resources yet</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Visit the <Link href="/resources" className="text-violet-500 hover:underline">Resources</Link> page to discover AI-evaluated learning materials.
+                <div className="rounded-xl border border-dashed p-6 text-center space-y-2">
+                  <p className="text-xs sm:text-sm font-semibold text-foreground">Resources are being prepared...</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Evaluated guides, videos, and GitHub starter projects for <strong className="text-foreground">{currentTopic}</strong> are being synced.
                   </p>
+                  <Link href="/resources" className="inline-block pt-1">
+                    <Button size="sm" variant="outline" className="rounded-xl text-xs h-8">
+                      Open Resource Discovery
+                    </Button>
+                  </Link>
                 </div>
               )}
             </CardContent>

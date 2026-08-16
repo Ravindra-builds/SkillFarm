@@ -1,7 +1,7 @@
 /**
- * YouTube Search — Phase 8
+ * YouTube Search
  *
- * Uses YouTube Data API v3 (YOUTUBE_API_KEY). Falls back to mock when no key.
+ * Uses YouTube Data API v3 (YOUTUBE_API_KEY). Falls back to real working YouTube searches & video hubs when no key.
  */
 
 type YoutubeResult = {
@@ -16,7 +16,7 @@ type YoutubeResult = {
 function isPlaceholder(v?: string | null) {
   if (!v) return true;
   const s = v.trim().toLowerCase();
-  return s.includes("aiza") && s.includes("...") || s.length < 20 || s === "aiza...";
+  return (s.includes("aiza") && s.includes("...")) || s.length < 20 || s === "aiza...";
 }
 
 export async function searchYoutube(query: string, maxResults = 3): Promise<YoutubeResult[]> {
@@ -47,7 +47,7 @@ export async function searchYoutube(query: string, maxResults = 3): Promise<Yout
       const id = (item.id as Record<string, unknown> | undefined)?.videoId as string | undefined;
       return {
         title: String(snippet?.title ?? "Untitled"),
-        url: id ? `https://youtube.com/watch?v=${id}` : "",
+        url: id ? `https://www.youtube.com/watch?v=${id}` : "",
         content: String(snippet?.description ?? `YouTube video for ${query}`),
         channel: String((snippet?.channelTitle as string) ?? "YouTube"),
         publishedAt: snippet?.publishedAt ? String(snippet.publishedAt) : undefined,
@@ -71,21 +71,22 @@ export async function searchYoutube(query: string, maxResults = 3): Promise<Yout
 }
 
 function mockYoutube(query: string, n: number): YoutubeResult[] {
-  const base = query.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 15);
+  const encoded = encodeURIComponent(query);
+
   return [
     {
-      title: `${query.slice(0, 40)} — Full Course (2h)`,
-      url: `https://youtube.com/watch?v=mock-${base}`,
-      content: `Complete walkthrough of ${query} — from basics to production, with timestamps.`,
-      channel: "Fireship",
+      title: `${query.slice(0, 40)} — Video Walkthrough & Lecture`,
+      url: `https://www.youtube.com/results?search_query=${encoded}`,
+      content: `Visual explanation and step-by-step coding walkthrough covering core principles, pitfalls, and architectural tradeoffs of ${query}.`,
+      channel: "Engineering Lectures",
       publishedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      thumbnail: `https://i.ytimg.com/vi/mock-${base}/hqdefault.jpg`,
     },
     {
-      title: `${query.slice(0, 35)} in 100 seconds`,
-      url: `https://youtube.com/watch?v=mock2-${base}`,
-      content: `Quick 100-second explainer for ${query} — perfect for review.`,
-      channel: "Web Dev Simplified",
+      title: `${query.slice(0, 35)} Crash Course in 100 Seconds`,
+      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + " crash course")}`,
+      content: `High-density conceptual explanation of ${query} — mental models and rapid overview.`,
+      channel: "Fireship & Tech Explained",
+      publishedAt: new Date(Date.now() - 86400000 * 14).toISOString(),
     },
   ].slice(0, n);
 }

@@ -378,7 +378,7 @@ export function RoadmapView() {
           <p className="text-[11px] text-muted-foreground">
             {rateLimitInfo?.remaining !== undefined
               ? `${rateLimitInfo.remaining} regenerations left today`
-              : "Rate limited to 2/day (10 in dev)"}
+              : "Rate limited to 2/day (20 in dev)"}
           </p>
         </div>
       </div>
@@ -713,7 +713,12 @@ export function RoadmapView() {
                         <label className="text-xs font-bold text-foreground">Difficulty</label>
                         <select
                           value={editForm.difficulty}
-                          onChange={(e) => setEditForm({ ...editForm, difficulty: e.target.value as any })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              difficulty: e.target.value as "beginner" | "intermediate" | "advanced",
+                            })
+                          }
                           className="w-full h-8 rounded-lg border border-input bg-background px-2 text-xs sm:text-sm mt-1"
                         >
                           <option value="beginner">Beginner</option>

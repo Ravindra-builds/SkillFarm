@@ -7,7 +7,7 @@
  * - Deduplication and weighted scoring
  * - Structured categorization: Learn (Docs/Guides), Watch (YouTube), Practice (GitHub)
  * - Cache reuse across users for identical topics
- * - Persistence to resources and resource_scores tables when database is available
+ * - Safe atomic upsert to resources and resource_scores tables when database is available
  */
 
 import { searchTavily } from "@/lib/search/tavily";
@@ -15,10 +15,10 @@ import { searchGithub } from "@/lib/search/github";
 import { searchYoutube } from "@/lib/search/youtube";
 import { scoreResource, dedupeByUrl, sortByScore, type ScoredResource } from "./scorer";
 import { cacheGet, cacheSet, normalizeQuery } from "@/lib/cache";
+import { CACHE_TTL } from "@/config/rate-limits";
 import { isDbAvailable } from "@/lib/env";
 import { getDb } from "@/db";
 import { resources as resourcesTable, resourceScores as resourceScoresTable } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
 export type TopicResourceCategories = {
   learn: ScoredResource[]; // Docs, articles, tutorials
@@ -82,7 +82,8 @@ export function normalizeTopicKey(topic: string): string {
 }
 
 /**
- * Asynchronously persists evaluated resources to PostgreSQL tables (resources + resource_scores).
+ * Asynchronously and atomically persists evaluated resources to PostgreSQL tables (resources + resource_scores).
+ * Uses onConflictDoUpdate to prevent race-condition unique constraint violations.
  */
 async function persistResourcesToDb(resources: ScoredResource[]): Promise<void> {
   if (!isDbAvailable()) return;
@@ -90,40 +91,36 @@ async function persistResourcesToDb(resources: ScoredResource[]): Promise<void> 
   try {
     const db = getDb();
     for (const r of resources) {
-      // Upsert resource row
-      const existing = await db
-        .select({ id: resourcesTable.id })
-        .from(resourcesTable)
-        .where(eq(resourcesTable.url, r.url))
-        .limit(1);
-
-      let resourceId: string;
-
-      if (existing.length === 0) {
-        const [inserted] = await db
-          .insert(resourcesTable)
-          .values({
-            url: r.url,
+      // Atomic upsert for resource row
+      const [upsertedResource] = await db
+        .insert(resourcesTable)
+        .values({
+          url: r.url,
+          title: r.title,
+          description: r.description ?? null,
+          source: r.source,
+          publishedAt: r.publishedAt ? new Date(r.publishedAt) : null,
+          fetchedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: resourcesTable.url,
+          set: {
             title: r.title,
             description: r.description ?? null,
             source: r.source,
             publishedAt: r.publishedAt ? new Date(r.publishedAt) : null,
-          })
-          .returning({ id: resourcesTable.id });
-        resourceId = inserted.id;
-      } else {
-        resourceId = existing[0].id;
-      }
+            fetchedAt: new Date(),
+          },
+        })
+        .returning({ id: resourcesTable.id });
 
-      // Upsert score row
-      const existingScore = await db
-        .select({ id: resourceScoresTable.id })
-        .from(resourceScoresTable)
-        .where(eq(resourceScoresTable.resourceId, resourceId))
-        .limit(1);
+      if (!upsertedResource?.id) continue;
+      const resourceId = upsertedResource.id;
 
-      if (existingScore.length === 0) {
-        await db.insert(resourceScoresTable).values({
+      // Atomic upsert for resource score row
+      await db
+        .insert(resourceScoresTable)
+        .values({
           resourceId,
           overall: r.score.overall,
           authority: r.score.authority,
@@ -133,8 +130,20 @@ async function persistResourcesToDb(resources: ScoredResource[]): Promise<void> 
           beginnerFriendly: r.score.beginnerFriendly,
           communitySignal: r.score.communitySignal,
           reasoning: r.score.reasoning,
+        })
+        .onConflictDoUpdate({
+          target: resourceScoresTable.resourceId,
+          set: {
+            overall: r.score.overall,
+            authority: r.score.authority,
+            freshness: r.score.freshness,
+            accuracy: r.score.accuracy,
+            practicalValue: r.score.practicalValue,
+            beginnerFriendly: r.score.beginnerFriendly,
+            communitySignal: r.score.communitySignal,
+            reasoning: r.score.reasoning,
+          },
         });
-      }
     }
   } catch (err) {
     console.error("[topic-research] DB persistence warning (non-fatal):", err);
@@ -273,9 +282,9 @@ export async function getTopicResourcePack(opts: TopicResearchOptions): Promise<
     durationMs: Date.now() - start,
   };
 
-  // 5. Cache for 7 days (604,800 seconds) so all users studying this topic reuse the results
+  // 5. Cache with centralized TTL (7 days) so all users studying this topic reuse the results
   if (useCache && allResources.length > 0) {
-    await cacheSet(cacheKey, pack, 604800).catch(() => {});
+    await cacheSet(cacheKey, pack, CACHE_TTL.TOPIC_RESOURCE_PACK_TTL).catch(() => {});
   }
 
   // 6. Asynchronously persist to DB without blocking
