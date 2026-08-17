@@ -130,8 +130,8 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md bg-card/60 backdrop-blur-2xl border-white/10 shadow-2xl relative z-10 p-2 sm:p-4">
         <CardHeader className="text-center pb-3">
-          <div className="mx-auto h-14 w-14 overflow-hidden rounded-2xl border border-white/10 shadow-lg shadow-violet-500/20 mb-3 bg-card flex items-center justify-center p-1">
-            <Image src="/logo.png" alt="SkillFarm Logo" width={56} height={56} className="h-full w-full object-cover rounded-xl" />
+          <div className="mx-auto h-16 w-16 mb-2 flex items-center justify-center">
+            <Image src="/logo.png" alt="SkillFarm Logo" width={64} height={64} className="h-full w-full object-contain" />
           </div>
           <h1 className="font-heading text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">SkillFarm</h1>
           <p className="text-sm text-muted-foreground mt-1">Plant knowledge. Grow skills. Ship real things.</p>

@@ -315,7 +315,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
           <Settings className="h-5 w-5 text-violet-600 shrink-0" /> Settings & Configuration
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage AI LLM models, resume background, Mem0 long-term memory, and subscription quotas.
+          Manage AI LLM models, resume background, personalized long-term memory, and subscription quotas.
         </p>
       </div>
 
@@ -734,7 +734,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
             <CardHeader className="p-4 sm:p-6 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-violet-600 shrink-0" /> Mem0 Long-Term Memory Store
+                  <Brain className="h-4 w-4 text-violet-600 shrink-0" /> Personalized Long-Term Memory Store
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
                   Key background facts, skills, work history, and engineering preferences stored across sessions.
@@ -978,7 +978,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
                 <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
-                    <Brain className="h-3.5 w-3.5 text-amber-500" /> Mem0 Memories
+                    <Brain className="h-3.5 w-3.5 text-amber-500" /> Long-Term Memories
                   </span>
                   <p className="font-semibold text-xs sm:text-sm text-foreground">{memories.length} Active Records</p>
                 </div>
@@ -1048,7 +1048,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                     <span className="font-medium text-foreground">Included</span>
                   </div>
                   <div className="p-3 flex items-center justify-between">
-                    <span className="text-muted-foreground">Mem0 Long-Term Memory</span>
+                    <span className="text-muted-foreground">Personalized Long-Term Memory</span>
                     <span className="font-medium text-foreground">PostgreSQL & Semantic Sync</span>
                   </div>
                   <div className="p-3 flex items-center justify-between">

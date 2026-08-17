@@ -139,7 +139,7 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
                 Resume Context & Background Extractor
               </h3>
               <p className="text-[11px] text-muted-foreground">
-                Upload your resume (.pdf or text) to sync your skills and experience to Mem0 Long-Term Memory.
+                Upload your resume (.pdf or text) to sync your skills and experience into Personalized Long-Term Memory.
               </p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
               <div className="flex items-center gap-2 flex-wrap">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <h4 className="font-semibold text-xs sm:text-sm text-foreground">
-                  Resume Successfully Extracted & Saved to Mem0!
+                  Resume Successfully Extracted & Saved to Long-Term Memory!
                 </h4>
                 <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">
                   {memoriesCount} Memories Synced

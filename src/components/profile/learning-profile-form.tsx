@@ -382,7 +382,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
               Have a resume (.pdf or text)?
             </span>
             <span className="text-[11px] text-muted-foreground hidden sm:inline">
-              Auto-extract skills & experience into Mem0 Long-Term Memory
+              Auto-extract skills & experience into Personalized Long-Term Memory
             </span>
           </div>
           <Button
