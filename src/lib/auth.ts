@@ -58,7 +58,7 @@ if (!hasGoogle) {
   );
 }
 
-import { getCustomSession } from "./session";
+import { getCustomSession, getGuestUserId } from "./session";
 
 function getAuthSecret(): string {
   const secret = process.env.AUTH_SECRET;
@@ -135,7 +135,16 @@ export const auth = (async () => {
     };
   }
 
-  return nextAuthSession;
+  // Provide isolated per-browser guest identity
+  const guestId = await getGuestUserId();
+  return {
+    user: {
+      id: guestId,
+      name: "Alex (Guest)",
+      email: `${guestId}@skillfarm.local`,
+      image: null,
+    },
+  };
 }) as unknown as typeof nextAuth.auth;
 
 /** Convenience helper — use in server components / API routes */

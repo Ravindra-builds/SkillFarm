@@ -1,6 +1,7 @@
 import { getTopicResourcePack } from "@/agents/research/topic-research";
 import { auth } from "@/lib/auth";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
+import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -49,12 +50,23 @@ export async function GET(req: Request) {
     const level = url.searchParams.get("level") || "intermediate";
     const week = url.searchParams.get("week") ? parseInt(url.searchParams.get("week")!, 10) : undefined;
     const forceRefresh = url.searchParams.get("refresh") === "true";
+    const isGuest = isGuestSession(userId);
+    let useCache = !forceRefresh;
+
+    if (isGuest && forceRefresh) {
+      const quota = checkGuestQuota(userId, "resource");
+      if (!quota.allowed) {
+        useCache = true; // Fall back to cached evaluated topic pack
+      } else {
+        recordGuestAction(userId, "resource");
+      }
+    }
 
     const pack = await getTopicResourcePack({
       topic,
       concepts,
       level,
-      useCache: !forceRefresh,
+      useCache,
     });
 
     return new Response(

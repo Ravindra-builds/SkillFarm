@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth, isAuthConfigured } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { GuestModeToast } from "@/components/auth/guest-mode-toast";
+import { isGuestSession } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,9 @@ export default async function DashboardLayout({
 
   // Protected dashboard: if Google is configured, require sign-in.
   // If not configured (preview mode) OR auth failed, allow guest access so the shell remains demonstrable.
+  const isGuest = !user || isGuestSession(user.email);
   const isMockUser = !configured && !user;
+
   if (configured && !user) {
     redirect("/login?callbackUrl=/dashboard");
   }
@@ -41,6 +45,7 @@ export default async function DashboardLayout({
           <main className="flex-1 bg-muted/30">{children}</main>
         </div>
       </div>
+      <GuestModeToast isGuest={isGuest} />
     </div>
   );
 }

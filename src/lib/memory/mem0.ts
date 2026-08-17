@@ -12,6 +12,7 @@ import { getDb } from "@/db";
 import { userMemories } from "@/db/schema";
 import { ensureDbUser } from "@/lib/users";
 import { isMockModeForced } from "@/lib/env";
+import { isGuestSession } from "@/lib/guest";
 
 export type MemoryItem = {
   id: string;
@@ -21,7 +22,7 @@ export type MemoryItem = {
   createdAt?: string;
 };
 
-// In-memory cache & fallback when database is unconfigured
+// In-memory cache & fallback when database is unconfigured or user is in guest mode
 const localMemoryStore = new Map<string, MemoryItem[]>(); // userId -> memories[]
 
 function isPlaceholderKey(key?: string | null): boolean {
@@ -50,7 +51,8 @@ const RESUME_CATEGORIES = new Set([
 
 /**
  * Add or update a long-term memory item for a user.
- * Automatically deduplicates matching memories and syncs to both PostgreSQL and Mem0 Cloud.
+ * Automatically deduplicates matching memories and syncs to both PostgreSQL and Mem0 Cloud for authenticated users.
+ * Guest users are strictly isolated to in-memory/local storage without consuming external resources.
  */
 export async function addMemory(
   userId: string,
@@ -61,11 +63,12 @@ export async function addMemory(
   const cleanText = text.trim();
   if (!cleanText) return { success: false };
 
+  const isGuest = isGuestSession(userId);
   const apiKey = process.env.MEM0_API_KEY;
   const shouldReplace = options?.replaceCategory ?? RESUME_CATEGORIES.has(category);
 
-  // 1. Sync to Mem0 Cloud API with infer: true for intelligent deduplication
-  if (apiKey && !isPlaceholderKey(apiKey)) {
+  // 1. Sync to Mem0 Cloud API (Protected: strictly skipped for Guest Mode)
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey)) {
     try {
       const res = await fetch("https://api.mem0.ai/v1/memories/", {
         method: "POST",
@@ -90,8 +93,8 @@ export async function addMemory(
     }
   }
 
-  // 2. Persist to PostgreSQL user_memories table
-  if (isDbAvailable()) {
+  // 2. Persist to PostgreSQL user_memories table (Protected: strictly skipped for Guest Mode)
+  if (!isGuest && isDbAvailable()) {
     try {
       const dbUserId = await ensureDbUser({ id: userId, email: userId });
       const db = getDb();
@@ -185,10 +188,11 @@ export async function addMemory(
  * 3. Fall back to in-memory local cache.
  */
 export async function getMemories(userId: string, query?: string): Promise<MemoryItem[]> {
+  const isGuest = isGuestSession(userId);
   const apiKey = process.env.MEM0_API_KEY;
 
-  // 1. If Mem0 Cloud API is configured, search semantic memories
-  if (apiKey && !isPlaceholderKey(apiKey)) {
+  // 1. If Mem0 Cloud API is configured, search semantic memories (Skipped for Guest Mode)
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey)) {
     try {
       let res: Response;
       if (query && query.trim()) {
@@ -233,8 +237,8 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
     }
   }
 
-  // 2. PostgreSQL user_memories table
-  if (isDbAvailable()) {
+  // 2. PostgreSQL user_memories table (Skipped for Guest Mode)
+  if (!isGuest && isDbAvailable()) {
     try {
       const dbUserId = await ensureDbUser({ id: userId, email: userId });
       const db = getDb();
@@ -291,8 +295,10 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
  * Delete a memory item by ID from PostgreSQL, Mem0 Cloud, and local memory store.
  */
 export async function deleteMemory(userId: string, memoryId: string): Promise<boolean> {
-  // 1. Delete from PostgreSQL
-  if (isDbAvailable()) {
+  const isGuest = isGuestSession(userId);
+
+  // 1. Delete from PostgreSQL (Skipped for Guest Mode)
+  if (!isGuest && isDbAvailable()) {
     try {
       const dbUserId = await ensureDbUser({ id: userId, email: userId });
       const db = getDb();
@@ -304,9 +310,9 @@ export async function deleteMemory(userId: string, memoryId: string): Promise<bo
     }
   }
 
-  // 2. Delete from Mem0 Cloud API
+  // 2. Delete from Mem0 Cloud API (Skipped for Guest Mode)
   const apiKey = process.env.MEM0_API_KEY;
-  if (apiKey && !isPlaceholderKey(apiKey) && !memoryId.startsWith("mem_")) {
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey) && !memoryId.startsWith("mem_")) {
     try {
       await fetch(`https://api.mem0.ai/v1/memories/${encodeURIComponent(memoryId)}/`, {
         method: "DELETE",

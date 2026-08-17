@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { ensureDbUser } from "@/lib/users";
 import { SignJWT, jwtVerify } from "jose";
+import { randomUUID } from "crypto";
 
 export type CustomUserSession = {
   id: string;
@@ -11,13 +12,11 @@ export type CustomUserSession = {
 
 const SESSION_COOKIE_NAME = "skillfarm_session";
 const LEGACY_COOKIE_NAME = "SkillFarm_session";
+const GUEST_ID_COOKIE_NAME = "skillfarm_guest_id";
 
 /**
  * Returns the signing key as a Uint8Array derived from AUTH_SECRET.
  * Falls back to a dev-only insecure key when the env var is missing.
- *
- * In production, missing AUTH_SECRET throws at auth startup (see lib/auth.ts),
- * so this fallback is only reachable in local dev without a secret set.
  */
 function getSigningKey(): Uint8Array {
   const secret =
@@ -72,23 +71,27 @@ export async function createCustomSession(
     isGuest,
   };
 
-  // Auto-provision user row in Neon database if available
-  await ensureDbUser({
-    id: normalizedEmail,
-    email: normalizedEmail,
-    name: sessionUser.name,
-  }).catch(() => null);
+  // Auto-provision user row in Neon database if available (authenticated only)
+  if (!isGuest) {
+    await ensureDbUser({
+      id: normalizedEmail,
+      email: normalizedEmail,
+      name: sessionUser.name,
+    }).catch(() => null);
+  }
 
   const token = await signSession(sessionUser);
 
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  });
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+  } catch {}
 
   return sessionUser;
 }
@@ -104,17 +107,44 @@ export async function getCustomSession(): Promise<CustomUserSession | null> {
     const verified = await verifySession(cookie.value);
     if (verified) return verified;
 
-    // Backward compat: try unsigned JSON (old format — drop after first login cycle)
+    // Backward compat: try unsigned JSON
     try {
       const parsed = JSON.parse(cookie.value) as CustomUserSession;
       if (parsed && parsed.email) return parsed;
     } catch {
-      // Not JSON either — discard
+      // Not JSON either
     }
 
     return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Generates or retrieves a unique guest ID per browser instance.
+ * Ensures Brave, Edge, Chrome, and private tabs maintain their own isolated session.
+ */
+export async function getGuestUserId(): Promise<string> {
+  try {
+    const cookieStore = await cookies();
+    const existing = cookieStore.get(GUEST_ID_COOKIE_NAME)?.value;
+    if (existing && existing.startsWith("guest_") && existing.length >= 10) {
+      return existing;
+    }
+    const freshId = `guest_${randomUUID().slice(0, 12)}`;
+    try {
+      cookieStore.set(GUEST_ID_COOKIE_NAME, freshId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      });
+    } catch {}
+    return freshId;
+  } catch {
+    return `guest_${Date.now().toString(36)}`;
   }
 }
 

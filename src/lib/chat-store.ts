@@ -3,13 +3,14 @@ import { getDb } from "@/db";
 import { conversations, messages } from "@/db/schema";
 import { randomUUID } from "crypto";
 import { ensureDbUser } from "@/lib/users";
+import { isMockModeForced } from "@/lib/env";
+import { isGuestSession } from "@/lib/guest";
 
 /**
- * Chat persistence — Phase 3
+ * Chat persistence
  *
- * Tries Neon + Drizzle; falls back to in-memory Maps when DB is not configured
- * (placeholder ep-xxx) or when the query fails (e.g., table not yet migrated).
- * This keeps the demo working in preview without any env.
+ * For authenticated users: Uses PostgreSQL + Drizzle; falls back to in-memory Maps when DB is unconfigured.
+ * For guest users: Strictly isolated to in-memory maps per unique guest session ID, guaranteeing zero database pollution or cross-browser leakage.
  */
 
 type ChatMessage = {
@@ -30,8 +31,6 @@ type ChatConversation = {
   updatedAt: Date;
 };
 
-import { isMockModeForced } from "@/lib/env";
-
 function isDbAvailable(): boolean {
   if (isMockModeForced()) return false;
   const v = process.env.DATABASE_URL;
@@ -41,7 +40,7 @@ function isDbAvailable(): boolean {
   return s.startsWith("postgresql");
 }
 
-// In-memory fallbacks
+// In-memory isolated storage
 const memConversations = new Map<string, ChatConversation>();
 const memMessages = new Map<string, ChatMessage[]>();
 
@@ -52,7 +51,6 @@ const memMessages = new Map<string, ChatMessage[]>();
 export function formatTitleFromMessage(content: string): string {
   if (!content) return "New conversation";
 
-  // 1. Strip code blocks, markdown symbols, and extra whitespace
   let clean = content
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
@@ -63,18 +61,15 @@ export function formatTitleFromMessage(content: string): string {
 
   if (!clean) return "New conversation";
 
-  // 2. Extract first sentence or question
   const firstSentence = clean.split(/[\n\.\?!]/)[0]?.trim();
   let candidate = firstSentence && firstSentence.length >= 4 ? firstSentence : clean;
 
-  // 3. Trim length cleanly at word boundary (max 42 chars)
   if (candidate.length > 42) {
     const cut = candidate.slice(0, 42);
     const lastSpace = cut.lastIndexOf(" ");
     candidate = (lastSpace > 15 ? cut.slice(0, lastSpace) : cut).trim() + "…";
   }
 
-  // 4. Capitalize first letter
   candidate = candidate.charAt(0).toUpperCase() + candidate.slice(1);
   return candidate || "New conversation";
 }
@@ -98,14 +93,15 @@ export async function ensureConversation(
   conversationId?: string,
   mentorId?: string
 ): Promise<ChatConversation> {
+  const isGuest = isGuestSession(userId);
+
   if (conversationId) {
     const existing = await getConversation(conversationId);
     if (existing) {
-      // Optionally update activeMentorId if mentor changed
       if (mentorId && existing.activeMentorId !== mentorId) {
         existing.activeMentorId = mentorId;
         memConversations.set(existing.id, { ...existing, updatedAt: new Date() });
-        if (isDbAvailable()) {
+        if (!isGuest && isDbAvailable()) {
           try {
             const db = getDb();
             await (db.update(conversations) as unknown as { set: (v: Record<string, unknown>) => { where: (c: unknown) => Promise<void> } })
@@ -118,8 +114,6 @@ export async function ensureConversation(
     }
   }
 
-  // When opening chat without a specific ID, always prefer an empty conversation if one already exists,
-  // or initialize a brand new chat automatically (so the user is in a fresh chat, not a previous conversation).
   const empty = await getEmptyConversation(userId);
   if (empty) {
     return empty;
@@ -143,7 +137,9 @@ export async function createConversation(
     updatedAt: now,
   };
 
-  if (!isDbAvailable()) {
+  const isGuest = isGuestSession(userId);
+
+  if (isGuest || !isDbAvailable()) {
     memConversations.set(conv.id, conv);
     memMessages.set(conv.id, []);
     return conv;
@@ -151,7 +147,6 @@ export async function createConversation(
 
   try {
     const dbUserId = await ensureDbUser({ id: userId, email: userId });
-
     const db = getDb();
     const [row] = await db
       .insert(conversations)
@@ -162,6 +157,18 @@ export async function createConversation(
         activeMentorId: conv.activeMentorId,
       })
       .returning();
+    
+    // Also mirror to memory for fast local reads
+    memConversations.set(row.id, {
+      id: row.id,
+      userId: row.userId,
+      title: row.title,
+      activeMentorId: row.activeMentorId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+    memMessages.set(row.id, []);
+
     return {
       id: row.id,
       userId: row.userId,
@@ -179,12 +186,15 @@ export async function createConversation(
 }
 
 export async function getConversation(id: string): Promise<ChatConversation | null> {
-  if (!isDbAvailable()) return memConversations.get(id) ?? null;
+  const mem = memConversations.get(id);
+  if (mem) return mem;
+
+  if (!isDbAvailable()) return null;
   try {
     const db = getDb();
     const rows = await db.select().from(conversations).where(eq(conversations.id, id)).limit(1);
     const r = rows[0];
-    if (!r) return memConversations.get(id) ?? null;
+    if (!r) return null;
     return {
       id: r.id,
       userId: r.userId,
@@ -195,16 +205,19 @@ export async function getConversation(id: string): Promise<ChatConversation | nu
     };
   } catch (err) {
     console.error("[chat-store] getConversation failed:", err);
-    return memConversations.get(id) ?? null;
+    return null;
   }
 }
 
 export async function getConversations(userId: string): Promise<ChatConversation[]> {
-  if (!isDbAvailable()) {
+  const isGuest = isGuestSession(userId);
+
+  if (isGuest || !isDbAvailable()) {
     return Array.from(memConversations.values())
       .filter((c) => c.userId === userId)
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }
+
   try {
     const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
@@ -213,8 +226,8 @@ export async function getConversations(userId: string): Promise<ChatConversation
       .from(conversations)
       .where(eq(conversations.userId, dbUserId))
       .orderBy(desc(conversations.updatedAt));
+
     if (rows.length === 0 && dbUserId !== userId) {
-      // Check if user was recorded under raw userId
       const fallbackRows = await db
         .select()
         .from(conversations)
@@ -231,11 +244,12 @@ export async function getConversations(userId: string): Promise<ChatConversation
         }));
       }
     }
+
     if (rows.length === 0) {
-      // also check memory (in case some convs were created in memory before DB was added)
       const mem = Array.from(memConversations.values()).filter((c) => c.userId === userId || c.userId === dbUserId);
       return mem.length > 0 ? mem : [];
     }
+
     return rows.map((r) => ({
       id: r.id,
       userId: r.userId,
@@ -251,7 +265,14 @@ export async function getConversations(userId: string): Promise<ChatConversation
 }
 
 export async function getMessages(conversationId: string): Promise<ChatMessage[]> {
-  if (!isDbAvailable()) return memMessages.get(conversationId) ?? [];
+  const mem = memMessages.get(conversationId);
+  if (mem && mem.length > 0) return mem;
+
+  const conv = memConversations.get(conversationId);
+  const isGuest = conv ? isGuestSession(conv.userId) : false;
+
+  if (isGuest || !isDbAvailable()) return mem ?? [];
+
   try {
     const db = getDb();
     const rows = await db
@@ -259,7 +280,8 @@ export async function getMessages(conversationId: string): Promise<ChatMessage[]
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.createdAt);
-    if (rows.length === 0) return memMessages.get(conversationId) ?? [];
+
+    if (rows.length === 0) return mem ?? [];
     return rows.map((r) => ({
       id: r.id,
       conversationId: r.conversationId,
@@ -270,7 +292,7 @@ export async function getMessages(conversationId: string): Promise<ChatMessage[]
     }));
   } catch (err) {
     console.error("[chat-store] getMessages failed:", err);
-    return memMessages.get(conversationId) ?? [];
+    return mem ?? [];
   }
 }
 
@@ -289,7 +311,7 @@ export async function saveMessage(
     createdAt: new Date(),
   };
 
-  // Always put in memory (so even DB mode has fast fallback)
+  // Always put in memory
   const list = memMessages.get(conversationId) ?? [];
   list.push(msg);
   memMessages.set(conversationId, list);
@@ -307,7 +329,10 @@ export async function saveMessage(
     }
   }
 
-  if (!isDbAvailable()) return msg;
+  const conv = memConversations.get(conversationId);
+  const isGuest = conv ? isGuestSession(conv.userId) : false;
+
+  if (isGuest || !isDbAvailable()) return msg;
 
   try {
     const db = getDb();
@@ -319,7 +344,7 @@ export async function saveMessage(
       mentorId: mentorId ?? "backend",
       createdAt: msg.createdAt,
     });
-    // Touch conversation updatedAt and optionally title
+
     const updatePayload: Record<string, unknown> = { updatedAt: new Date() };
     if (updatedTitle) {
       updatePayload.title = updatedTitle;
@@ -342,7 +367,10 @@ export async function deleteConversation(
     memConversations.delete(conversationId);
     memMessages.delete(conversationId);
   }
-  if (!isDbAvailable()) return true;
+
+  const isGuest = isGuestSession(userId);
+  if (isGuest || !isDbAvailable()) return true;
+
   try {
     const db = getDb();
     await db.delete(conversations).where(eq(conversations.id, conversationId));
@@ -363,7 +391,10 @@ export async function updateConversationTitle(
   if (mem && mem.userId === userId) {
     memConversations.set(conversationId, { ...mem, title: trimmed, updatedAt: new Date() });
   }
-  if (!isDbAvailable()) return true;
+
+  const isGuest = isGuestSession(userId);
+  if (isGuest || !isDbAvailable()) return true;
+
   try {
     const db = getDb();
     await (

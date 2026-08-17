@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getLearningProfile } from "@/lib/learning-profile";
-import { generateRoadmap } from "@/agents/roadmap/generator";
+import { generateRoadmap, generateStaticRoadmap } from "@/agents/roadmap/generator";
 import { getRoadmap, saveRoadmap } from "@/lib/roadmap-store";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
+import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export async function POST(req: Request) {
     const session = await auth();
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
+    const isGuest = isGuestSession(userId);
+
     // ── Centralized Rate Limiting (2/day prod, 10/day dev) ─────────────────────
     const rateCheck = await checkFeatureRateLimit(userId, "roadmap");
     if (!rateCheck.success) {
@@ -81,6 +84,24 @@ export async function POST(req: Request) {
         JSON.stringify({ error: "Please complete your learning profile on the dashboard before generating a roadmap." }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // ── Guest Mode Quota Enforcement (1 Live Generation / Day) ───────────────
+    if (isGuest) {
+      const quota = checkGuestQuota(userId, "roadmap");
+      if (!quota.allowed) {
+        // Return structured static template roadmap without invoking external LLM
+        const templateRoadmap = generateStaticRoadmap({ userId, profile });
+        await saveRoadmap(userId, templateRoadmap);
+        return new Response(
+          JSON.stringify({
+            ...templateRoadmap,
+            _guestNotice: "Guest mode limit reached (1 live generation/day). Curated engineering track loaded.",
+          }),
+          { headers: { "Content-Type": "application/json" } }
+        );
+      }
+      recordGuestAction(userId, "roadmap");
     }
 
     const roadmap = await generateRoadmap({

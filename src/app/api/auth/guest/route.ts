@@ -1,5 +1,6 @@
 import { createCustomSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,8 @@ export async function POST(req: Request) {
       );
     }
 
-    await createCustomSession("guest-preview-user@skillfarm.local", "Alex (Guest)", true);
+    const uniqueGuestId = `guest_${randomUUID().slice(0, 12)}`;
+    await createCustomSession(`${uniqueGuestId}@skillfarm.local`, "Alex (Guest)", true);
     return new Response(JSON.stringify({ success: true, redirectUrl: "/dashboard" }), {
       headers: { "Content-Type": "application/json" },
     });

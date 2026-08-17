@@ -16,6 +16,12 @@ import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 import { formatUserFacingError } from "@/lib/friendly-errors";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { addMemory } from "@/lib/memory/mem0";
+import {
+  isGuestSession,
+  checkGuestQuota,
+  recordGuestAction,
+  getGuestTemplateChatResponse,
+} from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +122,7 @@ function streamTextAsSSE(
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const chunks = text.match(/.{1,30}/g) ?? [text];
+      const chunks = text.match(/[\s\S]{1,24}/g) ?? [text];
       for (const ch of chunks) {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ type: "text", text: ch })}\n\n`)
@@ -247,6 +253,34 @@ export async function POST(req: Request) {
     conversationId = convo.id;
     if (lastUserText) {
       await saveMessage(conversationId, "user", lastUserText, null).catch(() => {});
+    }
+
+    const isGuest = isGuestSession(userId);
+
+    // ── Guest Mode Quota Check (Max 5 live chat replies per day) ───────────
+    if (isGuest) {
+      const guestQuota = checkGuestQuota(userId, "chat");
+      if (!guestQuota.allowed) {
+        const templateResponse = getGuestTemplateChatResponse(
+          isManual ? (requestedMentorId || "backend") : "orchestrator",
+          lastUserText
+        );
+        if (conversationId && lastUserText) {
+          await saveMessage(
+            conversationId,
+            "assistant",
+            templateResponse,
+            isManual ? requestedMentorId : "orchestrator"
+          ).catch(() => {});
+        }
+        return streamTextAsSSE(
+          templateResponse,
+          conversationId,
+          isManual ? (requestedMentorId || DEFAULT_MENTOR_ID) : DEFAULT_MENTOR_ID,
+          { "X-Guest-Limit-Reached": "1" }
+        );
+      }
+      recordGuestAction(userId, "chat");
     }
 
     // ── Learning profile & Mem0 Long-term Context ───────────────────────────

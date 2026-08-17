@@ -403,7 +403,7 @@ export default async function LandingPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-foreground">Connect & Socials</p>
               <div className="flex items-center gap-2 pt-1">
                 <a
-                  href="https://github.com"
+                  href="https://github.com/organizations/SkillFarm-In"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-8 w-8 rounded-xl border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-2xs"
@@ -412,7 +412,7 @@ export default async function LandingPage() {
                   <GithubIcon className="h-4 w-4" />
                 </a>
                 <a
-                  href="https://x.com"
+                  href="https://x.com/skillfarm_in"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-8 w-8 rounded-xl border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-2xs"
@@ -421,7 +421,7 @@ export default async function LandingPage() {
                   <XIcon className="h-4 w-4" />
                 </a>
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/company/skillfarm-in"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-8 w-8 rounded-xl border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-2xs"
@@ -430,7 +430,7 @@ export default async function LandingPage() {
                   <LinkedinIcon className="h-4 w-4" />
                 </a>
                 <a
-                  href="https://instagram.com"
+                  href="https://instagram.com/skillfarm_in"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-8 w-8 rounded-xl border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shadow-2xs"
