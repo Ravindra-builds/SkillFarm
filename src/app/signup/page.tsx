@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,38 +13,37 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
-function LoginForm() {
+export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleGoogleLogin() {
+  async function handleGoogleSignup() {
     setGoogleLoading(true);
     setError(null);
     try {
       const res = await signIn("google", {
-        callbackUrl,
+        callbackUrl: "/dashboard",
         redirect: false,
       });
 
       if (res?.error) {
-        // Fallback to safe error or guest preview if Google OAuth keys are missing
-        console.warn("[login] Google sign-in response error:", res.error);
         setError(AUTH_MESSAGES.OAUTH_FAILED);
       } else if (res?.url) {
         window.location.href = res.url;
       } else {
-        window.location.href = callbackUrl;
+        window.location.href = "/dashboard";
       }
-    } catch (err) {
-      console.error("[login] Google sign-in exception:", err);
+    } catch {
       setError(AUTH_MESSAGES.OAUTH_FAILED);
     } finally {
       setGoogleLoading(false);
@@ -58,7 +57,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/guest", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        window.location.href = callbackUrl;
+        window.location.href = "/dashboard";
       } else {
         setError(data.error || AUTH_MESSAGES.GENERIC_ERROR);
       }
@@ -73,32 +72,51 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
 
+    // Client-side validation
+    const trimmedFirstName = firstName.trim();
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
+
+    if (!trimmedFirstName) {
+      setError("Please enter your first name.");
+      return;
+    }
+
+    if (!trimmedEmail || !trimmedEmail.includes("@")) {
       setError(AUTH_MESSAGES.INVALID_EMAIL);
       return;
     }
-    if (!password) {
-      setError("Please enter your password.");
+
+    if (password.length < 8) {
+      setError(AUTH_MESSAGES.PASSWORD_TOO_SHORT);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(AUTH_MESSAGES.PASSWORDS_MUST_MATCH);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmedEmail, password }),
+        body: JSON.stringify({
+          firstName: trimmedFirstName,
+          lastName: lastName.trim(),
+          email: trimmedEmail,
+          password,
+        }),
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || AUTH_MESSAGES.INVALID_CREDENTIALS);
+        setError(data.error || AUTH_MESSAGES.GENERIC_ERROR);
         return;
       }
 
-      window.location.href = data.redirectUrl || callbackUrl;
+      window.location.href = data.redirectUrl || "/dashboard";
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
@@ -108,8 +126,8 @@ function LoginForm() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Continue your learning journey."
+      title="Create an account"
+      subtitle="Start your learning journey with your personal AI engineering team."
     >
       {error && (
         <div
@@ -125,7 +143,7 @@ function LoginForm() {
       <Button
         type="button"
         variant="outline"
-        onClick={handleGoogleLogin}
+        onClick={handleGoogleSignup}
         disabled={loading || googleLoading || guestLoading}
         className="w-full h-10 bg-card hover:bg-muted/80 text-foreground border-border/80 font-medium flex items-center justify-center gap-2.5 text-xs sm:text-sm transition-colors cursor-pointer"
       >
@@ -151,8 +169,47 @@ function LoginForm() {
         <div className="border-t border-border/70 w-full" />
       </div>
 
-      {/* Email + Password Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Signup Form */}
+      <form onSubmit={handleSubmit} className="space-y-3.5">
+        {/* Name Fields Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="firstName" className="text-xs font-medium text-muted-foreground">
+              First name
+            </Label>
+            <Input
+              id="firstName"
+              name="given-name"
+              type="text"
+              placeholder="Ada"
+              autoComplete="given-name"
+              required
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              disabled={loading || googleLoading || guestLoading}
+              className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="lastName" className="text-xs font-medium text-muted-foreground">
+              Last name
+            </Label>
+            <Input
+              id="lastName"
+              name="family-name"
+              type="text"
+              placeholder="Lovelace"
+              autoComplete="family-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              disabled={loading || googleLoading || guestLoading}
+              className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+            />
+          </div>
+        </div>
+
+        {/* Email */}
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">
             Email address
@@ -171,42 +228,68 @@ function LoginForm() {
           />
         </div>
 
+        {/* Password */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-              Password
-            </Label>
-            <Link
-              href="/forgot-password"
-              className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
-            >
-              Forgot password?
-            </Link>
-          </div>
+          <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">
+            Password (min 8 characters)
+          </Label>
           <PasswordInput
             id="password"
-            name="password"
+            name="new-password"
             placeholder="••••••••"
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading || googleLoading || guestLoading}
           />
         </div>
 
+        {/* Confirm Password */}
+        <div className="space-y-1.5">
+          <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground">
+            Confirm password
+          </Label>
+          <PasswordInput
+            id="confirmPassword"
+            name="confirm-new-password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading || googleLoading || guestLoading}
+          />
+        </div>
+
+        {/* Terms and Privacy acknowledgment */}
+        <p className="text-[11px] text-muted-foreground text-center leading-relaxed pt-1">
+          By creating an account, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-foreground transition-colors">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-foreground transition-colors">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+
+        {/* Submit Button */}
         <Button
           type="submit"
           disabled={loading || googleLoading || guestLoading}
-          className="w-full h-10 bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm rounded-lg shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
+          className="w-full h-10 bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm rounded-lg shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2 mt-2"
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Signing in...</span>
+              <span>Creating account...</span>
             </>
           ) : (
-            <span>Sign In</span>
+            <span>Create account</span>
           )}
         </Button>
       </form>
@@ -214,12 +297,12 @@ function LoginForm() {
       {/* Footer Navigation */}
       <div className="pt-2 space-y-3 text-center">
         <p className="text-xs text-muted-foreground">
-          Don&apos;t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            href="/signup"
+            href="/login"
             className="font-medium text-violet-400 hover:text-violet-300 transition-colors"
           >
-            Create one
+            Log in
           </Link>
         </p>
 
@@ -245,19 +328,5 @@ function LoginForm() {
         </div>
       </div>
     </AuthShell>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
-        </div>
-      }
-    >
-      <LoginForm />
-    </Suspense>
   );
 }

@@ -98,10 +98,10 @@ export const config = {
      * Match all request paths EXCEPT:
      * - _next/static (static files)
      * - _next/image (image optimization)
-     * - favicon.ico, apple-icon, manifest, icons
+     * - favicon.ico, apple-icon, manifest, icons, logo.png
      * - /api/* (API routes handle their own auth)
-     * - /login, / (landing)
+     * - /login, /signup, /forgot-password, /reset-password, /verify-email, / (landing)
      */
-    "/((?!_next/static|_next/image|favicon.ico|apple-icon|manifest|icon|login|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|apple-icon|manifest|icon|logo.png|login|signup|forgot-password|reset-password|verify-email|api/).*)",
   ],
 };
