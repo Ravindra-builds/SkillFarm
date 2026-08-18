@@ -70,6 +70,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
   const [isReplacing, setIsReplacing] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [showReplaceConfirmModal, setShowReplaceConfirmModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -567,7 +568,13 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
             )}
             <Button
               type="button"
-              onClick={handleProcessResume}
+              onClick={() => {
+                if (existingResume) {
+                  setShowReplaceConfirmModal(true);
+                } else {
+                  handleProcessResume();
+                }
+              }}
               disabled={loading || (mode === "file" && !file) || (mode === "text" && !rawText.trim())}
               className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-9 px-4 gap-1.5 shadow-2xs cursor-pointer"
             >
@@ -732,6 +739,60 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
                   </Button>
                 )
               )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* 5. Replace Resume Confirmation Modal */}
+      {showReplaceConfirmModal && existingResume && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-md rounded-3xl border border-amber-500/30 bg-card p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <RefreshCw className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-heading text-base font-bold text-foreground">
+                  Replace Active Resume?
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  You are about to overwrite your active resume ({existingResume.fileName}). This will update your parsed technical skill profile in PostgreSQL and memory.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-1 text-xs text-amber-950 dark:text-amber-200">
+              <p className="font-semibold text-[11px]">
+                Impact of replacing:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5 text-muted-foreground text-[11px] pl-1">
+                <li>Previous resume file in Cloudflare R2 will be deleted/overwritten</li>
+                <li>New skills and experience will become available to apply</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowReplaceConfirmModal(false)}
+                className="text-xs rounded-xl font-medium cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setShowReplaceConfirmModal(false);
+                  handleProcessResume();
+                }}
+                className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl px-4 gap-1.5 shadow-xs cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Yes, Replace & Save
+              </Button>
             </div>
           </Card>
         </div>

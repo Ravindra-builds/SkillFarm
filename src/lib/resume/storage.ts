@@ -2,6 +2,7 @@ import { getDb, isDbAvailable } from "@/db";
 import { userResumes } from "@/db/schema/learning";
 import { isGuestSession } from "@/lib/guest";
 import { ensureDbUser } from "@/lib/users";
+import { deleteFileFromR2 } from "@/lib/storage/r2";
 import { eq, desc } from "drizzle-orm";
 import type { StructuredResumeData } from "./types";
 
@@ -45,12 +46,21 @@ export async function saveResumeRecord(
     const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
     const existing = await db
-      .select({ id: userResumes.id })
+      .select({ id: userResumes.id, storageKey: userResumes.storageKey })
       .from(userResumes)
       .where(eq(userResumes.userId, dbUserId))
       .limit(1);
 
     if (existing.length > 0) {
+      const oldStorageKey = existing[0].storageKey;
+      if (oldStorageKey && params.storageKey && oldStorageKey !== params.storageKey) {
+        try {
+          await deleteFileFromR2(oldStorageKey);
+        } catch (delErr) {
+          console.warn("[resume-storage] Non-blocking warning: Failed to delete previous resume from R2:", delErr);
+        }
+      }
+
       const [updated] = await db
         .update(userResumes)
         .set({

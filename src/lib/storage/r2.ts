@@ -108,9 +108,10 @@ export async function uploadFileToR2(params: {
   }
 
   const safeName = sanitizeFileName(params.fileName || "resume.pdf");
-  const timestamp = Date.now();
+  const ext = safeName.includes(".") ? safeName.split(".").pop() : "pdf";
   const safeUserId = params.userId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  const key = `resumes/${safeUserId}/${timestamp}-${safeName}`;
+  // Deterministic user key so updating replaces the file in-place with zero orphaned storage consumption
+  const key = `resumes/${safeUserId}/active-resume.${ext}`;
 
   try {
     const command = new PutObjectCommand({

@@ -25,9 +25,8 @@ export async function GET() {
       format: "mixed" as const,
     };
 
-    // Auto-generate if no roadmap exists OR if profile was updated after the roadmap
-    const isStale = profile && roadmap && new Date(profile.updatedAt).getTime() > new Date(roadmap.updatedAt).getTime();
-    if (!roadmap || isStale) {
+    // Auto-generate only if no roadmap exists at all for this user
+    if (!roadmap) {
       roadmap = await generateRoadmap({ userId, profile: activeProfile });
       await saveRoadmap(userId, roadmap);
     }

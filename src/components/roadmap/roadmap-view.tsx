@@ -30,6 +30,7 @@ import {
   Target,
   BrainCircuit,
   Lightbulb,
+  AlertOctagon,
 } from "lucide-react";
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
 
@@ -40,6 +41,8 @@ export function RoadmapView() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimitInfo, setRateLimitInfo] = useState<{ limit?: number; remaining?: number } | null>(null);
   const [selected, setSelected] = useState<RoadmapNode | null>(null);
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenStep, setRegenStep] = useState<1 | 2>(1);
 
   // Filter & Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -413,7 +416,14 @@ export function RoadmapView() {
 
         <div className="flex flex-col items-start md:items-end gap-1.5 shrink-0 w-full md:w-auto">
           <Button
-            onClick={regenerate}
+            onClick={() => {
+              if (roadmap && roadmap.nodes.length > 0) {
+                setRegenStep(1);
+                setShowRegenModal(true);
+              } else {
+                regenerate();
+              }
+            }}
             disabled={regenerating}
             className="w-full md:w-auto bg-violet-600 hover:bg-violet-500 text-white rounded-xl shadow-xs cursor-pointer text-xs sm:text-sm font-semibold h-9 px-4 flex items-center justify-center gap-2"
           >
@@ -950,6 +960,108 @@ export function RoadmapView() {
           )}
         </div>
       </div>
+
+      {/* 2-Step Roadmap Regeneration Confirmation Modal */}
+      {showRegenModal && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-md rounded-3xl border border-amber-500/30 bg-card p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            {regenStep === 1 ? (
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-heading text-base font-bold text-foreground">
+                      Regenerate Engineering Roadmap?
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      You are about to regenerate your AI roadmap. This will recreate all modules and milestones according to your latest profile.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 space-y-1.5 text-xs text-amber-950 dark:text-amber-200">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-amber-600" />
+                    Impact of this action:
+                  </div>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground text-[11px] pl-1">
+                    <li>Current node completion statuses ({completedCount}/{totalCount} milestones) will be reset</li>
+                    <li>Replaces active topic nodes, tasks, and project linkages</li>
+                    <li>Consumes 1 daily roadmap generation credit</li>
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRegenModal(false)}
+                    className="text-xs rounded-xl font-medium cursor-pointer"
+                  >
+                    Keep Current Roadmap
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setRegenStep(2)}
+                    className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-xl px-4 gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    Next Step <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                    <AlertOctagon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-heading text-base font-bold text-foreground">
+                      Final Confirmation: Overwrite Roadmap?
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Please confirm that you want to wipe your current progress and generate a fresh engineering roadmap.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-900 dark:text-red-200">
+                  <p className="font-semibold text-[11px] leading-relaxed">
+                    ⚠️ This action is permanent and cannot be undone.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRegenStep(1)}
+                    className="text-xs rounded-xl font-medium cursor-pointer"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      setShowRegenModal(false);
+                      regenerate();
+                    }}
+                    className="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl px-4 gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Yes, Overwrite & Regenerate
+                  </Button>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

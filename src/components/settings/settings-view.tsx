@@ -62,6 +62,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
   const [showAllMemories, setShowAllMemories] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [memoryToDelete, setMemoryToDelete] = useState<{ id: string; text: string } | null>(null);
 
   // LLM Setup state
   const [llmPref, setLlmPref] = useState<LlmPreference>(() => getStoredLlmPreference());
@@ -878,7 +879,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                           </span>
                           <button
                             type="button"
-                            onClick={() => handleDeleteMemory(m.id)}
+                            onClick={() => setMemoryToDelete({ id: m.id, text: m.memory })}
                             className="rounded-lg p-1 text-muted-foreground hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer"
                             title="Delete memory"
                             aria-label="Delete memory"
@@ -1065,6 +1066,55 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Memory Confirmation Modal */}
+      {memoryToDelete && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-md rounded-3xl border border-red-500/30 bg-card p-5 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-heading text-base font-bold text-foreground">
+                  Delete AI Mentor Memory?
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  This memory will be permanently removed from your long-term AI context across mentor chats.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-3.5 text-xs text-foreground/90 italic break-words">
+              “{memoryToDelete.text.slice(0, 150)}{memoryToDelete.text.length > 150 ? "..." : ""}”
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setMemoryToDelete(null)}
+                className="text-xs rounded-xl font-medium cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const id = memoryToDelete.id;
+                  setMemoryToDelete(null);
+                  handleDeleteMemory(id);
+                }}
+                className="bg-red-600 hover:bg-red-500 text-white text-xs font-semibold rounded-xl px-4 gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Confirm Delete
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
