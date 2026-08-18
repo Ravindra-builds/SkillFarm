@@ -9,6 +9,7 @@
 
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
 import { getTopicResourcePack } from "./topic-research";
+import { isGuestSession } from "@/lib/guest";
 
 /**
  * Discovers and warms resource packs for the current and next upcoming week.
@@ -22,10 +23,17 @@ export async function scheduleRoadmapResearch(
     return { scheduledTopics: [] };
   }
 
+  const isGuest = isGuestSession(roadmap.userId);
+
   // 1. Identify current active week
   const currentNode = roadmap.nodes.find((n) => n.status === "current") ?? roadmap.nodes[0];
   const currentWeek = currentNode.week ?? 1;
-  const targetWeeks = [currentWeek, currentWeek + 1];
+  let targetWeeks = [currentWeek, currentWeek + 1];
+
+  // For guest users, strictly limit the demo research scope to Weeks 1 and 2
+  if (isGuest) {
+    targetWeeks = targetWeeks.filter((w) => w <= 2);
+  }
 
   // 2. Extract distinct topics for these target weeks
   const targetNodes: RoadmapNode[] = [];

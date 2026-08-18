@@ -19,6 +19,7 @@ import {
   ChevronRight,
   Loader2,
   Sparkles,
+  Lock,
 } from "lucide-react";
 
 type Conversation = {
@@ -257,6 +258,7 @@ export function ConversationHistory({
   );
   const [loading, setLoading] = useState(!initialConversations);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [guestLimitModalOpen, setGuestLimitModalOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; title: string } | null>(null);
@@ -399,19 +401,24 @@ export function ConversationHistory({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "New conversation", mentorId: "backend" }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.conversation?.id) {
-          if (data.alreadyExists) {
-            addToast("You already have an empty chat — switched to it", "info");
-          } else {
-            addToast("New chat started ✨", "success");
-          }
-          await fetchConversations();
-          if (onSelect) onSelect();
-          router.push(`/chat?conversationId=${data.conversation.id}`);
-          return;
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 403 || data?.isGuestLimitReached) {
+        setGuestLimitModalOpen(true);
+        addToast("Guest limit reached: Max 3 conversations in demo mode", "info");
+        return;
+      }
+
+      if (res.ok && data?.conversation?.id) {
+        if (data.alreadyExists) {
+          addToast("You already have an empty chat — switched to it", "info");
+        } else {
+          addToast("New chat started ✨", "success");
         }
+        await fetchConversations();
+        if (onSelect) onSelect();
+        router.push(`/chat?conversationId=${data.conversation.id}`);
+        return;
       }
     } catch (err) {
       console.error("[conversation-history] Create new chat error:", err);
@@ -463,6 +470,40 @@ export function ConversationHistory({
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                 Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guest conversation limit reached modal */}
+      {guestLimitModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-heading text-base font-bold text-foreground">
+                Conversation Limit Reached
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                You have reached the guest sandbox limit of 3 conversations. Create a free account to unlock unlimited conversations with your specialist mentors and save your chat history to the cloud.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <Link href="/login" className="w-full">
+                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGuestLimitModalOpen(false)}
+                className="rounded-xl text-xs h-8 text-muted-foreground hover:text-foreground"
+              >
+                Stay in Current Chat
               </Button>
             </div>
           </div>

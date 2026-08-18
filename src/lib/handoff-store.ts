@@ -3,12 +3,14 @@ import { getDb } from "@/db";
 import { mentorHandoffs } from "@/db/schema";
 import { randomUUID } from "crypto";
 import type { MentorId } from "@/config/mentors";
+import { isGuestSession } from "@/lib/guest";
+import { getConversation } from "@/lib/chat-store";
 
 /**
  * Handoff persistence — Phase 6
  *
- * Uses Neon when available, otherwise in-memory Map.
- * Mirrors chat-store pattern for preview without DB.
+ * For authenticated users: Uses PostgreSQL + Drizzle.
+ * For guest users: Strictly isolated to memory/Redis, preventing foreign key errors against the DB.
  */
 
 type Handoff = {
@@ -49,7 +51,11 @@ export async function saveHandoff(
   list.push(h);
   memHandoffs.set(conversationId, list);
 
-  if (!isDbAvailable()) return h;
+  // Check if this conversation belongs to a guest user
+  const conv = await getConversation(conversationId).catch(() => null);
+  const isGuest = conv ? isGuestSession(conv.userId) : false;
+
+  if (isGuest || !isDbAvailable()) return h;
 
   try {
     const db = getDb();
@@ -78,7 +84,10 @@ export async function saveHandoff(
 }
 
 export async function getHandoffs(conversationId: string): Promise<Handoff[]> {
-  if (!isDbAvailable()) return memHandoffs.get(conversationId) ?? [];
+  const conv = await getConversation(conversationId).catch(() => null);
+  const isGuest = conv ? isGuestSession(conv.userId) : false;
+
+  if (isGuest || !isDbAvailable()) return memHandoffs.get(conversationId) ?? [];
   try {
     const db = getDb();
     const rows = await db.select().from(mentorHandoffs).where(eq(mentorHandoffs.conversationId, conversationId)).orderBy(desc(mentorHandoffs.createdAt));

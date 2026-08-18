@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getConversations, createConversation, getEmptyConversation } from "@/lib/chat-store";
+import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,8 @@ export async function POST(req: Request) {
     const userId =
       session?.user?.email ?? session?.user?.id ?? "guest-preview-user";
 
+    const isGuest = isGuestSession(userId);
+
     const json = await req.json().catch(() => ({}));
     const parsed = createSchema.safeParse(json);
     const mentorId = (parsed.success ? parsed.data.mentorId : undefined) ?? "backend";
@@ -46,7 +49,28 @@ export async function POST(req: Request) {
       );
     }
 
+    // ── Guest Mode Quota Enforcement (Max 3 Conversations) ───────────────────
+    if (isGuest) {
+      const quota = await checkGuestQuota(userId, "conversation");
+      if (!quota.allowed) {
+        return Response.json(
+          {
+            error: "Guest conversation limit reached",
+            message:
+              "You have reached the limit of 3 conversations in guest sandbox mode. Create a free account to start unlimited conversations and save your mentor chat history.",
+            isGuestLimitReached: true,
+            conversionNotice: quota.conversionNotice,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const conv = await createConversation(userId, title, mentorId);
+    if (isGuest) {
+      await recordGuestAction(userId, "conversation");
+    }
+
     return Response.json(
       { conversation: conv, alreadyExists: false },
       { status: 201 }

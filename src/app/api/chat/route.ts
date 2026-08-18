@@ -143,6 +143,7 @@ function streamTextAsSSE(
       Connection: "keep-alive",
       "X-Is-Mock": "1",
       "X-Mentor-Id": mentorId,
+      "X-Conversation-Id": conversationId,
       ...extraHeaders,
     },
   });
@@ -529,17 +530,14 @@ export async function POST(req: Request) {
         }
       );
 
-      if (Object.keys(handoffHeaders).length > 0) {
-        const mergedHeaders = new Headers(synthesisRes.headers);
-        for (const [k, v] of Object.entries(handoffHeaders)) mergedHeaders.set(k, v);
-        return new Response(synthesisRes.body, {
-          status: synthesisRes.status,
-          statusText: synthesisRes.statusText,
-          headers: mergedHeaders,
-        });
-      }
-
-      return synthesisRes;
+      const mergedHeaders = new Headers(synthesisRes.headers);
+      mergedHeaders.set("X-Conversation-Id", conversationId);
+      for (const [k, v] of Object.entries(handoffHeaders)) mergedHeaders.set(k, v);
+      return new Response(synthesisRes.body, {
+        status: synthesisRes.status,
+        statusText: synthesisRes.statusText,
+        headers: mergedHeaders,
+      });
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -584,7 +582,10 @@ export async function POST(req: Request) {
     });
 
     return result.toUIMessageStreamResponse({
-      headers: { "X-Mentor-Id": mentorId } as unknown as Headers,
+      headers: {
+        "X-Mentor-Id": mentorId,
+        "X-Conversation-Id": conversationId,
+      } as unknown as Headers,
     });
   } catch (err) {
     // Technical error with full stack trace logged exclusively to server terminal for debugging

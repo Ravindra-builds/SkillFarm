@@ -186,4 +186,60 @@ describe("Guest Mode & Temporary Storage Architecture", () => {
     expect(secReply).toContain("Cybersecurity");
     expect(secReply).toContain("Defense in Depth");
   });
+
+  it("safely persists mentor handoffs in memory/Redis for guests without DB foreign key errors", async () => {
+    const { saveHandoff, getHandoffs } = await import("@/lib/handoff-store");
+    const { createConversation } = await import("@/lib/chat-store");
+
+    const guestId = `guest_handoff_${Date.now()}`;
+    const conv = await createConversation(guestId, "Architecture discussion", "backend");
+
+    const handoff = await saveHandoff(
+      conv.id,
+      "backend",
+      "system-design",
+      "User requested high-scale distributed system review"
+    );
+
+    expect(handoff.id).toBeDefined();
+    expect(handoff.toMentorId).toBe("system-design");
+
+    const history = await getHandoffs(conv.id);
+    expect(history.length).toBeGreaterThan(0);
+    expect(history[0].toMentorId).toBe("system-design");
+  });
+
+  it("strictly restricts capstone week unlocks to max Week 2 for guest demo sessions", async () => {
+    const { toggleCapstoneTask, getCapstoneProject, saveCapstoneProject } = await import("@/lib/project-store");
+    const guestId = `guest_capstone_${Date.now()}`;
+
+    const initialState = {
+      id: `cp_${guestId}`,
+      userId: guestId,
+      name: "Portfolio Microservices",
+      description: "Demo project",
+      goalAlignment: "Backend skills",
+      stack: ["Node.js", "PostgreSQL"],
+      features: ["Week 1: Core", "Week 2: Auth", "Week 3: Kafka", "Week 4: K8s"],
+      currentWeek: 1,
+      unlockedWeeks: [1],
+      tasks: [
+        { id: "t1", week: 1, title: "Task 1", completed: false },
+        { id: "t2", week: 2, title: "Task 2", completed: false },
+        { id: "t3", week: 3, title: "Task 3", completed: false },
+      ],
+      updatedAt: new Date(),
+    };
+
+    await saveCapstoneProject(guestId, initialState);
+
+    // Complete Week 1 -> Unlocks Week 2
+    const afterW1 = await toggleCapstoneTask(guestId, "t1", true);
+    expect(afterW1?.unlockedWeeks).toContain(2);
+
+    // Complete Week 2 -> Must NOT unlock Week 3 for guest sessions
+    const afterW2 = await toggleCapstoneTask(guestId, "t2", true);
+    expect(afterW2?.unlockedWeeks).not.toContain(3);
+    expect(Math.max(...(afterW2?.unlockedWeeks || [1]))).toBeLessThanOrEqual(2);
+  });
 });

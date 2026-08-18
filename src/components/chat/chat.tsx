@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Send, Sparkles, Loader2, AlertCircle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus, Cpu } from "lucide-react";
+import { Send, Sparkles, Loader2, AlertCircle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus, Cpu, Lock } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
 import { ConversationHistory } from "@/components/chat/conversation-history";
@@ -226,6 +227,17 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
       return undefined;
     }
   });
+
+  const [guestLimitModalOpen, setGuestLimitModalOpen] = useState(false);
+  const [guestMessageLimitReached, setGuestMessageLimitReached] = useState(false);
+  const [guestNoticeText, setGuestNoticeText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialConv) {
+      setConvId(initialConv);
+    }
+  }, [initialConv]);
+
   const [isMock, setIsMock] = useState(false);
   const [decision, setDecision] = useState<{ requiredMentors: string[]; reasoning: string; confidence: number } | null>(null);
   const [activeMentorHeader, setActiveMentorHeader] = useState<string | null>(null);
@@ -347,6 +359,27 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
       }
 
       if (res.headers.get("X-Is-Mock") === "1") setIsMock(true);
+      const returnedConvId = res.headers.get("X-Conversation-Id");
+      if (returnedConvId && returnedConvId !== convId) {
+        setConvId(returnedConvId);
+        if (typeof window !== "undefined") {
+          window.history.replaceState(null, "", `/chat?conversationId=${returnedConvId}`);
+        }
+      }
+
+      const isGuestLimit = res.headers.get("X-Guest-Limit-Reached") === "1";
+      const guestNotice = res.headers.get("X-Guest-Conversion-Notice");
+      if (isGuestLimit) {
+        setGuestMessageLimitReached(true);
+        if (guestNotice) {
+          try {
+            setGuestNoticeText(decodeURIComponent(guestNotice));
+          } catch {
+            setGuestNoticeText(guestNotice);
+          }
+        }
+      }
+
       const decisionHeader = res.headers.get("X-Decision");
 
       if (typeof window !== "undefined") {
@@ -465,21 +498,23 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: "New conversation", mentorId: isAuto ? "backend" : mentorId }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.conversation?.id) {
-          setMobileHistoryOpen(false);
-          router.push(`/chat?conversationId=${data.conversation.id}`);
-          return;
-        }
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 403 || data?.isGuestLimitReached) {
+        setGuestLimitModalOpen(true);
+        return;
+      }
+
+      if (res.ok && data?.conversation?.id) {
+        setMobileHistoryOpen(false);
+        router.push(`/chat?conversationId=${data.conversation.id}`);
+        return;
       }
     } catch (err) {
       console.error("Failed to start new chat:", err);
     } finally {
       setIsCreatingChat(false);
     }
-    setMobileHistoryOpen(false);
-    router.push("/chat");
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -498,6 +533,19 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* Subtle Guest Top Conversion Banner */}
+      {isMockUser && (
+        <div className="border-b bg-violet-500/10 border-violet-500/20 px-3 sm:px-6 py-2 flex items-center justify-between gap-3 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+            <span className="font-medium">Create a free account to continue this conversation.</span>
+          </div>
+          <Link href="/login" className="shrink-0 font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+            Sign in →
+          </Link>
+        </div>
+      )}
+
       <div className="border-b bg-card/50 backdrop-blur px-3 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
         {/* Mobile: history drawer trigger */}
         <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
@@ -777,6 +825,23 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       <div className="p-3 sm:p-4 bg-card/60 backdrop-blur-md border-t">
         <div className="max-w-3xl mx-auto space-y-2">
+          {/* Guest Message Limit Inline Notice */}
+          {guestMessageLimitReached && (
+            <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <Lock className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                <span className="font-medium leading-relaxed">
+                  {guestNoticeText || "Mentor: Create a free account to continue this conversation."}
+                </span>
+              </div>
+              <Link href="/login" className="shrink-0 w-full sm:w-auto">
+                <Button size="sm" className="w-full sm:w-auto h-7 px-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold shadow-xs">
+                  <Sparkles className="h-3 w-3 mr-1" /> Sign in with Google
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Integrated prompt card */}
           <div className="relative rounded-2xl border border-border/80 bg-background/90 shadow-xs transition-all focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/15">
             {/* Expanding Textarea */}
@@ -846,6 +911,40 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           </div>
         </div>
       </div>
+
+      {/* Guest conversation limit reached modal */}
+      {guestLimitModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-heading text-base font-bold text-foreground">
+                Conversation Limit Reached
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                You have reached the guest sandbox limit of 3 conversations. Create a free account to unlock unlimited conversations with your specialist mentors and save your chat history to the cloud.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <Link href="/login" className="w-full">
+                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setGuestLimitModalOpen(false)}
+                className="rounded-xl text-xs h-8 text-muted-foreground hover:text-foreground"
+              >
+                Stay in Current Chat
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -139,6 +139,17 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Subtle Guest Top Banner */}
+      <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+          <span className="font-medium">Create an account to keep your resume profile and use it across SkillFarm.</span>
+        </div>
+        <Link href="/login" className="shrink-0 font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+          Sign in →
+        </Link>
+      </div>
+
       {/* Upload Box Container */}
       <div className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-4 sm:p-5 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">

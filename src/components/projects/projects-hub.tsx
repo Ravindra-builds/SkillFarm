@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Target,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import type { CapstoneProjectState, CapstoneTask, CapstoneWeekContext } from "@/lib/project-store";
 
@@ -35,6 +36,7 @@ export function ProjectsHub() {
 
   // Active view week
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const [showGuestLockedModal, setShowGuestLockedModal] = useState(false);
 
   // GitHub repo editing
   const [isEditingRepo, setIsEditingRepo] = useState(false);
@@ -249,10 +251,32 @@ export function ProjectsHub() {
     );
   }
 
+  const isGuest = Boolean(
+    capstone?.userId && (
+      capstone.userId === "guest-preview-user" ||
+      capstone.userId.startsWith("guest") ||
+      capstone.userId.includes("guest") ||
+      capstone.userId.endsWith("@skillfarm.local")
+    )
+  );
+
   if (!capstone) return null;
 
   return (
     <div className="space-y-5 sm:space-y-6">
+      {/* Subtle Guest Top Banner */}
+      {isGuest && (
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+            <span className="font-medium">Create an account to save your projects and progress.</span>
+          </div>
+          <Link href="/login" className="shrink-0 font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+            Sign in <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5 border-b pb-5">
         <div className="space-y-2.5 flex-1 w-full">
@@ -401,24 +425,33 @@ export function ProjectsHub() {
 
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
           {weekNumbers.map((w) => {
-            const isUnlocked = capstone.unlockedWeeks.includes(w);
+            const isGuestLocked = isGuest && w > 2;
+            const isUnlocked = !isGuestLocked && capstone.unlockedWeeks.includes(w);
             const isSelected = selectedWeek === w;
             const wTasks = capstone.tasks.filter((t) => t.week === w);
             const wDone = wTasks.filter((t) => t.completed).length;
-            const isWeekCompleted = wTasks.length > 0 && wDone === wTasks.length;
+            const isWeekCompleted = !isGuestLocked && wTasks.length > 0 && wDone === wTasks.length;
             const wCtx = capstone.weekContexts?.find((c) => c.week === w);
             const wLabel = wCtx?.topic || capstone.features?.[w - 1] || `Week ${w}`;
 
             return (
               <button
                 key={w}
-                disabled={!isUnlocked}
-                onClick={() => setSelectedWeek(w)}
+                onClick={() => {
+                  if (isGuestLocked) {
+                    setShowGuestLockedModal(true);
+                    return;
+                  }
+                  if (!isUnlocked) return;
+                  setSelectedWeek(w);
+                }}
                 className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-1.5 min-h-[74px] cursor-pointer ${
                   isSelected
                     ? "border-violet-600 bg-violet-600 text-white shadow-xs ring-1.5 ring-violet-500/30"
                     : isWeekCompleted
                     ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-foreground"
+                    : isGuestLocked
+                    ? "border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-muted-foreground"
                     : isUnlocked
                     ? "border-border/80 bg-card hover:bg-muted/60 text-foreground"
                     : "border-border/40 bg-muted/20 opacity-60 cursor-not-allowed text-muted-foreground"
@@ -430,6 +463,10 @@ export function ProjectsHub() {
                   </span>
                   {isWeekCompleted ? (
                     <CheckCircle2 className={`h-4 w-4 ${isSelected ? "text-white" : "text-emerald-500"}`} />
+                  ) : isGuestLocked ? (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400">
+                      <Lock className="h-3 w-3" /> Locked
+                    </span>
                   ) : !isUnlocked ? (
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (
@@ -610,8 +647,71 @@ export function ProjectsHub() {
               )}
             </div>
           )}
+
+          {/* Guest Locked Multi-Week Deliverables Teaser Card */}
+          {isGuest && (
+            <div className="mt-4 rounded-2xl border-2 border-dashed border-violet-500/40 bg-gradient-to-b from-violet-500/10 via-card to-card p-5 sm:p-7 text-center space-y-3.5 shadow-md animate-in fade-in duration-300">
+              <div className="h-11 w-11 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+                <Lock className="h-5 w-5" />
+              </div>
+              <div className="space-y-1 max-w-md mx-auto">
+                <h3 className="font-heading text-sm sm:text-base font-bold text-foreground">
+                  🔒 Unlock Advanced Capstone Deliverables (Weeks 3+)
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Weeks 1–2 project tasks are unlocked for this demo session. Create a free account to unlock all advanced production deliverables, automated code reviews, and persistent repository tracking.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 px-4 shadow-xs">
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Create Free Account
+                  </Button>
+                </Link>
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs h-9 px-3.5">
+                    Sign in with Google
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Guest Locked Deliverables Modal */}
+      {showGuestLockedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="font-heading text-base font-bold text-foreground">
+                Advanced Deliverable Locked
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Weeks 1–2 project deliverables are unlocked for this guest sandbox. Create a free account to unlock all remaining multi-week milestones, test suites, and cloud syncing.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-1">
+              <Link href="/login" className="w-full">
+                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGuestLockedModal(false)}
+                className="rounded-xl text-xs h-8 text-muted-foreground hover:text-foreground"
+              >
+                Back to Week 1–2
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

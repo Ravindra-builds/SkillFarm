@@ -7,6 +7,7 @@ import { ConversationHistory } from "@/components/chat/conversation-history";
 import { ensureConversation, getMessages, createConversation, getConversations } from "@/lib/chat-store";
 import { getHandoffs } from "@/lib/handoff-store";
 import { isValidMentorId, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
+import { isGuestSession } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export default async function ChatPage({ searchParams }: Props) {
   }
 
   const userId = (user?.email as string | undefined) ?? (user as unknown as { id?: string } | undefined)?.id ?? "guest-preview-user";
+  const isGuest = isGuestSession(userId);
   const sp = searchParams ? await searchParams : {};
   let conversationId: string | undefined = sp?.conversationId ?? undefined;
   const isNew = sp?.new === "true" || sp?.new === "1";
@@ -55,10 +57,20 @@ export default async function ChatPage({ searchParams }: Props) {
 
   try {
     let convo;
-    if (isNew && !conversationId) {
-      convo = await createConversation(userId, undefined, initialMentorId === "auto" ? undefined : initialMentorId);
-    } else {
-      convo = await ensureConversation(userId, conversationId, initialMentorId === "auto" ? undefined : initialMentorId);
+    if (isGuest && !conversationId && !isNew) {
+      // For guest users, reuse their active conversation so we don't accidentally exceed the 3-convo limit
+      const existingConvs = await getConversations(userId);
+      if (existingConvs.length > 0) {
+        convo = existingConvs[0];
+      }
+    }
+
+    if (!convo) {
+      if (isNew && !conversationId) {
+        convo = await createConversation(userId, undefined, initialMentorId === "auto" ? undefined : initialMentorId);
+      } else {
+        convo = await ensureConversation(userId, conversationId, initialMentorId === "auto" ? undefined : initialMentorId);
+      }
     }
     conversationId = convo.id;
     const [msgs, handoffs, convs] = await Promise.all([

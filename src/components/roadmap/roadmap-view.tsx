@@ -350,6 +350,19 @@ export function RoadmapView() {
         </div>
       )}
 
+      {/* Subtle Guest Top Banner */}
+      {isGuest && (
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+            <span className="font-medium">Create a free account to save your complete learning roadmap.</span>
+          </div>
+          <Link href="/login" className="shrink-0 font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+            Sign in <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5 border-b pb-5">
         <div className="space-y-2.5 flex-1 w-full">

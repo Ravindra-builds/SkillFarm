@@ -348,7 +348,9 @@ export async function toggleCapstoneTask(
   if (weekAllDone) {
     const nextWeek = task.week + 1;
     const maxWeek = Math.max(...capstone.tasks.map((t) => t.week), 1);
-    if (nextWeek <= maxWeek && !capstone.unlockedWeeks.includes(nextWeek)) {
+    const isGuest = isGuestSession(userId);
+    const maxAllowed = isGuest ? 2 : maxWeek;
+    if (nextWeek <= maxAllowed && !capstone.unlockedWeeks.includes(nextWeek)) {
       capstone.unlockedWeeks.push(nextWeek);
       capstone.unlockedWeeks.sort((a, b) => a - b);
       capstone.currentWeek = nextWeek;

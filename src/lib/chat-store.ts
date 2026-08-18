@@ -131,6 +131,13 @@ export async function ensureConversation(
     return empty;
   }
 
+  if (isGuest) {
+    const list = await getConversations(userId);
+    if (list.length >= GUEST_CONFIG.MAX_CONVERSATIONS) {
+      return list[0];
+    }
+  }
+
   return createConversation(userId, "New conversation", mentorId);
 }
 
@@ -152,12 +159,17 @@ export async function createConversation(
   const isGuest = isGuestSession(userId);
 
   if (isGuest) {
+    const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(userId))) || [];
+    if (existingList.length >= GUEST_CONFIG.MAX_CONVERSATIONS) {
+      const existing = existingList[0] || Array.from(memConversations.values()).find((c) => c.userId === userId);
+      if (existing) return existing;
+    }
+
     memConversations.set(conv.id, conv);
     memMessages.set(conv.id, []);
 
     // Sync to Redis with TTL
     await setGuestState(guestKeys.conversation(userId, conv.id), conv, GUEST_CONFIG.SESSION_TTL);
-    const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(userId))) || [];
     await setGuestState(
       guestKeys.conversations(userId),
       [conv, ...existingList.filter((c) => c.id !== conv.id)],
