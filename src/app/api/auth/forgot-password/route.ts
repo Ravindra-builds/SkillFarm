@@ -44,35 +44,30 @@ export async function POST(req: Request) {
     const { email } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if user exists before generating token
+    // Check if user exists
     const exists = await checkUserExists(normalizedEmail);
-    let devResetLink: string | undefined = undefined;
 
-    if (exists || process.env.NODE_ENV !== "production") {
+    if (exists) {
       const token = await createPasswordResetToken(normalizedEmail);
-      const origin = req.headers.get("origin") || "http://localhost:3000";
-      const resetUrl = `${origin}/reset-password?token=${token}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
+      const resetUrl = `${appUrl}/reset-password?token=${token}`;
 
       await sendAuthEmail({
         to: normalizedEmail,
         subject: "Reset your SkillFarm password",
         actionUrl: resetUrl,
         actionText: "Reset Password",
-        previewText: "We received a request to reset your password. Click below to choose a new password.",
+        previewText: "We received a request to reset your password. Click the button below to choose a new password.",
         type: "password_reset",
       });
-
-      if (process.env.NODE_ENV !== "production") {
-        devResetLink = `/reset-password?token=${token}`;
-      }
     }
 
-    // Always return safe success message to prevent email enumeration (Rule 9)
+    // 🔒 SECURITY: Always return safe generic success message to prevent email enumeration.
+    // The secret reset token is NEVER returned in the API response or exposed to the client.
     return new Response(
       JSON.stringify({
         success: true,
         message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS,
-        ...(devResetLink ? { devResetLink } : {}),
       }),
       { headers: { "Content-Type": "application/json" } }
     );

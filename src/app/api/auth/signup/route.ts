@@ -6,7 +6,6 @@ import {
   checkUserExists,
   createEmailVerificationToken,
 } from "@/lib/password-auth";
-import { createCustomSession } from "@/lib/session";
 import { sendAuthEmail } from "@/lib/email-service";
 import { AUTH_MESSAGES } from "@/lib/auth-errors";
 
@@ -65,14 +64,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // Hash password and store credentials (unverified initially)
+    // Hash password and store unverified credentials
     const hash = await hashPassword(password);
     await saveUserCredential(normalizedEmail, fullName, hash, false);
 
-    // Create verification token & dispatch verification email
+    // Create verification token & dispatch real verification email
     const token = await createEmailVerificationToken(normalizedEmail);
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    const verifyUrl = `${origin}/verify-email?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
+    const verifyUrl = `${appUrl}/verify-email?token=${token}`;
 
     await sendAuthEmail({
       to: normalizedEmail,
@@ -83,14 +82,14 @@ export async function POST(req: Request) {
       type: "verification",
     });
 
-    // Create session
-    await createCustomSession(normalizedEmail, fullName, false);
-
+    // 🔒 SECURITY: Do NOT establish an authenticated session for unverified users.
+    // Redirect user to the verify-email page where they are asked to check their real inbox.
     return new Response(
       JSON.stringify({
         success: true,
-        user: { email: normalizedEmail, name: fullName },
-        redirectUrl: `/verify-email?email=${encodeURIComponent(normalizedEmail)}&token=${token}`,
+        requiresVerification: true,
+        message: "Account created! Please check your email to verify your account.",
+        redirectUrl: `/verify-email?email=${encodeURIComponent(normalizedEmail)}`,
       }),
       { headers: { "Content-Type": "application/json" } }
     );

@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Mail,
   RefreshCw,
-  Sparkles,
 } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
@@ -26,7 +25,6 @@ function VerifyEmailForm() {
   const [verified, setVerified] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
-  const [devVerifyLink, setDevVerifyLink] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleVerify = useCallback(async (tokenToVerify: string) => {
@@ -42,14 +40,14 @@ function VerifyEmailForm() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || "This verification link is invalid or has expired.");
+        setError(data.error || "This verification link is invalid or has expired. Please request a new one.");
         return;
       }
 
       setVerified(true);
       setTimeout(() => {
         window.location.href = data.redirectUrl || "/dashboard";
-      }, 1200);
+      }, 1500);
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
@@ -57,7 +55,7 @@ function VerifyEmailForm() {
     }
   }, []);
 
-  // Auto-verify if token is in query params
+  // Automatically verify when the user clicks the link in their email containing the token
   useEffect(() => {
     if (token && !verified && !verifying) {
       handleVerify(token);
@@ -87,10 +85,7 @@ function VerifyEmailForm() {
         return;
       }
 
-      setResendStatus(AUTH_MESSAGES.VERIFICATION_SENT);
-      if (data.devVerifyLink) {
-        setDevVerifyLink(data.devVerifyLink);
-      }
+      setResendStatus("A fresh verification link has been sent to your email inbox.");
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
@@ -103,8 +98,8 @@ function VerifyEmailForm() {
       title={verified ? "Email Verified" : "Verify your email"}
       subtitle={
         verified
-          ? "Your SkillFarm account is fully active."
-          : "We've sent a verification link to your email address."
+          ? "Your SkillFarm account is active."
+          : "Please check your registered email inbox to continue."
       }
     >
       {error && (
@@ -134,7 +129,7 @@ function VerifyEmailForm() {
             Verifying your email address...
           </h2>
           <p className="text-xs text-muted-foreground">
-            Please wait while we activate your account session.
+            Validating security token and preparing your dashboard.
           </p>
         </div>
       ) : verified ? (
@@ -144,10 +139,10 @@ function VerifyEmailForm() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <h2 className="text-sm font-semibold text-foreground">
-              Verification Successful!
+              Email Verified Successfully!
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Your email has been confirmed. Redirecting to your dashboard...
+              Your account has been authenticated. Redirecting to your dashboard...
             </p>
           </div>
 
@@ -166,39 +161,14 @@ function VerifyEmailForm() {
               <Mail className="h-5 w-5" />
             </div>
             <h2 className="text-sm font-semibold text-foreground">
-              Check your inbox
+              Check your email inbox
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              We sent a verification link {email ? `to ${email}` : "to your email"}. Click the link to complete verification.
+              We sent a verification link {email ? `to ${email}` : "to your email address"}. You must click the link in your email to verify your identity and activate your account.
             </p>
           </div>
 
-          {/* Dev Quick-Verification Button */}
-          {token && (
-            <Button
-              type="button"
-              onClick={() => handleVerify(token)}
-              className="w-full h-10 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-            >
-              <Sparkles className="h-3.5 w-3.5" /> Complete Email Verification
-            </Button>
-          )}
-
-          {devVerifyLink && (
-            <div className="pt-1">
-              <Link href={devVerifyLink} className="block">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-9 text-xs border-violet-500/40 text-violet-300 hover:bg-violet-500/10 flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-violet-400" /> Click to Verify Email
-                </Button>
-              </Link>
-            </div>
-          )}
-
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2 pt-2">
             {email && (
               <Button
                 type="button"

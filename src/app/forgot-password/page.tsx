@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, Mail } from "lucide-react";
+import { AlertCircle, Loader2, ArrowLeft, Mail } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 export default function ForgotPasswordPage() {
@@ -14,7 +14,6 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [devResetLink, setDevResetLink] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,9 +41,6 @@ export default function ForgotPasswordPage() {
       }
 
       setSubmitted(true);
-      if (data.devResetLink) {
-        setDevResetLink(data.devResetLink);
-      }
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
@@ -69,31 +65,17 @@ export default function ForgotPasswordPage() {
 
       {submitted ? (
         <div className="space-y-4 animate-in fade-in">
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center space-y-2">
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center space-y-2">
             <div className="mx-auto h-10 w-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
               <Mail className="h-5 w-5" />
             </div>
             <h2 className="text-sm font-semibold text-foreground">
-              Check your email
+              Check your email inbox
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS}
             </p>
           </div>
-
-          {devResetLink && (
-            <div className="pt-1">
-              <Link href={devResetLink} className="block">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-9 text-xs border-violet-500/40 text-violet-300 hover:bg-violet-500/10 flex items-center justify-center gap-1.5"
-                >
-                  <Mail className="h-3.5 w-3.5 text-violet-400" /> Open Password Reset Page
-                </Button>
-              </Link>
-            </div>
-          )}
 
           <div className="pt-2 text-center">
             <Link href="/login">

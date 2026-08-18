@@ -94,6 +94,10 @@ function LoginForm() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (data.requiresVerification && data.redirectUrl) {
+          window.location.href = data.redirectUrl;
+          return;
+        }
         setError(data.error || AUTH_MESSAGES.INVALID_CREDENTIALS);
         return;
       }

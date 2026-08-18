@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getUserCredential, verifyPassword, saveUserCredential, hashPassword } from "@/lib/password-auth";
+import {
+  getUserCredential,
+  verifyPassword,
+  createEmailVerificationToken,
+} from "@/lib/password-auth";
 import { createCustomSession } from "@/lib/session";
+import { sendAuthEmail } from "@/lib/email-service";
 import { AUTH_MESSAGES } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
@@ -45,23 +50,12 @@ export async function POST(req: Request) {
     const { email, password } = parseResult.data;
     const normalizedEmail = email.toLowerCase().trim();
 
-    let cred = await getUserCredential(normalizedEmail);
-
-    // If user has not created a password yet but exists in DB or dev demo mode,
-    // support auto-provisioning for preview resilience
+    const cred = await getUserCredential(normalizedEmail);
     if (!cred) {
-      // In development/demo, allow new credentials to initialize smoothly
-      if (process.env.NODE_ENV !== "production" && password.length >= 6) {
-        const hash = await hashPassword(password);
-        const name = normalizedEmail.split("@")[0];
-        await saveUserCredential(normalizedEmail, name, hash);
-        cred = { email: normalizedEmail, name, passwordHash: hash, createdAt: Date.now() };
-      } else {
-        return new Response(
-          JSON.stringify({ error: AUTH_MESSAGES.INVALID_CREDENTIALS }),
-          { status: 401, headers: { "Content-Type": "application/json" } }
-        );
-      }
+      return new Response(
+        JSON.stringify({ error: AUTH_MESSAGES.INVALID_CREDENTIALS }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
     }
 
     const isValid = await verifyPassword(password, cred.passwordHash);
@@ -72,7 +66,33 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create session cookie
+    // 🔒 SECURITY CHECK: If email is not verified, block login and send fresh verification link
+    if (cred.emailVerified === false) {
+      const token = await createEmailVerificationToken(normalizedEmail);
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
+      const verifyUrl = `${appUrl}/verify-email?token=${token}`;
+
+      await sendAuthEmail({
+        to: normalizedEmail,
+        subject: "Verify your SkillFarm account",
+        actionUrl: verifyUrl,
+        actionText: "Verify Email Address",
+        previewText: "Please verify your email address to sign in to your SkillFarm workspace.",
+        type: "verification",
+      });
+
+      return new Response(
+        JSON.stringify({
+          error: "Your email address is not verified yet. We have sent a fresh verification link to your inbox.",
+          requiresVerification: true,
+          email: normalizedEmail,
+          redirectUrl: `/verify-email?email=${encodeURIComponent(normalizedEmail)}`,
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create authenticated session cookie
     await createCustomSession(normalizedEmail, cred.name, false);
 
     return new Response(

@@ -4,6 +4,7 @@ import {
   createEmailVerificationToken,
   consumeEmailVerificationToken,
   getUserCredential,
+  checkUserExists,
 } from "@/lib/password-auth";
 import { createCustomSession } from "@/lib/session";
 import { sendAuthEmail } from "@/lib/email-service";
@@ -53,29 +54,32 @@ export async function POST(req: Request) {
     if (action === "resend") {
       if (!email) {
         return new Response(
-          JSON.stringify({ error: "Email is required" }),
+          JSON.stringify({ error: "Email address is required." }),
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
       const normalizedEmail = email.toLowerCase().trim();
-      const freshToken = await createEmailVerificationToken(normalizedEmail);
-      const origin = req.headers.get("origin") || "http://localhost:3000";
-      const verifyUrl = `${origin}/verify-email?token=${freshToken}&email=${encodeURIComponent(normalizedEmail)}`;
+      const exists = await checkUserExists(normalizedEmail);
 
-      await sendAuthEmail({
-        to: normalizedEmail,
-        subject: "Verify your SkillFarm account",
-        actionUrl: verifyUrl,
-        actionText: "Verify Email Address",
-        previewText: "Click the button below to verify your SkillFarm account.",
-        type: "verification",
-      });
+      if (exists) {
+        const freshToken = await createEmailVerificationToken(normalizedEmail);
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.headers.get("origin") || "http://localhost:3000";
+        const verifyUrl = `${appUrl}/verify-email?token=${freshToken}`;
+
+        await sendAuthEmail({
+          to: normalizedEmail,
+          subject: "Verify your SkillFarm account",
+          actionUrl: verifyUrl,
+          actionText: "Verify Email Address",
+          previewText: "Click the button below to verify your SkillFarm account and activate your workspace.",
+          type: "verification",
+        });
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
           message: AUTH_MESSAGES.VERIFICATION_SENT,
-          devVerifyLink: `/verify-email?token=${freshToken}&email=${encodeURIComponent(normalizedEmail)}`,
         }),
         { headers: { "Content-Type": "application/json" } }
       );
@@ -97,7 +101,7 @@ export async function POST(req: Request) {
         );
       }
 
-      // Establish session
+      // Establish authenticated session for the verified user
       const cred = await getUserCredential(verifiedEmail);
       const name = cred?.name || verifiedEmail.split("@")[0];
       await createCustomSession(verifiedEmail, name, false);
