@@ -9,6 +9,7 @@ export { extractTextFromPdfBuffer } from "./pdf-extractor";
 export { extractStructuredResume } from "./llm-extractor";
 export { syncResumeToMem0 } from "./mem0-sync";
 export { scrubSensitiveInformation, validateResumeSections } from "./pii-scrubber";
+export { saveResumeRecord, getLatestUserResume } from "./storage";
 
 /**
  * High-level unified resume parser & memory synchronization engine.

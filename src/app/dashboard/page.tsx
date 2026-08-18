@@ -58,10 +58,9 @@ export default async function DashboardPage() {
     profile = null;
   }
 
-  // Load or auto-generate real roadmap from profile
+  // Load or auto-generate initial roadmap if none exists
   let roadmap = await getRoadmap(userId);
-  const isStale = profile && roadmap && new Date(profile.updatedAt).getTime() > new Date(roadmap.updatedAt).getTime();
-  if ((!roadmap || isStale) && profile) {
+  if (!roadmap && profile) {
     roadmap = await generateRoadmap({ userId, profile });
     await saveRoadmap(userId, roadmap);
   }

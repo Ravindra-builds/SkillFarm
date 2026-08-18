@@ -725,7 +725,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
 
         {/* Tab 1: Resume Context Extractor */}
         <TabsContent value="resume" className="space-y-4">
-          <ResumeUploader onProfileExtracted={() => refreshMemories()} />
+          <ResumeUploader userName={user?.name} onProfileExtracted={() => refreshMemories()} />
         </TabsContent>
 
         {/* Tab 2: Mem0 Memory Manager */}

@@ -1,7 +1,8 @@
 import { auth } from "@/lib/auth";
-import { processAndStoreResume } from "@/lib/resume";
+import { processAndStoreResume, saveResumeRecord, getLatestUserResume } from "@/lib/resume";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
-import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
+import { isGuestSession, checkGuestQuota, recordGuestAction, getGuestState, setGuestState, guestKeys, GUEST_CONFIG } from "@/lib/guest";
+import { uploadFileToR2, isR2Configured } from "@/lib/storage/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,10 @@ export async function POST(req: Request) {
 
     let textContent = "";
     let pdfBuffer: Buffer | undefined;
+    let fileName = "resume.txt";
+    let fileSize = 0;
+    let fileMime = "text/plain";
+    let fileBufferToStore: Buffer | undefined;
 
     // Handle Multipart Form Data (PDF / text file upload)
     if (contentType.includes("multipart/form-data")) {
@@ -65,19 +70,33 @@ export async function POST(req: Request) {
             { status: 400, headers: { "Content-Type": "application/json" } }
           );
         }
+        fileName = file.name || "resume.pdf";
+        fileSize = file.size;
+        fileMime = file.type || (fileName.endsWith(".pdf") ? "application/pdf" : "text/plain");
+
         const arrayBuffer = await file.arrayBuffer();
-        if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-          pdfBuffer = Buffer.from(arrayBuffer);
+        fileBufferToStore = Buffer.from(arrayBuffer);
+
+        if (fileMime === "application/pdf" || fileName.endsWith(".pdf")) {
+          pdfBuffer = fileBufferToStore;
         } else {
           textContent = new TextDecoder().decode(arrayBuffer);
         }
       } else if (textParam) {
         textContent = textParam;
+        fileName = "pasted-resume.txt";
+        fileSize = Buffer.byteLength(textContent, "utf-8");
+        fileMime = "text/plain";
+        fileBufferToStore = Buffer.from(textContent, "utf-8");
       }
     } else {
       // Handle standard JSON payload
       const json = await req.json().catch(() => ({}));
       textContent = json.resumeText || "";
+      fileName = "pasted-resume.txt";
+      fileSize = Buffer.byteLength(textContent, "utf-8");
+      fileMime = "text/plain";
+      fileBufferToStore = Buffer.from(textContent, "utf-8");
     }
 
     if (!pdfBuffer && (!textContent || textContent.trim().length < 10)) {
@@ -89,14 +108,67 @@ export async function POST(req: Request) {
       );
     }
 
+    // 1. Process and store in Mem0 / Memory
     const result = await processAndStoreResume(userId, {
       pdfBuffer,
       text: textContent,
     });
 
+    // 2. Cloudflare R2 Upload (for authenticated users when R2 is configured)
+    let r2UploadResult: { key: string; url: string | null } | null = null;
+    if (!isGuest && isR2Configured() && fileBufferToStore) {
+      try {
+        r2UploadResult = await uploadFileToR2({
+          userId,
+          fileBuffer: fileBufferToStore,
+          fileName,
+          contentType: fileMime,
+        });
+      } catch (r2Err) {
+        console.error("[api/settings/resume] R2 upload warning:", r2Err);
+      }
+    }
+
+    // 3. Save Resume record to PostgreSQL database (or guest Redis cache)
+    let resumeRecordId: string | null = null;
+    if (!isGuest) {
+      resumeRecordId = await saveResumeRecord(userId, {
+        fileName,
+        fileSize,
+        fileType: fileMime,
+        storageKey: r2UploadResult?.key ?? null,
+        storageUrl: r2UploadResult?.url ?? null,
+        structured: result.structured,
+      });
+    } else {
+      const guestResume = {
+        id: "guest-resume",
+        userId,
+        fileName,
+        fileSize,
+        fileType: fileMime,
+        storageKey: null,
+        storageUrl: null,
+        extractedSkills: result.structured.skills,
+        suggestedLevel: result.structured.suggestedLevel,
+        targetRole: result.structured.targetRole,
+        summary: result.structured.summary,
+        parsedData: result.structured,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await setGuestState(guestKeys.profile(userId) + ":resume", guestResume, GUEST_CONFIG.SESSION_TTL);
+      resumeRecordId = "guest-resume";
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
+        resumeId: resumeRecordId,
+        storage: r2UploadResult ? {
+          key: r2UploadResult.key,
+          url: r2UploadResult.url,
+        } : null,
         parsed: {
           extractedSkills: result.structured.skills,
           experienceSummary: result.structured.summary,
@@ -118,6 +190,36 @@ export async function POST(req: Request) {
     const msg = err instanceof Error ? err.message : "Failed to parse resume";
     return new Response(
       JSON.stringify({ error: msg }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = (await (auth as unknown as () => Promise<unknown>)().catch(() => null)) as unknown as { user?: { email?: string; id?: string } } | null;
+    const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+    const isGuest = isGuestSession(userId);
+
+    if (isGuest) {
+      const guestResume = await getGuestState(guestKeys.profile(userId) + ":resume");
+      return new Response(JSON.stringify({ resume: guestResume ?? null, isGuest: true }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const latest = await getLatestUserResume(userId);
+    return new Response(
+      JSON.stringify({
+        resume: latest,
+        isGuest: false,
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("[api/settings/resume] GET error:", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch resume record" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

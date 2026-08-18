@@ -13,7 +13,8 @@ import { saveProjects } from "@/lib/project-store";
  * synchronizes the personalized roadmap and practical projects.
  */
 export async function saveProfileAction(
-  data: LearningProfileInput
+  data: LearningProfileInput,
+  regenerateRoadmap: boolean = false
 ): Promise<{ ok: boolean; isMock: boolean; error?: string }> {
   try {
     const session = await auth();
@@ -24,8 +25,8 @@ export async function saveProfileAction(
 
     const result = await saveLearningProfile(userId, data);
 
-    if (result.ok && result.profile) {
-      // Regenerate personalized roadmap based on updated profile
+    if (result.ok && result.profile && regenerateRoadmap) {
+      // Regenerate personalized roadmap only when user explicitly confirms
       const newRoadmap = await generateRoadmap({ userId, profile: result.profile });
       await saveRoadmap(userId, newRoadmap);
 

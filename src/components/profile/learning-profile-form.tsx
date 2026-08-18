@@ -26,13 +26,19 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import type { LearningProfileInput } from "@/lib/learning-profile";
 import { ResumeUploader } from "@/components/resume/resume-uploader";
 
 type Props = {
   initial?: Partial<LearningProfileInput>;
-  action: (data: LearningProfileInput) => Promise<{ ok: boolean; isMock: boolean; error?: string }>;
+  action: (
+    data: LearningProfileInput,
+    regenerateRoadmap?: boolean
+  ) => Promise<{ ok: boolean; isMock: boolean; error?: string }>;
   userName?: string | null;
 };
 
@@ -108,6 +114,12 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
   const [format, setFormat] = useState<LearningProfileInput["format"]>(initial?.format ?? "mixed");
   const [msg, setMsg] = useState<{ type: "success" | "error" | "mock"; text: string } | null>(null);
 
+  // 2-Step Roadmap Regeneration Confirmation Modal State
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenStep, setRegenStep] = useState<1 | 2>(1);
+  const [pendingPayload, setPendingPayload] = useState<LearningProfileInput | null>(null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
   function toggleResumeUploader() {
     const next = !showResumeUploader;
     setShowResumeUploader(next);
@@ -140,6 +152,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
     }
     setIsEditing(false);
     setShowResumeUploader(false);
+    setShowRegenModal(false);
     setMsg(null);
   }
 
@@ -194,17 +207,58 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
       format,
     };
 
-    startTransition(async () => {
-      const res = await action(payload);
-      if (!res.ok) {
-        setMsg({ type: "error", text: res.error ?? "Failed to save profile. Please check your inputs." });
-        return;
-      }
+    // Check if core learning profile attributes changed
+    const isGoalChanged = initial?.goal ? initial.goal.trim() !== payload.goal : true;
+    const isLevelChanged = initial?.currentLevel ? initial.currentLevel !== payload.currentLevel : false;
+    const isHoursChanged = initial?.weeklyHours ? initial.weeklyHours !== payload.weeklyHours : false;
+    const areSkillsChanged =
+      initial?.knownSkills
+        ? JSON.stringify([...initial.knownSkills].sort()) !== JSON.stringify([...payload.knownSkills].sort())
+        : true;
 
-      setMsg({ type: "success", text: "Learning profile updated successfully! Roadmaps and mentor context synchronized." });
-      setIsEditing(false);
-      setShowResumeUploader(false);
-      router.refresh();
+    const hasCoreChanges = hasExistingProfile && (isGoalChanged || isLevelChanged || isHoursChanged || areSkillsChanged);
+
+    if (hasCoreChanges) {
+      setPendingPayload(payload);
+      setRegenStep(1);
+      setShowRegenModal(true);
+      return;
+    }
+
+    // Save directly without wiping roadmap
+    performSave(payload, !hasExistingProfile);
+  }
+
+  function performSave(payload: LearningProfileInput, regenerateRoadmap: boolean) {
+    setMsg(null);
+    setShowRegenModal(false);
+    if (regenerateRoadmap) {
+      setIsRegenerating(true);
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await action(payload, regenerateRoadmap);
+        if (!res.ok) {
+          setMsg({ type: "error", text: res.error ?? "Failed to save profile. Please check your inputs." });
+          setIsRegenerating(false);
+          return;
+        }
+
+        setMsg({
+          type: "success",
+          text: regenerateRoadmap
+            ? "Learning profile & customized roadmap regenerated successfully!"
+            : "Learning profile updated! Your existing roadmap progress has been preserved.",
+        });
+        setIsEditing(false);
+        setShowResumeUploader(false);
+        router.refresh();
+      } catch (err) {
+        setMsg({ type: "error", text: err instanceof Error ? err.message : "Failed to update profile." });
+      } finally {
+        setIsRegenerating(false);
+      }
     });
   }
 
@@ -341,7 +395,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         {/* Expandable Resume Uploader with Scroll Ref */}
         {showResumeUploader && (
           <div ref={uploaderRef} className="animate-in fade-in slide-in-from-top-2 duration-200">
-            <ResumeUploader onProfileExtracted={handleResumeExtracted} />
+            <ResumeUploader userName={userName} onProfileExtracted={handleResumeExtracted} />
           </div>
         )}
       </div>
@@ -407,7 +461,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
 
         {showResumeUploader && (
           <div ref={uploaderRef} className="animate-in fade-in slide-in-from-top-1 duration-150">
-            <ResumeUploader onProfileExtracted={handleResumeExtracted} />
+            <ResumeUploader userName={userName} onProfileExtracted={handleResumeExtracted} />
           </div>
         )}
 
@@ -696,6 +750,118 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           )}
         </div>
       </CardContent>
+
+      {/* 2-Step Roadmap Regeneration Confirmation Modal */}
+      {showRegenModal && pendingPayload && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-lg rounded-3xl border border-violet-500/30 bg-card p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+            {regenStep === 1 ? (
+              /* STEP 1: Regeneration Prompt */
+              <>
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-2xl bg-violet-600/15 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-heading text-lg font-bold text-foreground">
+                      Profile Updated — Regenerate Roadmap?
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      You updated your target goal, skill set, or experience level. Would you like to generate a new customized roadmap and project milestones to match, or preserve your current learning progress?
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-border/70 bg-muted/20 p-3.5 space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-foreground font-semibold">
+                    <span>Target Goal:</span>
+                    <span className="text-violet-600 dark:text-violet-400 truncate">“{pendingPayload.goal}”</span>
+                  </div>
+                  <p>Level: <strong className="capitalize text-foreground">{pendingPayload.currentLevel}</strong> • {pendingPayload.knownSkills.length} Skills Added</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => performSave(pendingPayload, false)}
+                    disabled={isPending}
+                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium order-2 sm:order-1"
+                  >
+                    Keep Current Roadmap
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setRegenStep(2)}
+                    disabled={isPending}
+                    className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-xs order-1 sm:order-2"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Regenerate Roadmap & Projects
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* STEP 2: Caution / Confirmation Reset */
+              <>
+                <div className="flex items-start gap-3.5">
+                  <div className="h-10 w-10 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-heading text-lg font-bold text-foreground flex items-center gap-2">
+                      ⚠️ Confirm Roadmap Reset
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      Regenerating your roadmap will replace your current roadmap nodes, completed topic progress, and capstone project checklist with a brand-new curriculum.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+                  <strong>Warning:</strong> Existing checked tasks and module badges in your current roadmap will be reset and rebuilt around your new profile.
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setRegenStep(1)}
+                    disabled={isPending}
+                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium"
+                  >
+                    Go Back
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => performSave(pendingPayload, false)}
+                    disabled={isPending}
+                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium"
+                  >
+                    Cancel & Keep Progress
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => performSave(pendingPayload, true)}
+                    disabled={isPending || isRegenerating}
+                    className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-xs"
+                  >
+                    {isRegenerating ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5" /> Confirm & Regenerate
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
     </Card>
   );
 }

@@ -23,5 +23,9 @@ export function getDb() {
   return _db;
 }
 
+export function isDbAvailable(): boolean {
+  return Boolean(process.env.DATABASE_URL);
+}
+
 // Re-export schema for convenience
 export * from "./schema";

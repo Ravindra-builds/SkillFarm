@@ -5,6 +5,7 @@ export const learningProfiles = pgTable("learning_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("userId")
     .notNull()
+    .unique()
     .references(() => users.id, { onDelete: "cascade" }),
   goal: text("goal").notNull(),
   currentLevel: text("currentLevel").notNull(), // beginner | intermediate | advanced
@@ -135,4 +136,23 @@ export const userMemories = pgTable("user_memories", {
   memoryText: text("memoryText").notNull(),
   category: text("category").default("general"),
   createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const userResumes = pgTable("user_resumes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  fileName: text("fileName").notNull(),
+  fileSize: integer("fileSize"),
+  fileType: text("fileType").notNull(),
+  storageKey: text("storageKey"),
+  storageUrl: text("storageUrl"),
+  extractedSkills: jsonb("extractedSkills").$type<string[]>(),
+  suggestedLevel: text("suggestedLevel"),
+  targetRole: text("targetRole"),
+  summary: text("summary"),
+  parsedData: jsonb("parsedData"),
+  createdAt: timestamp("createdAt", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date" }).defaultNow().notNull(),
 });
