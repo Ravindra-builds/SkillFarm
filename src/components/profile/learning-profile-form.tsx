@@ -164,6 +164,14 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
       text: `Resume profile extracted! Added ${extracted.skills.length} skills and updated experience level to ${extracted.level}.`,
     });
     setIsEditing(true); // switch to edit form so user can review and save
+
+    // Smoothly scroll to the skills section where data was applied
+    setTimeout(() => {
+      const el = document.getElementById("skills-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150);
   }
 
   function submit() {
@@ -527,7 +535,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         </div>
 
         {/* Section 3: Known Skills Tag Manager */}
-        <div className="space-y-2 pt-1">
+        <div id="skills-section" className="space-y-2 pt-1 scroll-mt-6">
           <div className="flex items-center justify-between">
             <Label className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
               <Code2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" /> Known Skills & Technologies ({skills.length}/20)

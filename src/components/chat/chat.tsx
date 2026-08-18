@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Send, Sparkles, Loader2, AlertCircle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus, Cpu, Lock } from "lucide-react";
+import { Send, Sparkles, Loader2, AlertCircle, RefreshCw, Lightbulb, Network, GitBranch, Bot, History, MessageSquarePlus, Cpu, Lock, X } from "lucide-react";
 import { mentorRegistry, DEFAULT_MENTOR_ID, type MentorId } from "@/agents/mentors";
 import { mentors } from "@/config/mentors";
 import { ConversationHistory } from "@/components/chat/conversation-history";
@@ -654,45 +654,57 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         ))}
       </div>
 
+      {/* Compact Orchestrator Decision Bar */}
       {decision && (
-        <div className="border-b bg-violet-500/5 px-4 sm:px-6 py-2.5 flex flex-wrap gap-2 items-center text-xs">
-          <span className="font-semibold flex items-center gap-1.5">
-            <Network className="h-3.5 w-3.5 text-[#7C5CFC]" /> Orchestrator routed to:
-          </span>
-          <span className="font-mono bg-[#7C5CFC] text-white px-2 py-1 rounded-full text-[11px]">{decision.requiredMentors.join(" + ")}</span>
-          <span className="text-muted-foreground">• {Math.round(decision.confidence * 100)}% • {decision.reasoning.slice(0, 120)}</span>
-        </div>
-      )}
-      {activeMentorHeader && !decision && isAuto && (
-        <div className="border-b bg-muted/50 px-4 sm:px-6 py-1.5 text-xs text-muted-foreground">
-          Consulted: <span className="font-medium text-foreground">{activeMentorHeader}</span> {isMock ? "(mock)" : ""}
-        </div>
-      )}
-
-      {lastHandoff && (
-        <div className="border-b bg-amber-500/10 border-amber-500/20 px-4 sm:px-6 py-2.5 flex flex-wrap items-center gap-2 text-xs">
-          <GitBranch className="h-3.5 w-3.5 text-amber-600" />
-          <span className="font-semibold">🔄 Handed off from {lastHandoff.from} to {lastHandoff.to}</span>
-          <span className="text-muted-foreground hidden sm:inline">• {lastHandoff.reason}</span>
-          <Badge variant="outline" className="ml-auto text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20 hidden sm:inline-flex">
-            Handoff • {lastHandoff.from} → {lastHandoff.to}
-          </Badge>
-        </div>
-      )}
-
-      {handoffHistory.length > 0 && (
-        <div className="border-b bg-card px-4 sm:px-6 py-2">
-          <p className="text-xs font-semibold flex items-center gap-1.5">
-            <GitBranch className="h-3.5 w-3.5 text-amber-600" /> Handoff history ({handoffHistory.length})
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {handoffHistory.map((h) => (
-              <Badge key={h.id} variant="outline" className="text-[11px] gap-1">
-                <span className="h-2 w-2 rounded-full bg-amber-500" /> {h.fromMentorId} → {h.toMentorId}
-                {h.reason ? ` • ${h.reason.slice(0, 40)}` : ""}
-              </Badge>
-            ))}
+        <div className="border-b bg-violet-500/5 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Network className="h-3.5 w-3.5 text-[#7C5CFC] shrink-0" />
+            <span className="font-semibold shrink-0">Routed to:</span>
+            <span className="font-mono bg-[#7C5CFC] text-white px-1.5 py-0.5 rounded text-[10px]">
+              {decision.requiredMentors.join(" + ")}
+            </span>
+            <span className="text-muted-foreground hidden sm:inline truncate text-[11px]">
+              • {Math.round(decision.confidence * 100)}% • {decision.reasoning}
+            </span>
           </div>
+          <button
+            onClick={() => setDecision(null)}
+            className="text-muted-foreground hover:text-foreground shrink-0 p-0.5 cursor-pointer"
+            title="Dismiss"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Compact Active Mentor / Mock Notice */}
+      {activeMentorHeader && !decision && isAuto && (
+        <div className="border-b bg-muted/40 px-3 sm:px-6 py-1 text-[11px] text-muted-foreground flex items-center justify-between">
+          <span>Consulted: <span className="font-medium text-foreground">{activeMentorHeader}</span> {isMock ? "(mock)" : ""}</span>
+        </div>
+      )}
+
+      {/* Ultra-Compact Handoff Banner (Low-profile, non-intrusive) */}
+      {lastHandoff && (
+        <div className="border-b bg-amber-500/10 border-amber-500/20 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <GitBranch className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+            <span className="font-semibold shrink-0">
+              🔄 Handoff: <span className="capitalize">{lastHandoff.from}</span> → <span className="capitalize">{lastHandoff.to}</span>
+            </span>
+            {lastHandoff.reason && (
+              <span className="text-muted-foreground hidden md:inline truncate text-[11px]">
+                • {lastHandoff.reason}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setLastHandoff(null)}
+            className="text-muted-foreground hover:text-foreground shrink-0 p-0.5 cursor-pointer"
+            title="Dismiss"
+          >
+            <X className="h-3 w-3" />
+          </button>
         </div>
       )}
 

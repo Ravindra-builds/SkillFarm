@@ -339,12 +339,26 @@ export async function updateNodeStatus(
 
   node.status = status;
 
-  // Auto-unlock next node when one is completed
+  let next1Id: string | null = null;
+  let next1Status: RoadmapNode["status"] | null = null;
+  let next2Id: string | null = null;
+  let next2Status: RoadmapNode["status"] | null = null;
+
+  // Auto-unlock next nodes when one is completed
   if (status === "completed") {
     const idx = current.nodes.findIndex((n) => n.id === nodeId);
-    const next = current.nodes[idx + 1];
-    if (next && next.status === "locked") next.status = "next";
-    if (next && next.status === "next") next.status = "current";
+    const next1 = current.nodes[idx + 1];
+    if (next1 && (next1.status === "locked" || next1.status === "next")) {
+      next1.status = "current";
+      next1Id = next1.id;
+      next1Status = "current";
+    }
+    const next2 = current.nodes[idx + 2];
+    if (next2 && next2.status === "locked") {
+      next2.status = "next";
+      next2Id = next2.id;
+      next2Status = "next";
+    }
   }
 
   current.updatedAt = new Date();
@@ -362,6 +376,20 @@ export async function updateNodeStatus(
         .update(roadmapNodes)
         .set({ status })
         .where(eq(roadmapNodes.id, nodeId));
+
+      if (next1Id && next1Status) {
+        await db
+          .update(roadmapNodes)
+          .set({ status: next1Status })
+          .where(eq(roadmapNodes.id, next1Id));
+      }
+
+      if (next2Id && next2Status) {
+        await db
+          .update(roadmapNodes)
+          .set({ status: next2Status })
+          .where(eq(roadmapNodes.id, next2Id));
+      }
     } catch (err) {
       console.error("[roadmap-store] node status update failed:", err);
     }
@@ -375,7 +403,8 @@ export async function updateNodeDetails(
   nodeId: string,
   patch: Partial<Pick<RoadmapNode, "title" | "description" | "practicalTask" | "projectBrief" | "status" | "estimatedHours" | "difficulty" | "theme" | "featureCompleted" | "topic">>
 ): Promise<Roadmap | null> {
-  const current = memRoadmaps.get(userId) ?? (isDbAvailable() ? await loadFromDb(userId) : null);
+  const isGuest = isGuestSession(userId);
+  const current = await getRoadmap(userId);
   if (!current) return null;
 
   const node = current.nodes.find((n) => n.id === nodeId);
@@ -394,6 +423,11 @@ export async function updateNodeDetails(
 
   current.updatedAt = new Date();
   memRoadmaps.set(userId, current);
+
+  if (isGuest) {
+    await setGuestState(guestKeys.roadmap(userId), current, GUEST_CONFIG.SESSION_TTL);
+    return current;
+  }
 
   if (isDbAvailable()) {
     try {

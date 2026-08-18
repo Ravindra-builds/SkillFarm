@@ -52,4 +52,42 @@ describe("Resume Extraction & Mem0 Processing", () => {
       processAndStoreResume("test-user-123", { text: "" })
     ).rejects.toThrow("No readable resume text");
   });
+
+  it("redacts sensitive PII (phone, email, address) before processing", async () => {
+    const resumeWithPii = `
+      John Doe
+      Email: john.doe.dev@gmail.com
+      Phone: +1 (555) 234-5678
+      Address: 742 Evergreen Terrace, Apt 4B, Springfield, OR 97477
+      
+      Professional Summary:
+      Full stack engineer with deep experience building scalable TypeScript and Node.js applications.
+      
+      Technical Skills:
+      TypeScript, React, Node.js, PostgreSQL, Docker, AWS
+    `;
+
+    const result = await processAndStoreResume("test-user-123", {
+      text: resumeWithPii,
+    });
+
+    expect(result.rawText).not.toContain("john.doe.dev@gmail.com");
+    expect(result.rawText).not.toContain("555) 234-5678");
+    expect(result.rawText).not.toContain("742 Evergreen Terrace");
+    expect(result.rawText).toContain("[REDACTED_EMAIL]");
+    expect(result.rawText).toContain("[REDACTED_PHONE]");
+  });
+
+  it("rejects resume that lacks both skills and profile summary sections", async () => {
+    const invalidResume = `
+      Random Essay or Receipt
+      Total Amount: $45.00
+      Date: 2024-01-15
+      Thank you for your business!
+    `;
+
+    await expect(
+      processAndStoreResume("test-user-123", { text: invalidResume })
+    ).rejects.toThrow(/Skills.*Profile Summary/i);
+  });
 });

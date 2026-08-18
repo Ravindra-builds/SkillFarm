@@ -42,6 +42,8 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
   const [guestLimitNotice, setGuestLimitNotice] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<StructuredResumeData | null>(null);
   const [memoriesCount, setMemoriesCount] = useState<number>(0);
+  const [isApplied, setIsApplied] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -63,6 +65,8 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
     setError(null);
     setGuestLimitNotice(null);
     setParsedData(null);
+    setIsApplied(false);
+    setIsCollapsed(false);
 
     if (mode === "file" && !file) {
       setError("Please select a .pdf or .txt resume file.");
@@ -128,6 +132,8 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
 
   function handleApplyToProfile() {
     if (!parsedData) return;
+    setIsApplied(true);
+    setIsCollapsed(true);
     if (onProfileExtracted) {
       onProfileExtracted({
         skills: parsedData.skills,
@@ -303,98 +309,136 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
 
       {/* Extracted Structured Results Banner */}
       {parsedData && (
-        <Card className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 sm:p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-start justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                <h4 className="font-semibold text-xs sm:text-sm text-foreground">
-                  Resume Successfully Extracted & Saved to Long-Term Memory!
-                </h4>
-                <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">
-                  {memoriesCount} Memories Synced
-                </Badge>
+        isCollapsed && isApplied ? (
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 sm:p-4 flex items-center justify-between gap-3 text-xs text-emerald-950 dark:text-emerald-200 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div>
+                <p className="font-semibold text-foreground">
+                  ✓ Applied {parsedData.skills.length} skills & {parsedData.suggestedLevel} level to your Learning Profile
+                </p>
+                <p className="text-[11px] text-muted-foreground line-clamp-1">
+                  {parsedData.summary}
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Your AI mentors and personalized roadmap now have full context of your real-world background.
-              </p>
             </div>
-
-            {onProfileExtracted && (
-              <Button
-                size="sm"
-                onClick={handleApplyToProfile}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl h-8 gap-1.5 shadow-2xs"
-              >
-                Apply to Learning Profile <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCollapsed(false)}
+              className="h-7 px-2.5 text-xs font-semibold rounded-lg shrink-0 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20"
+            >
+              View Details
+            </Button>
           </div>
+        ) : (
+          <Card className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 p-4 sm:p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-start justify-between flex-wrap gap-2 border-b border-emerald-500/20 pb-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="font-semibold text-xs sm:text-sm text-foreground">
+                    Resume Successfully Extracted & Saved to Long-Term Memory!
+                  </h4>
+                  <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">
+                    {memoriesCount} Memories Synced
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Your AI mentors and personalized roadmap now have full context of your real-world background.
+                </p>
+              </div>
 
-          {/* Highlights Grid */}
-          <div className="space-y-3">
-            {/* Executive Summary */}
-            <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
-              <span className="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1">
-                <Brain className="h-3 w-3" /> Profile Summary
-              </span>
-              <p className="text-xs text-foreground leading-relaxed">{parsedData.summary}</p>
+              <div className="flex items-center gap-2">
+                {isApplied && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsCollapsed(true)}
+                    className="text-xs h-8 text-muted-foreground hover:text-foreground"
+                  >
+                    Minimize
+                  </Button>
+                )}
+                {onProfileExtracted && (
+                  <Button
+                    size="sm"
+                    onClick={handleApplyToProfile}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-xl h-8 gap-1.5 shadow-2xs"
+                  >
+                    {isApplied ? "Re-apply to Profile" : "Apply to Learning Profile"} <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
             </div>
 
-            {/* Extracted Skills */}
-            {parsedData.skills && parsedData.skills.length > 0 && (
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3 text-violet-500" /> Detected Skills ({parsedData.skills.length})
+            {/* Highlights Grid */}
+            <div className="space-y-3">
+              {/* Executive Summary */}
+              <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
+                <span className="text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1">
+                  <Brain className="h-3 w-3" /> Profile Summary
                 </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {parsedData.skills.map((sk) => (
-                    <Badge
-                      key={sk}
-                      variant="secondary"
-                      className="text-[11px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20"
-                    >
-                      {sk}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-xs text-foreground leading-relaxed">{parsedData.summary}</p>
               </div>
-            )}
 
-            {/* Projects & Experience */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {parsedData.projects && parsedData.projects.length > 0 && (
-                <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
-                  <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
-                    <FolderGit2 className="h-3 w-3" /> Key Projects
+              {/* Extracted Skills */}
+              {parsedData.skills && parsedData.skills.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3 text-violet-500" /> Detected Skills ({parsedData.skills.length})
                   </span>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                    {parsedData.projects.slice(0, 3).map((p, i) => (
-                      <li key={i} className="line-clamp-1">
-                        <strong className="text-foreground">{p.name}:</strong> {p.description}
-                      </li>
+                  <div className="flex flex-wrap gap-1.5">
+                    {parsedData.skills.map((sk) => (
+                      <Badge
+                        key={sk}
+                        variant="secondary"
+                        className="text-[11px] bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20"
+                      >
+                        {sk}
+                      </Badge>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
-              {parsedData.experience && parsedData.experience.length > 0 && (
-                <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
-                  <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                    <Briefcase className="h-3 w-3" /> Experience
-                  </span>
-                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                    {parsedData.experience.slice(0, 2).map((e, i) => (
-                      <li key={i} className="line-clamp-1">
-                        <strong className="text-foreground">{e.role}</strong> {e.company ? `@ ${e.company}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Projects & Experience */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {parsedData.projects && parsedData.projects.length > 0 && (
+                  <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
+                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                      <FolderGit2 className="h-3 w-3" /> Key Projects
+                    </span>
+                    <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                      {parsedData.projects.slice(0, 3).map((p, i) => (
+                        <li key={i} className="line-clamp-1">
+                          <strong className="text-foreground">{p.name}:</strong> {p.description}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {parsedData.experience && parsedData.experience.length > 0 && (
+                  <div className="rounded-xl border border-border/50 bg-background/60 p-3 space-y-1">
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" /> Experience
+                    </span>
+                    <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                      {parsedData.experience.slice(0, 2).map((e, i) => (
+                        <li key={i} className="line-clamp-1">
+                          <strong className="text-foreground">{e.role}</strong> {e.company ? `@ ${e.company}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+        )
       )}
     </div>
   );

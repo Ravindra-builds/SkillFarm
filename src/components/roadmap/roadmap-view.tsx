@@ -140,6 +140,37 @@ export function RoadmapView() {
 
   async function updateStatus(nodeId: string, newStatus: RoadmapNode["status"]) {
     if (!roadmap) return;
+
+    let targetToSelectId = nodeId;
+
+    // Optimistic local update
+    const updatedNodes = roadmap.nodes.map((n, idx, arr) => {
+      if (n.id === nodeId) return { ...n, status: newStatus };
+      if (newStatus === "completed") {
+        if (idx > 0 && arr[idx - 1].id === nodeId && (n.status === "locked" || n.status === "next")) {
+          targetToSelectId = n.id;
+          return { ...n, status: "current" as const };
+        }
+        if (idx > 1 && arr[idx - 2].id === nodeId && n.status === "locked") {
+          return { ...n, status: "next" as const };
+        }
+      }
+      return n;
+    });
+
+    const updatedRoadmap: Roadmap = {
+      ...roadmap,
+      nodes: updatedNodes,
+      updatedAt: new Date(),
+    };
+    setRoadmap(updatedRoadmap);
+    const newSelected = updatedNodes.find((n) => n.id === targetToSelectId) ?? updatedNodes.find((n) => n.id === nodeId) ?? selected;
+    if (newSelected) setSelected(newSelected);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("skillfarm:roadmap-updated"));
+    }
+
     try {
       const res = await fetch("/api/roadmap/progress", {
         method: "POST",
@@ -150,28 +181,13 @@ export function RoadmapView() {
         const updated = await res.json();
         if (updated && updated.nodes) {
           setRoadmap(updated);
-          const newSelected = updated.nodes.find((n: RoadmapNode) => n.id === nodeId) ?? selected;
-          setSelected(newSelected);
-          return;
+          const serverSelected = updated.nodes.find((n: RoadmapNode) => n.id === targetToSelectId) ?? updated.nodes.find((n: RoadmapNode) => n.id === nodeId) ?? newSelected;
+          setSelected(serverSelected);
         }
       }
     } catch (e) {
       console.error("[roadmap] updateStatus failed:", e);
     }
-
-    // Optimistic local update
-    const updatedNodes = roadmap.nodes.map((n) => {
-      if (n.id === nodeId) return { ...n, status: newStatus };
-      return n;
-    });
-    const updatedRoadmap: Roadmap = {
-      ...roadmap,
-      nodes: updatedNodes,
-      updatedAt: new Date(),
-    };
-    setRoadmap(updatedRoadmap);
-    const newSelected = updatedNodes.find((n) => n.id === nodeId) ?? null;
-    setSelected(newSelected);
   }
 
   function startEditing(node: RoadmapNode) {

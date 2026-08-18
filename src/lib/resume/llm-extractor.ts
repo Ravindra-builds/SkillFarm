@@ -114,7 +114,8 @@ export async function extractStructuredResume(
       system: `You are an expert technical talent assessor and engineering resume parser for SkillFarm.
 Analyze the provided resume text thoroughly and extract high-precision structured profile data.
 Extract at most the top 20 most important technical skills as concise names (e.g. "TypeScript", "PostgreSQL", "Docker").
-Identify key projects, work highlights, and provide an accurate suggested proficiency level.`,
+Identify key projects, work highlights, and provide an accurate suggested proficiency level.
+CRITICAL PRIVACY RULE: Do NOT extract or include any sensitive personal information such as phone numbers, personal emails, physical addresses, zip codes, or national IDs in any output field.`,
       prompt: `Candidate Resume Text:\n"""\n${text.slice(0, 10000)}\n"""\n\nExtract the structured candidate profile into JSON:`,
       schema: resumeExtractionSchema,
       temperature: 0.2,

@@ -1,18 +1,21 @@
 import { extractTextFromPdfBuffer } from "./pdf-extractor";
 import { extractStructuredResume } from "./llm-extractor";
 import { syncResumeToMem0 } from "./mem0-sync";
-import type { StructuredResumeData, ResumeParseResult } from "./types";
+import { scrubSensitiveInformation, validateResumeSections } from "./pii-scrubber";
+import type { ResumeParseResult } from "./types";
 
 export * from "./types";
 export { extractTextFromPdfBuffer } from "./pdf-extractor";
 export { extractStructuredResume } from "./llm-extractor";
 export { syncResumeToMem0 } from "./mem0-sync";
+export { scrubSensitiveInformation, validateResumeSections } from "./pii-scrubber";
 
 /**
  * High-level unified resume parser & memory synchronization engine.
  *
- * Handles both PDF binary buffers and raw text, extracts structured candidate facts via LLM,
- * and saves them directly into Mem0 Long-Term Memory.
+ * Excludes sensitive personal details (phones, personal emails, street addresses),
+ * validates mandatory Skills or Profile Summary sections, extracts structured engineering facts,
+ * and saves them into Mem0 Long-Term Memory.
  */
 export async function processAndStoreResume(
   userId: string,
@@ -36,14 +39,28 @@ export async function processAndStoreResume(
     throw new Error("No readable resume text could be found or extracted.");
   }
 
-  // 1. Structured LLM Extraction
-  const structured = await extractStructuredResume(rawText, options);
+  // 1. Validate mandatory Skills or Profile Summary section
+  const validation = validateResumeSections(rawText);
+  if (!validation.valid) {
+    throw new Error(validation.reason || "Resume must contain at least a 'Skills' or 'Profile Summary' section.");
+  }
 
-  // 2. Persist to Mem0 Long-Term Memory
+  // 2. Scrub sensitive PII (Phone, Personal Email, Street Address, DOB)
+  const sanitizedText = scrubSensitiveInformation(rawText);
+
+  // 3. Structured LLM / Heuristic Extraction
+  const structured = await extractStructuredResume(sanitizedText, options);
+
+  // Double check that structured extraction produced skills or summary
+  if ((!structured.skills || structured.skills.length === 0) && !structured.summary) {
+    throw new Error("Unable to extract technical skills or profile summary from the document. Please ensure your resume lists your technical competencies.");
+  }
+
+  // 4. Persist to Mem0 Long-Term Memory
   const memoriesStored = await syncResumeToMem0(userId, structured);
 
   return {
-    rawText,
+    rawText: sanitizedText,
     structured,
     memoriesStored,
   };
