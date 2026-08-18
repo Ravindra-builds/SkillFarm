@@ -1,21 +1,24 @@
 import { createCustomSession } from "@/lib/session";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkGuestIpAbuse } from "@/lib/guest";
 import { randomUUID } from "crypto";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    // Rate-limit: 10 guest sessions per minute per IP
+    // IP-based abuse rate limiter (20 guest creations per 10min per IP hash)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       req.headers.get("x-real-ip") ??
-      "unknown";
-    const rateCheck = await checkRateLimit(`guest-auth:${ip}`, 10, 60);
-    if (!rateCheck.success) {
+      "127.0.0.1";
+    const ipCheck = await checkGuestIpAbuse(ip);
+    if (!ipCheck.allowed) {
       return new Response(
-        JSON.stringify({ error: "Too many requests. Please wait before trying again.", retryAfter: rateCheck.resetSec }),
-        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) } }
+        JSON.stringify({
+          error: "Too many guest sessions initiated from this network. Please wait a few minutes or sign in with Google.",
+          retryAfter: 300,
+        }),
+        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": "300" } }
       );
     }
 

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { processAndStoreResume } from "@/lib/resume";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
+import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,22 @@ export async function POST(req: Request) {
   try {
     const session = (await (auth as unknown as () => Promise<unknown>)().catch(() => null)) as unknown as { user?: { email?: string; id?: string } } | null;
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
+    const isGuest = isGuestSession(userId);
+
+    // ── Guest Mode Quota Check (1 Upload per session) ─────────────────────────
+    if (isGuest) {
+      const guestQuota = await checkGuestQuota(userId, "resume");
+      if (!guestQuota.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "Guest limit reached",
+            message: "You have used your guest resume analysis. Create a free account to save your resume profile and extract continuous career skill matrices.",
+          }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      await recordGuestAction(userId, "resume");
+    }
 
     // ── Centralized Rate Limiting (2/day prod, 10/day dev) ─────────────────────
     const rateCheck = await checkFeatureRateLimit(userId, "resume");

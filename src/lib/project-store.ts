@@ -6,6 +6,13 @@ import { isDbAvailable } from "@/lib/env";
 import type { Roadmap, CapstoneProject } from "@/lib/roadmap-store";
 import { getRoadmap } from "@/lib/roadmap-store";
 import { ensureDbUser } from "@/lib/users";
+import {
+  isGuestSession,
+  getGuestState,
+  setGuestState,
+  guestKeys,
+  GUEST_CONFIG,
+} from "@/lib/guest";
 
 export type ProjectStatus = "not-started" | "in-progress" | "completed";
 
@@ -185,12 +192,20 @@ export function syncCapstoneFromRoadmap(
  * Automatically synchronizes from the user's roadmap if not yet initialized.
  */
 export async function getCapstoneProject(userId: string): Promise<CapstoneProjectState | null> {
+  const isGuest = isGuestSession(userId);
+
   const cachedState = memCapstones.get(userId);
   if (cachedState) return cachedState;
 
   let state: CapstoneProjectState | null = null;
 
-  if (isDbAvailable()) {
+  if (isGuest) {
+    const fromRedis = await getGuestState<CapstoneProjectState>(guestKeys.projects(userId));
+    if (fromRedis) {
+      memCapstones.set(userId, fromRedis);
+      return fromRedis;
+    }
+  } else if (isDbAvailable()) {
     try {
       const dbUserId = await ensureDbUser({ id: userId, email: userId });
       const db = getDb();
@@ -241,13 +256,19 @@ export async function getCapstoneProject(userId: string): Promise<CapstoneProjec
 }
 
 /**
- * Saves the Main-Project state to memory and PostgreSQL.
+ * Saves the Main-Project state to memory and PostgreSQL (or Redis for guests).
  */
 export async function saveCapstoneProject(
   userId: string,
   capstone: CapstoneProjectState
 ): Promise<CapstoneProjectState> {
+  const isGuest = isGuestSession(userId);
   memCapstones.set(userId, capstone);
+
+  if (isGuest) {
+    await setGuestState(guestKeys.projects(userId), capstone, GUEST_CONFIG.SESSION_TTL);
+    return capstone;
+  }
 
   if (isDbAvailable()) {
     try {

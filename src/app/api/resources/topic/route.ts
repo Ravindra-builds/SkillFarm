@@ -54,11 +54,11 @@ export async function GET(req: Request) {
     let useCache = !forceRefresh;
 
     if (isGuest && forceRefresh) {
-      const quota = checkGuestQuota(userId, "resource");
+      const quota = await checkGuestQuota(userId, "resource");
       if (!quota.allowed) {
-        useCache = true; // Fall back to cached evaluated topic pack
+        useCache = true; // Fall back to cached evaluated topic pack without consuming external search API
       } else {
-        recordGuestAction(userId, "resource");
+        await recordGuestAction(userId, "resource");
       }
     }
 

@@ -86,9 +86,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // ── Guest Mode Quota Enforcement (1 Live Generation / Day) ───────────────
+    // ── Guest Mode Quota Enforcement (1 Live Generation / Session) ───────────
     if (isGuest) {
-      const quota = checkGuestQuota(userId, "roadmap");
+      const quota = await checkGuestQuota(userId, "roadmap");
       if (!quota.allowed) {
         // Return structured static template roadmap without invoking external LLM
         const templateRoadmap = generateStaticRoadmap({ userId, profile });
@@ -96,12 +96,12 @@ export async function POST(req: Request) {
         return new Response(
           JSON.stringify({
             ...templateRoadmap,
-            _guestNotice: "Guest mode limit reached (1 live generation/day). Curated engineering track loaded.",
+            _guestNotice: "Guest mode limit reached. Curated engineering track loaded. Create a free account to save customized roadmaps.",
           }),
           { headers: { "Content-Type": "application/json" } }
         );
       }
-      recordGuestAction(userId, "roadmap");
+      await recordGuestAction(userId, "roadmap");
     }
 
     const roadmap = await generateRoadmap({

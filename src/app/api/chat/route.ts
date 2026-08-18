@@ -21,6 +21,7 @@ import {
   checkGuestQuota,
   recordGuestAction,
   getGuestTemplateChatResponse,
+  GUEST_CONFIG,
 } from "@/lib/guest";
 
 export const dynamic = "force-dynamic";
@@ -251,21 +252,26 @@ export async function POST(req: Request) {
       isManual ? requestedMentorId! : undefined
     );
     conversationId = convo.id;
-    if (lastUserText) {
-      await saveMessage(conversationId, "user", lastUserText, null).catch(() => {});
-    }
-
+    let userQuery = lastUserText;
     const isGuest = isGuestSession(userId);
 
-    // ── Guest Mode Quota Check (Max 5 live chat replies per day) ───────────
+    if (isGuest && userQuery.length > GUEST_CONFIG.MAX_INPUT_SIZE) {
+      userQuery = userQuery.slice(0, GUEST_CONFIG.MAX_INPUT_SIZE);
+    }
+
+    if (userQuery) {
+      await saveMessage(conversationId, "user", userQuery, null).catch(() => {});
+    }
+
+    // ── Guest Mode Quota Check (Per-conversation + Total Session Limits) ────
     if (isGuest) {
-      const guestQuota = checkGuestQuota(userId, "chat");
+      const guestQuota = await checkGuestQuota(userId, "chat", { conversationId });
       if (!guestQuota.allowed) {
         const templateResponse = getGuestTemplateChatResponse(
           isManual ? (requestedMentorId || "backend") : "orchestrator",
-          lastUserText
+          userQuery
         );
-        if (conversationId && lastUserText) {
+        if (conversationId && userQuery) {
           await saveMessage(
             conversationId,
             "assistant",
@@ -277,10 +283,13 @@ export async function POST(req: Request) {
           templateResponse,
           conversationId,
           isManual ? (requestedMentorId || DEFAULT_MENTOR_ID) : DEFAULT_MENTOR_ID,
-          { "X-Guest-Limit-Reached": "1" }
+          {
+            "X-Guest-Limit-Reached": "1",
+            "X-Guest-Conversion-Notice": encodeURIComponent(guestQuota.conversionNotice || ""),
+          }
         );
       }
-      recordGuestAction(userId, "chat");
+      await recordGuestAction(userId, "chat", { conversationId });
     }
 
     // ── Learning profile & Mem0 Long-term Context ───────────────────────────
@@ -563,7 +572,7 @@ export async function POST(req: Request) {
       // Cap history to last 8 messages to control context window size and cost.
       messages: [...history.slice(-8), { role: "user" as const, content: lastUserText }],
       temperature: 0.7,
-      maxOutputTokens: 800,
+      maxOutputTokens: isGuest ? GUEST_CONFIG.MAX_OUTPUT_TOKENS : 800,
       onFinish: async ({ text }) => {
         await saveMessage(conversationId!, "assistant", text, mentorId).catch(() => {});
         addMemory(

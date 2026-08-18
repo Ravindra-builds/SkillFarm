@@ -3,6 +3,13 @@ import { getDb } from "@/db";
 import { roadmaps, roadmapNodes } from "@/db/schema";
 import { isDbAvailable } from "@/lib/env";
 import { ensureDbUser } from "@/lib/users";
+import {
+  isGuestSession,
+  getGuestState,
+  setGuestState,
+  guestKeys,
+  GUEST_CONFIG,
+} from "@/lib/guest";
 
 export type CapstoneProject = {
   name: string;
@@ -271,6 +278,20 @@ async function persistToDb(userId: string, roadmap: Roadmap): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getRoadmap(userId: string): Promise<Roadmap | null> {
+  const isGuest = isGuestSession(userId);
+
+  if (isGuest) {
+    const mem = memRoadmaps.get(userId);
+    if (mem) return mem;
+
+    const fromRedis = await getGuestState<Roadmap>(guestKeys.roadmap(userId));
+    if (fromRedis) {
+      memRoadmaps.set(userId, fromRedis);
+      return fromRedis;
+    }
+    return null;
+  }
+
   // Load from DB first if available to guarantee real-time sync across Server Components and API routes
   if (isDbAvailable()) {
     const fromDb = await loadFromDb(userId);
@@ -285,10 +306,18 @@ export async function getRoadmap(userId: string): Promise<Roadmap | null> {
 }
 
 export async function saveRoadmap(userId: string, roadmap: Roadmap): Promise<Roadmap> {
-  // Always update in-memory cache (fast reads, works without DB)
+  const isGuest = isGuestSession(userId);
+
+  // Always update in-memory cache (fast reads)
   memRoadmaps.set(userId, roadmap);
 
-  // Persist to DB if available
+  if (isGuest) {
+    // Store in Redis with guest session TTL
+    await setGuestState(guestKeys.roadmap(userId), roadmap, GUEST_CONFIG.SESSION_TTL);
+    return roadmap;
+  }
+
+  // Persist to PostgreSQL for authenticated users
   if (isDbAvailable()) {
     await persistToDb(userId, roadmap);
   }
@@ -301,7 +330,8 @@ export async function updateNodeStatus(
   nodeId: string,
   status: RoadmapNode["status"]
 ): Promise<Roadmap | null> {
-  const current = memRoadmaps.get(userId) ?? (isDbAvailable() ? await loadFromDb(userId) : null);
+  const isGuest = isGuestSession(userId);
+  const current = await getRoadmap(userId);
   if (!current) return null;
 
   const node = current.nodes.find((n) => n.id === nodeId);
@@ -319,6 +349,11 @@ export async function updateNodeStatus(
 
   current.updatedAt = new Date();
   memRoadmaps.set(userId, current);
+
+  if (isGuest) {
+    await setGuestState(guestKeys.roadmap(userId), current, GUEST_CONFIG.SESSION_TTL);
+    return current;
+  }
 
   if (isDbAvailable()) {
     try {

@@ -35,9 +35,9 @@ export function GuestModeToast({ isGuest }: GuestModeToastProps) {
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="h-6.5 w-6.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
-              <Info className="h-3.5 w-3.5" />
+              <Sparkles className="h-3.5 w-3.5" />
             </div>
-            <p className="text-xs font-bold text-foreground">Guest Demo Mode</p>
+            <p className="text-xs font-bold text-foreground">Exploring in Guest Sandbox</p>
           </div>
           <button
             onClick={() => setVisible(false)}
@@ -49,7 +49,7 @@ export function GuestModeToast({ isGuest }: GuestModeToastProps) {
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          You are exploring in guest mode. Your roadmap progress and notes are kept locally in your browser for demonstration.
+          You are exploring in a temporary guest sandbox. Try creating your roadmap, chatting with AI mentors, and testing project drills. Sign in with Google anytime to save your multi-week progress.
         </p>
 
         <div className="flex items-center justify-between gap-2 pt-0.5">

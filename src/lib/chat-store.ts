@@ -4,16 +4,24 @@ import { conversations, messages } from "@/db/schema";
 import { randomUUID } from "crypto";
 import { ensureDbUser } from "@/lib/users";
 import { isMockModeForced } from "@/lib/env";
-import { isGuestSession } from "@/lib/guest";
+import {
+  isGuestSession,
+  getGuestState,
+  setGuestState,
+  deleteGuestState,
+  guestKeys,
+  GUEST_CONFIG,
+} from "@/lib/guest";
 
 /**
  * Chat persistence
  *
  * For authenticated users: Uses PostgreSQL + Drizzle; falls back to in-memory Maps when DB is unconfigured.
- * For guest users: Strictly isolated to in-memory maps per unique guest session ID, guaranteeing zero database pollution or cross-browser leakage.
+ * For guest users: Strictly isolated to Upstash Redis with TTL / ephemeral memory per unique guest session ID,
+ * guaranteeing zero database pollution, cross-browser leakage, or permanent storage waste.
  */
 
-type ChatMessage = {
+export type ChatMessage = {
   id: string;
   conversationId: string;
   role: "user" | "assistant" | "system";
@@ -22,7 +30,7 @@ type ChatMessage = {
   createdAt: Date;
 };
 
-type ChatConversation = {
+export type ChatConversation = {
   id: string;
   userId: string;
   title: string | null;
@@ -40,7 +48,7 @@ function isDbAvailable(): boolean {
   return s.startsWith("postgresql");
 }
 
-// In-memory isolated storage
+// In-memory fast layer
 const memConversations = new Map<string, ChatConversation>();
 const memMessages = new Map<string, ChatMessage[]>();
 
@@ -100,8 +108,12 @@ export async function ensureConversation(
     if (existing) {
       if (mentorId && existing.activeMentorId !== mentorId) {
         existing.activeMentorId = mentorId;
-        memConversations.set(existing.id, { ...existing, updatedAt: new Date() });
-        if (!isGuest && isDbAvailable()) {
+        existing.updatedAt = new Date();
+        memConversations.set(existing.id, existing);
+
+        if (isGuest) {
+          await setGuestState(guestKeys.conversation(userId, existing.id), existing, GUEST_CONFIG.SESSION_TTL);
+        } else if (isDbAvailable()) {
           try {
             const db = getDb();
             await (db.update(conversations) as unknown as { set: (v: Record<string, unknown>) => { where: (c: unknown) => Promise<void> } })
@@ -139,7 +151,23 @@ export async function createConversation(
 
   const isGuest = isGuestSession(userId);
 
-  if (isGuest || !isDbAvailable()) {
+  if (isGuest) {
+    memConversations.set(conv.id, conv);
+    memMessages.set(conv.id, []);
+
+    // Sync to Redis with TTL
+    await setGuestState(guestKeys.conversation(userId, conv.id), conv, GUEST_CONFIG.SESSION_TTL);
+    const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(userId))) || [];
+    await setGuestState(
+      guestKeys.conversations(userId),
+      [conv, ...existingList.filter((c) => c.id !== conv.id)],
+      GUEST_CONFIG.SESSION_TTL
+    );
+
+    return conv;
+  }
+
+  if (!isDbAvailable()) {
     memConversations.set(conv.id, conv);
     memMessages.set(conv.id, []);
     return conv;
@@ -157,8 +185,7 @@ export async function createConversation(
         activeMentorId: conv.activeMentorId,
       })
       .returning();
-    
-    // Also mirror to memory for fast local reads
+
     memConversations.set(row.id, {
       id: row.id,
       userId: row.userId,
@@ -212,10 +239,24 @@ export async function getConversation(id: string): Promise<ChatConversation | nu
 export async function getConversations(userId: string): Promise<ChatConversation[]> {
   const isGuest = isGuestSession(userId);
 
-  if (isGuest || !isDbAvailable()) {
+  if (isGuest) {
+    const memList = Array.from(memConversations.values())
+      .filter((c) => c.userId === userId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    if (memList.length > 0) return memList;
+
+    const redisList = await getGuestState<ChatConversation[]>(guestKeys.conversations(userId));
+    if (redisList && Array.isArray(redisList)) {
+      redisList.forEach((c) => memConversations.set(c.id, c));
+      return redisList;
+    }
+    return [];
+  }
+
+  if (!isDbAvailable()) {
     return Array.from(memConversations.values())
       .filter((c) => c.userId === userId)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }
 
   try {
@@ -270,6 +311,15 @@ export async function getMessages(conversationId: string): Promise<ChatMessage[]
 
   const conv = memConversations.get(conversationId);
   const isGuest = conv ? isGuestSession(conv.userId) : false;
+
+  if (isGuest && conv) {
+    const redisMsgs = await getGuestState<ChatMessage[]>(guestKeys.messages(conv.userId, conversationId));
+    if (redisMsgs && Array.isArray(redisMsgs)) {
+      memMessages.set(conversationId, redisMsgs);
+      return redisMsgs;
+    }
+    return mem ?? [];
+  }
 
   if (isGuest || !isDbAvailable()) return mem ?? [];
 
@@ -332,6 +382,22 @@ export async function saveMessage(
   const conv = memConversations.get(conversationId);
   const isGuest = conv ? isGuestSession(conv.userId) : false;
 
+  if (isGuest && conv) {
+    // Save to Redis with guest session TTL
+    await setGuestState(guestKeys.messages(conv.userId, conversationId), list, GUEST_CONFIG.SESSION_TTL);
+    if (updatedTitle) {
+      conv.title = updatedTitle;
+    }
+    conv.updatedAt = new Date();
+    memConversations.set(conversationId, conv);
+    await setGuestState(guestKeys.conversation(conv.userId, conversationId), conv, GUEST_CONFIG.SESSION_TTL);
+
+    const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(conv.userId))) || [];
+    const updatedConvs = [conv, ...existingList.filter((c) => c.id !== conv.id)];
+    await setGuestState(guestKeys.conversations(conv.userId), updatedConvs, GUEST_CONFIG.SESSION_TTL);
+    return msg;
+  }
+
   if (isGuest || !isDbAvailable()) return msg;
 
   try {
@@ -369,7 +435,19 @@ export async function deleteConversation(
   }
 
   const isGuest = isGuestSession(userId);
-  if (isGuest || !isDbAvailable()) return true;
+  if (isGuest) {
+    await deleteGuestState(guestKeys.conversation(userId, conversationId));
+    await deleteGuestState(guestKeys.messages(userId, conversationId));
+    const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(userId))) || [];
+    await setGuestState(
+      guestKeys.conversations(userId),
+      existingList.filter((c) => c.id !== conversationId),
+      GUEST_CONFIG.SESSION_TTL
+    );
+    return true;
+  }
+
+  if (!isDbAvailable()) return true;
 
   try {
     const db = getDb();
@@ -393,7 +471,17 @@ export async function updateConversationTitle(
   }
 
   const isGuest = isGuestSession(userId);
-  if (isGuest || !isDbAvailable()) return true;
+  if (isGuest) {
+    if (mem) {
+      await setGuestState(guestKeys.conversation(userId, conversationId), mem, GUEST_CONFIG.SESSION_TTL);
+      const existingList = (await getGuestState<ChatConversation[]>(guestKeys.conversations(userId))) || [];
+      const updated = existingList.map((c) => (c.id === conversationId ? { ...c, title: trimmed } : c));
+      await setGuestState(guestKeys.conversations(userId), updated, GUEST_CONFIG.SESSION_TTL);
+    }
+    return true;
+  }
+
+  if (!isDbAvailable()) return true;
 
   try {
     const db = getDb();

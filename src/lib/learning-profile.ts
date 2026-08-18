@@ -3,11 +3,18 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { learningProfiles } from "@/db/schema";
 import { ensureDbUser } from "@/lib/users";
+import {
+  isGuestSession,
+  getGuestState,
+  setGuestState,
+  guestKeys,
+  GUEST_CONFIG,
+} from "@/lib/guest";
 
 /**
  * Learning Profile — structured memory that drives personalization.
- * Persisted in Neon (learning_profiles table) with in-memory fallback
- * when DATABASE_URL is not configured.
+ * Persisted in Neon (learning_profiles table) for authenticated users,
+ * and isolated to Upstash Redis TTL / ephemeral memory for guest demo sessions.
  */
 
 export const learningProfileSchema = z.object({
@@ -32,9 +39,7 @@ export type LearningProfile = LearningProfileInput & {
   updatedAt: Date;
 };
 
-// We keep a tiny in-memory fallback for preview without DB.
-// In production with DB, this map is never used except to avoid crashing
-// if DATABASE_URL is missing during dev.
+// In-memory fallback
 const memoryFallback = new Map<string, LearningProfile>();
 
 import { isMockModeForced } from "@/lib/env";
@@ -49,6 +54,20 @@ function isDbAvailable(): boolean {
 }
 
 export async function getLearningProfile(userId: string): Promise<LearningProfile | null> {
+  const isGuest = isGuestSession(userId);
+
+  if (isGuest) {
+    const mem = memoryFallback.get(userId);
+    if (mem) return mem;
+
+    const fromRedis = await getGuestState<LearningProfile>(guestKeys.profile(userId));
+    if (fromRedis) {
+      memoryFallback.set(userId, fromRedis);
+      return fromRedis;
+    }
+    return null;
+  }
+
   if (!isDbAvailable()) {
     return memoryFallback.get(userId) ?? null;
   }
@@ -97,6 +116,19 @@ export async function saveLearningProfile(
   input: LearningProfileInput
 ): Promise<{ ok: boolean; profile: LearningProfile; isMock: boolean }> {
   const parsed = learningProfileSchema.parse(input);
+  const isGuest = isGuestSession(userId);
+
+  if (isGuest) {
+    const profile: LearningProfile = {
+      id: `guest_${userId}`,
+      userId,
+      ...parsed,
+      updatedAt: new Date(),
+    };
+    memoryFallback.set(userId, profile);
+    await setGuestState(guestKeys.profile(userId), profile, GUEST_CONFIG.SESSION_TTL);
+    return { ok: true, profile, isMock: false };
+  }
 
   // Preview without DB → memory fallback
   if (!isDbAvailable()) {

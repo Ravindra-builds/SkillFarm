@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
   FileCheck,
   X,
   ArrowRight,
+  LogIn,
 } from "lucide-react";
 import type { StructuredResumeData } from "@/lib/resume";
 
@@ -37,6 +39,7 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
   const [rawText, setRawText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestLimitNotice, setGuestLimitNotice] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<StructuredResumeData | null>(null);
   const [memoriesCount, setMemoriesCount] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -51,12 +54,14 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
       }
       setFile(selected);
       setError(null);
+      setGuestLimitNotice(null);
     }
   }
 
   async function handleProcessResume(e?: React.FormEvent) {
     if (e) e.preventDefault();
     setError(null);
+    setGuestLimitNotice(null);
     setParsedData(null);
 
     if (mode === "file" && !file) {
@@ -88,10 +93,17 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
         });
       }
 
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
 
       if (!res.ok || !json.success) {
-        throw new Error(json.error || "Failed to process resume");
+        if (res.status === 403 || json.error?.includes("limit") || json.error === "Guest limit reached" || json.message?.includes("limit")) {
+          setGuestLimitNotice(
+            json.message ||
+              "You have reached your guest limit for resume analysis. Sign in with Google to save your resume profile and unlock unlimited uploads."
+          );
+          return;
+        }
+        throw new Error(json.error || json.message || "Failed to process resume");
       }
 
       const structured: StructuredResumeData = json.parsed?.structured || {
@@ -223,6 +235,30 @@ export function ResumeUploader({ onProfileExtracted, className = "" }: ResumeUpl
             rows={4}
             className="text-xs font-mono rounded-xl resize-none border-border/80"
           />
+        )}
+
+        {/* Guest Limit Conversion Notice */}
+        {guestLimitNotice && (
+          <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-4 space-y-3 animate-in fade-in duration-200">
+            <div className="flex items-start gap-2.5">
+              <div className="h-7 w-7 rounded-xl bg-violet-600/20 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-bold text-foreground">Guest Demo Limit Reached</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {guestLimitNotice}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Link href="/login">
+                <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-8 px-3.5 gap-1.5 shadow-xs">
+                  <LogIn className="h-3.5 w-3.5" /> Sign in with Google
+                </Button>
+              </Link>
+            </div>
+          </div>
         )}
 
         {/* Error Alert */}

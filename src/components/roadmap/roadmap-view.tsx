@@ -243,6 +243,22 @@ export function RoadmapView() {
     return groups;
   }, [roadmap]);
 
+  const isGuest = Boolean(
+    roadmap?.userId && (
+      roadmap.userId === "guest-preview-user" ||
+      roadmap.userId.startsWith("guest") ||
+      roadmap.userId.includes("guest") ||
+      roadmap.userId.endsWith("@skillfarm.local")
+    )
+  );
+
+  const displayWeekGroups = useMemo(() => {
+    if (isGuest) {
+      return weekGroups.filter((g) => g.weekNumber <= 2);
+    }
+    return weekGroups;
+  }, [weekGroups, isGuest]);
+
   // Filtered nodes
   const filteredNodes = useMemo(() => {
     if (!roadmap) return [];
@@ -462,7 +478,7 @@ export function RoadmapView() {
       <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-5 sm:gap-6 items-start">
         {/* Left Column: Week-by-Week Milestone Timeline */}
         <div className="space-y-5 sm:space-y-6">
-          {weekGroups.map((group) => {
+          {displayWeekGroups.map((group) => {
             const visibleNodesInWeek = group.nodes.filter((n) => filteredNodes.some((fn) => fn.id === n.id));
             if (visibleNodesInWeek.length === 0) return null;
 
@@ -622,6 +638,37 @@ export function RoadmapView() {
               </div>
             );
           })}
+
+          {/* Guest Locked Multi-Week Progression Teaser Card */}
+          {isGuest && (
+            <div className="rounded-2xl border-2 border-dashed border-violet-500/40 bg-gradient-to-b from-violet-500/10 via-card to-card p-6 sm:p-8 text-center space-y-4 shadow-lg relative overflow-hidden animate-in fade-in duration-300">
+              <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+                <Lock className="h-6 w-6" />
+              </div>
+
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h3 className="font-heading text-base sm:text-lg font-bold text-foreground flex items-center justify-center gap-2">
+                  🔒 Continue Your Full Multi-Week Roadmap
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  You are exploring the 2-week guest sandbox. Create a free account to customize all 8–12 milestone weeks, unlock production capstone reviews, and save your progress to the cloud.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs sm:text-sm h-10 px-5 shadow-xs">
+                    <Sparkles className="h-4 w-4 mr-2" /> Create Free Account
+                  </Button>
+                </Link>
+                <Link href="/login" className="w-full sm:w-auto">
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm h-10 px-4">
+                    Sign in with Google
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
 
           {filteredNodes.length === 0 && (
             <div className="rounded-2xl border border-dashed p-10 text-center space-y-2">
