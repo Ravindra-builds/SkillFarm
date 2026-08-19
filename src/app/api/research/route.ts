@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { research } from "@/agents/research/research";
 import { auth } from "@/lib/auth";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkFeatureRateLimit, checkRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ const bodySchema = z.object({
  * Returns: { query, resources: ScoredResource[], cached, sourcesUsed, durationMs }
  *
  * Auth: optional — guest preview works, but we still check auth for logging.
- * Rate limiting: enabled (15 requests per 60 seconds).
+ * Rate limiting: enabled (centralized rate rule).
  */
 export async function POST(req: Request) {
   try {
@@ -35,11 +35,17 @@ export async function POST(req: Request) {
 
     const { query, maxResults } = parsed.data;
 
-      // Rate-limit: 15 research requests per 60 seconds (expensive paid API call)
-    const rateCheck = await checkRateLimit(`research:${userId}`, 15, 60);
+    // Rate-limit using centralized rules (15/day in prod, 100/day in dev)
+    const rateCheck = await checkFeatureRateLimit(userId, "research");
     if (!rateCheck.success) {
       return new Response(
-        JSON.stringify({ error: "Rate limit exceeded. Please wait before running more research.", retryAfter: rateCheck.resetSec }),
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          message: `Daily research run limit reached (${rateCheck.limit} per 24h). Please try again later.`,
+          retryAfter: rateCheck.resetSec,
+          remaining: rateCheck.remaining,
+          limit: rateCheck.limit,
+        }),
         { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) } }
       );
     }

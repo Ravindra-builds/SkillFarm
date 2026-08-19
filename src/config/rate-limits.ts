@@ -96,6 +96,9 @@ export const CACHE_TTL = {
   // 24-hour TTL for learning profiles
   LEARNING_PROFILE_TTL: 86400, // 86,400s
 
+  // 180-day TTL for cached user credentials in Redis
+  CREDENTIAL_CACHE_TTL: 180 * 86400, // 15,552,000s (180 days)
+
   // Default TTL when not specified
   DEFAULT_TTL: 3600, // 3,600s
 } as const;

@@ -9,7 +9,7 @@ import { synthesizeParallel, streamSynthesis } from "@/agents/orchestrator/synth
 import { detectHandoff, parseExplicitHandoff } from "@/agents/orchestrator/handoff";
 import { saveHandoff } from "@/lib/handoff-store";
 import type { MentorId } from "@/config/mentors";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { checkPlanLimit, incrementPlanUsage } from "@/lib/subscription";
 import { detectScopeViolation } from "@/lib/scope-guard";
 import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
@@ -180,8 +180,8 @@ export async function POST(req: Request) {
     } | null;
     userId = session?.user?.email ?? session?.user?.id ?? "guest-preview-user";
 
-    // ── Rate Limiting — 30 req/min ─────────────────────────────────────────
-    const rateCheck = await checkRateLimit(`chat:${userId}`, 30, 60);
+    // ── Rate Limiting (Centralized rule) ──────────────────────────────────
+    const rateCheck = await checkFeatureRateLimit(userId, "chat");
     if (!rateCheck.success) {
       return new Response(
         JSON.stringify({

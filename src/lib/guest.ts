@@ -305,7 +305,8 @@ export async function checkGuestIpAbuse(ip: string): Promise<{ allowed: boolean;
   if (redis) {
     try {
       const current = await redis.incr(key);
-      if (current === 1) {
+      const ttl = await redis.ttl(key);
+      if (ttl === -1 || current === 1) {
         await redis.expire(key, GUEST_CONFIG.IP_BURST_WINDOW_SEC);
       }
       return {

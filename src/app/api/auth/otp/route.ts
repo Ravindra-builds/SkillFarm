@@ -2,6 +2,7 @@ import { z } from "zod";
 import { generateOTP, verifyOTP } from "@/lib/otp-store";
 import { createCustomSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getRateLimitRule } from "@/config";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +16,12 @@ const requestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    // Rate-limit: 5 OTP requests per minute per IP (prevents enumeration & brute-force)
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
       req.headers.get("x-real-ip") ??
-      "unknown";
-    const rateCheck = await checkRateLimit(`otp:${ip}`, 5, 60);
+      "127.0.0.1";
+    const rule = getRateLimitRule("otp");
+    const rateCheck = await checkRateLimit(`otp:${ip}`, rule.limit, rule.windowSec);
     if (!rateCheck.success) {
       return new Response(
         JSON.stringify({ error: "Too many attempts. Please wait before trying again.", retryAfter: rateCheck.resetSec }),

@@ -15,6 +15,7 @@ import { ensureDbUser, isDbAvailable } from "@/lib/users";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { CACHE_TTL } from "@/config/rate-limits";
 
 const scryptAsync = promisify(scrypt);
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -97,7 +98,7 @@ export async function saveUserCredential(
     }
   }
 
-  // 2. Save credential hash in Redis or In-Memory
+  // 2. Save credential hash in Redis (with 180-day TTL) or In-Memory
   const redis = await getRedis();
   const record: CredentialRecord = {
     email: normalizedEmail,
@@ -108,7 +109,11 @@ export async function saveUserCredential(
   };
 
   if (redis) {
-    await redis.set(`auth:cred:${normalizedEmail}`, JSON.stringify(record));
+    await redis.set(
+      `auth:cred:${normalizedEmail}`,
+      JSON.stringify(record),
+      { ex: CACHE_TTL.CREDENTIAL_CACHE_TTL }
+    );
   } else {
     memCredentials.set(normalizedEmail, record);
   }
@@ -123,15 +128,20 @@ export async function getUserCredential(email: string): Promise<CredentialRecord
   const redis = await getRedis();
   if (redis) {
     const raw = await redis.get<string | CredentialRecord>(`auth:cred:${normalizedEmail}`);
-    if (!raw) return null;
-    if (typeof raw === "string") {
-      try {
-        return JSON.parse(raw) as CredentialRecord;
-      } catch {
-        return null;
+    if (raw) {
+      // Refresh TTL on active access so active user sessions maintain valid cache
+      await redis.expire(`auth:cred:${normalizedEmail}`, CACHE_TTL.CREDENTIAL_CACHE_TTL).catch(() => {});
+
+      if (typeof raw === "string") {
+        try {
+          return JSON.parse(raw) as CredentialRecord;
+        } catch {
+          return null;
+        }
       }
+      return raw as CredentialRecord;
     }
-    return raw as CredentialRecord;
+    return null;
   }
 
   const mem = memCredentials.get(normalizedEmail);

@@ -22,6 +22,7 @@ function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
@@ -31,6 +32,7 @@ function SignupForm() {
     email?: string;
     password?: string;
     confirmPassword?: string;
+    terms?: string;
   }>({});
 
   async function handleGoogleSignup() {
@@ -76,6 +78,7 @@ function SignupForm() {
       email?: string;
       password?: string;
       confirmPassword?: string;
+      terms?: string;
     } = {};
 
     const trimmedFirstName = firstName.trim();
@@ -101,6 +104,10 @@ function SignupForm() {
       errors.confirmPassword = "Please confirm your password.";
     } else if (password !== confirmPassword) {
       errors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (!agreeToTerms) {
+      errors.terms = "You must agree to the Terms of Service and Privacy Policy to create an account.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -224,7 +231,7 @@ function SignupForm() {
               id="lastName"
               name="family-name"
               type="text"
-              placeholder="Doe"
+              placeholder="doe"
               autoComplete="family-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -243,7 +250,7 @@ function SignupForm() {
             id="email"
             name="email"
             type="email"
-            placeholder="john.doe@example.com"
+            placeholder="name@example.com"
             autoComplete="email"
             value={email}
             onChange={(e) => {
@@ -319,18 +326,41 @@ function SignupForm() {
           )}
         </div>
 
-        {/* Terms and Privacy acknowledgment */}
-        <p className="text-[11px] text-muted-foreground text-center leading-relaxed pt-1">
-          By creating an account, you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-foreground transition-colors">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline hover:text-foreground transition-colors">
-            Privacy Policy
-          </Link>
-          .
-        </p>
+        {/* Mandatory Terms & Privacy Checkbox */}
+        <div className="space-y-1 pt-1">
+          <div className="flex items-start gap-2.5">
+            <input
+              type="checkbox"
+              id="agreeToTerms"
+              name="agreeToTerms"
+              checked={agreeToTerms}
+              onChange={(e) => {
+                setAgreeToTerms(e.target.checked);
+                if (fieldErrors.terms) {
+                  setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+                }
+              }}
+              className="mt-0.5 h-4 w-4 rounded border-border/80 bg-background/60 text-violet-600 focus:ring-violet-500/30 accent-violet-600 cursor-pointer shrink-0"
+            />
+            <label htmlFor="agreeToTerms" className="text-[12px] text-muted-foreground leading-snug cursor-pointer select-none">
+              I agree to SkillFarm&apos;s{" "}
+              <Link href="/terms" target="_blank" className="text-violet-400 hover:text-violet-300 underline font-medium">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" target="_blank" className="text-violet-400 hover:text-violet-300 underline font-medium">
+                Privacy Policy
+              </Link>
+              .
+            </label>
+          </div>
+          {fieldErrors.terms && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.terms}
+            </p>
+          )}
+        </div>
 
         {/* Submit Button */}
         <Button

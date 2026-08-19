@@ -72,7 +72,7 @@ export function AuthShell({ children, title, subtitle }: AuthShellProps) {
         {/* Security badge footer */}
         <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/80">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Safe & encrypted developer environment</span>
+          <span>End-to-end encrypted & secure learning environment</span>
         </div>
       </div>
     </div>

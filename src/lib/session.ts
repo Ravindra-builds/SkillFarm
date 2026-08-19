@@ -103,17 +103,9 @@ export async function getCustomSession(): Promise<CustomUserSession | null> {
       cookieStore.get(SESSION_COOKIE_NAME) || cookieStore.get(LEGACY_COOKIE_NAME);
     if (!cookie?.value) return null;
 
-    // Try signed JWT first (new format)
+    // Enforce cryptographic JWT signature verification
     const verified = await verifySession(cookie.value);
     if (verified) return verified;
-
-    // Backward compat: try unsigned JSON
-    try {
-      const parsed = JSON.parse(cookie.value) as CustomUserSession;
-      if (parsed && parsed.email) return parsed;
-    } catch {
-      // Not JSON either
-    }
 
     return null;
   } catch {

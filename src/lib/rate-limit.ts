@@ -34,10 +34,12 @@ export async function checkRateLimit(
   if (redis) {
     try {
       const current = await redis.incr(key);
-      if (current === 1) {
+      let ttl = await redis.ttl(key);
+      // Guarantee key expiration if key has no TTL (-1) or was just created (current === 1)
+      if (ttl === -1 || current === 1) {
         await redis.expire(key, windowSec);
+        ttl = windowSec;
       }
-      const ttl = await redis.ttl(key);
 
       return {
         success: current <= limit,
