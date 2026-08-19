@@ -2,19 +2,18 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/auth/password-input";
-import { GoogleIcon } from "@/components/auth/google-icon";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
+import { GoogleIcon } from "@/components/auth/google-icon";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
@@ -24,39 +23,30 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   async function handleGoogleLogin() {
-    setGoogleLoading(true);
     setError(null);
+    setGoogleLoading(true);
     try {
-      const res = await signIn("google", {
-        callbackUrl,
-        redirect: false,
-      });
-
-      if (res?.error) {
-        // Fallback to safe error or guest preview if Google OAuth keys are missing
-        console.warn("[login] Google sign-in response error:", res.error);
-        setError(AUTH_MESSAGES.OAUTH_FAILED);
-      } else if (res?.url) {
-        window.location.href = res.url;
-      } else {
-        window.location.href = callbackUrl;
-      }
-    } catch (err) {
-      console.error("[login] Google sign-in exception:", err);
-      setError(AUTH_MESSAGES.OAUTH_FAILED);
-    } finally {
+      await signIn("google", { callbackUrl });
+    } catch {
+      setError(AUTH_MESSAGES.GENERIC_ERROR);
       setGoogleLoading(false);
     }
   }
 
-  async function handleGuestLogin() {
-    setGuestLoading(true);
+  async function handleGuestDemo() {
     setError(null);
+    setGuestLoading(true);
     try {
-      const res = await fetch("/api/auth/guest", { method: "POST" });
+      const res = await fetch("/api/auth/guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
       const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
         window.location.href = callbackUrl;
       } else {
@@ -73,16 +63,27 @@ function LoginForm() {
     e.preventDefault();
     setError(null);
 
+    const errors: { email?: string; password?: string } = {};
     const trimmedEmail = email.trim();
+
     if (!trimmedEmail) {
-      setError(AUTH_MESSAGES.INVALID_EMAIL);
-      return;
+      errors.email = "Please enter your email address.";
+    } else if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      errors.email = "Please enter a valid email address.";
     }
+
     if (!password) {
-      setError("Please enter your password.");
+      errors.password = "Please enter your password.";
+    } else if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -155,8 +156,8 @@ function LoginForm() {
         <div className="border-t border-border/70 w-full" />
       </div>
 
-      {/* Email + Password Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Email + Password Form with Custom Validation */}
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">
             Email address
@@ -167,12 +168,24 @@ function LoginForm() {
             type="email"
             placeholder="name@example.com"
             autoComplete="email"
-            required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) {
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }
+            }}
             disabled={loading || googleLoading || guestLoading}
-            className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+            className={`h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500 ${
+              fieldErrors.email ? "border-destructive/60 focus-visible:ring-destructive/30" : ""
+            }`}
           />
+          {fieldErrors.email && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.email}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -192,11 +205,21 @@ function LoginForm() {
             name="password"
             placeholder="••••••••"
             autoComplete="current-password"
-            required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (fieldErrors.password) {
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }
+            }}
             disabled={loading || googleLoading || guestLoading}
           />
+          {fieldErrors.password && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.password}
+            </p>
+          )}
         </div>
 
         <Button
@@ -221,29 +244,31 @@ function LoginForm() {
           Don&apos;t have an account?{" "}
           <Link
             href="/signup"
-            className="font-medium text-violet-400 hover:text-violet-300 transition-colors"
+            className="font-medium text-violet-400 hover:text-violet-300 hover:underline transition-colors"
           >
-            Create one
+            Create an account
           </Link>
         </p>
 
-        <div className="border-t border-border/40 pt-3">
+        {/* Guest Exploration Option */}
+        <div className="pt-2 border-t border-border/50">
           <Button
             type="button"
             variant="ghost"
-            onClick={handleGuestLogin}
+            onClick={handleGuestDemo}
             disabled={loading || googleLoading || guestLoading}
-            className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 font-normal flex items-center justify-center gap-2 cursor-pointer rounded-lg"
           >
             {guestLoading ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                <span>Entering guest mode...</span>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Launching guest workspace...</span>
               </>
             ) : (
-              <span className="flex items-center justify-center gap-1">
-                Continue as Guest <ArrowRight className="h-3 w-3 ml-1" />
-              </span>
+              <>
+                <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+                <span>Explore in Guest Sandbox</span>
+              </>
             )}
           </Button>
         </div>

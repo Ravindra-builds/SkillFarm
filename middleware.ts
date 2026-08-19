@@ -100,8 +100,8 @@ export const config = {
      * - _next/image (image optimization)
      * - favicon.ico, apple-icon, manifest, icons, logo.png
      * - /api/* (API routes handle their own auth)
-     * - /login, /signup, /forgot-password, /reset-password, /verify-email, / (landing)
+     * - /login, /signup, /forgot-password, /reset-password, /verify-email, /terms, /privacy, / (landing)
      */
-    "/((?!_next/static|_next/image|favicon.ico|apple-icon|manifest|icon|logo.png|login|signup|forgot-password|reset-password|verify-email|api/).*)",
+    "/((?!_next/static|_next/image|favicon.ico|apple-icon|manifest|icon|logo.png|login|signup|forgot-password|reset-password|verify-email|terms|privacy|api/).*)",
   ],
 };

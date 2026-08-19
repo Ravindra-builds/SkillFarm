@@ -451,10 +451,15 @@ export default async function LandingPage() {
           <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
             <p>© {new Date().getFullYear()} SkillFarm. Plant knowledge. Grow skills. Ship real things.</p>
             <div className="flex items-center gap-4">
+              <Link href="/terms" className="hover:underline text-muted-foreground hover:text-foreground">
+                Terms
+              </Link>
+              <Link href="/privacy" className="hover:underline text-muted-foreground hover:text-foreground">
+                Privacy
+              </Link>
               <a href="mailto:support@skillfarm.in" className="hover:underline text-muted-foreground hover:text-foreground">
                 Support
               </a>
-              <Link href="/settings" className="hover:underline">Settings</Link>
               <Link href="/roadmap" className="hover:underline">Roadmap</Link>
               <Link href="/dashboard" className="hover:underline">Dashboard</Link>
             </div>

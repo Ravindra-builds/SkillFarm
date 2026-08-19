@@ -1,63 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/auth/password-input";
-import { GoogleIcon } from "@/components/auth/google-icon";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { AlertCircle, Loader2, ArrowRight } from "lucide-react";
+import { GoogleIcon } from "@/components/auth/google-icon";
+import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
-export default function SignupPage() {
-  const router = useRouter();
+function SignupForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+  }>({});
 
   async function handleGoogleSignup() {
-    setGoogleLoading(true);
     setError(null);
+    setGoogleLoading(true);
     try {
-      const res = await signIn("google", {
-        callbackUrl: "/dashboard",
-        redirect: false,
-      });
-
-      if (res?.error) {
-        setError(AUTH_MESSAGES.OAUTH_FAILED);
-      } else if (res?.url) {
-        window.location.href = res.url;
-      } else {
-        window.location.href = "/dashboard";
-      }
+      await signIn("google", { callbackUrl });
     } catch {
-      setError(AUTH_MESSAGES.OAUTH_FAILED);
-    } finally {
+      setError(AUTH_MESSAGES.GENERIC_ERROR);
       setGoogleLoading(false);
     }
   }
 
-  async function handleGuestLogin() {
-    setGuestLoading(true);
+  async function handleGuestDemo() {
     setError(null);
+    setGuestLoading(true);
     try {
-      const res = await fetch("/api/auth/guest", { method: "POST" });
+      const res = await fetch("/api/auth/guest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
       const data = await res.json().catch(() => ({}));
+
       if (res.ok) {
-        window.location.href = "/dashboard";
+        window.location.href = callbackUrl;
       } else {
         setError(data.error || AUTH_MESSAGES.GENERIC_ERROR);
       }
@@ -72,30 +71,44 @@ export default function SignupPage() {
     e.preventDefault();
     setError(null);
 
-    // Client-side validation
+    const errors: {
+      firstName?: string;
+      email?: string;
+      password?: string;
+      confirmPassword?: string;
+    } = {};
+
     const trimmedFirstName = firstName.trim();
     const trimmedEmail = email.trim();
 
     if (!trimmedFirstName) {
-      setError("Please enter your first name.");
+      errors.firstName = "Please enter your first name.";
+    }
+
+    if (!trimmedEmail) {
+      errors.email = "Please enter your email address.";
+    } else if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    if (!password) {
+      errors.password = "Please enter a password.";
+    } else if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters.";
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password.";
+    } else if (password !== confirmPassword) {
+      errors.confirmPassword = "Passwords do not match.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
-      setError(AUTH_MESSAGES.INVALID_EMAIL);
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(AUTH_MESSAGES.PASSWORD_TOO_SHORT);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError(AUTH_MESSAGES.PASSWORDS_MUST_MATCH);
-      return;
-    }
-
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await fetch("/api/auth/signup", {
@@ -116,7 +129,7 @@ export default function SignupPage() {
         return;
       }
 
-      window.location.href = data.redirectUrl || "/dashboard";
+      window.location.href = data.redirectUrl || "/verify-email";
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
@@ -169,10 +182,10 @@ export default function SignupPage() {
         <div className="border-t border-border/70 w-full" />
       </div>
 
-      {/* Signup Form */}
-      <form onSubmit={handleSubmit} className="space-y-3.5">
-        {/* Name Fields Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Registration Form with Custom Validation */}
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        {/* Name Fields (Row) */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="firstName" className="text-xs font-medium text-muted-foreground">
               First name
@@ -181,14 +194,26 @@ export default function SignupPage() {
               id="firstName"
               name="given-name"
               type="text"
-              placeholder="Ada"
+              placeholder="John"
               autoComplete="given-name"
-              required
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                if (fieldErrors.firstName) {
+                  setFieldErrors((prev) => ({ ...prev, firstName: undefined }));
+                }
+              }}
               disabled={loading || googleLoading || guestLoading}
-              className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+              className={`h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500 ${
+                fieldErrors.firstName ? "border-destructive/60 focus-visible:ring-destructive/30" : ""
+              }`}
             />
+            {fieldErrors.firstName && (
+              <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                {fieldErrors.firstName}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -199,7 +224,7 @@ export default function SignupPage() {
               id="lastName"
               name="family-name"
               type="text"
-              placeholder="Lovelace"
+              placeholder="Doe"
               autoComplete="family-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -218,14 +243,26 @@ export default function SignupPage() {
             id="email"
             name="email"
             type="email"
-            placeholder="name@example.com"
+            placeholder="john.doe@example.com"
             autoComplete="email"
-            required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (fieldErrors.email) {
+                setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }
+            }}
             disabled={loading || googleLoading || guestLoading}
-            className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+            className={`h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500 ${
+              fieldErrors.email ? "border-destructive/60 focus-visible:ring-destructive/30" : ""
+            }`}
           />
+          {fieldErrors.email && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.email}
+            </p>
+          )}
         </div>
 
         {/* Password */}
@@ -238,12 +275,21 @@ export default function SignupPage() {
             name="new-password"
             placeholder="••••••••"
             autoComplete="new-password"
-            required
-            minLength={8}
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (fieldErrors.password) {
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }
+            }}
             disabled={loading || googleLoading || guestLoading}
           />
+          {fieldErrors.password && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.password}
+            </p>
+          )}
         </div>
 
         {/* Confirm Password */}
@@ -256,12 +302,21 @@ export default function SignupPage() {
             name="confirm-new-password"
             placeholder="••••••••"
             autoComplete="new-password"
-            required
-            minLength={8}
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (fieldErrors.confirmPassword) {
+                setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+              }
+            }}
             disabled={loading || googleLoading || guestLoading}
           />
+          {fieldErrors.confirmPassword && (
+            <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {fieldErrors.confirmPassword}
+            </p>
+          )}
         </div>
 
         {/* Terms and Privacy acknowledgment */}
@@ -281,15 +336,15 @@ export default function SignupPage() {
         <Button
           type="submit"
           disabled={loading || googleLoading || guestLoading}
-          className="w-full h-10 bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm rounded-lg shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2 mt-2"
+          className="w-full h-10 bg-violet-600 hover:bg-violet-500 text-white font-medium text-sm rounded-lg shadow-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
         >
           {loading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Creating account...</span>
+              <span>Creating your account...</span>
             </>
           ) : (
-            <span>Create account</span>
+            <span>Create Account</span>
           )}
         </Button>
       </form>
@@ -300,33 +355,49 @@ export default function SignupPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-violet-400 hover:text-violet-300 transition-colors"
+            className="font-medium text-violet-400 hover:text-violet-300 hover:underline transition-colors"
           >
             Log in
           </Link>
         </p>
 
-        <div className="border-t border-border/40 pt-3">
+        {/* Guest Demo Option */}
+        <div className="pt-2 border-t border-border/50">
           <Button
             type="button"
             variant="ghost"
-            onClick={handleGuestLogin}
+            onClick={handleGuestDemo}
             disabled={loading || googleLoading || guestLoading}
-            className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+            className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 font-normal flex items-center justify-center gap-2 cursor-pointer rounded-lg"
           >
             {guestLoading ? (
               <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                <span>Entering guest mode...</span>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Launching guest workspace...</span>
               </>
             ) : (
-              <span className="flex items-center justify-center gap-1">
-                Continue as Guest <ArrowRight className="h-3 w-3 ml-1" />
-              </span>
+              <>
+                <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+                <span>Explore in Guest Sandbox</span>
+              </>
             )}
           </Button>
         </div>
       </div>
     </AuthShell>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0B0F17] flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

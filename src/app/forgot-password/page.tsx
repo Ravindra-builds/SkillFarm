@@ -13,6 +13,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -20,11 +21,16 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !trimmedEmail.includes("@")) {
-      setError(AUTH_MESSAGES.INVALID_EMAIL);
+    if (!trimmedEmail) {
+      setEmailError("Please enter your email address.");
+      return;
+    }
+    if (!trimmedEmail.includes("@") || !trimmedEmail.includes(".")) {
+      setEmailError("Please enter a valid email address.");
       return;
     }
 
+    setEmailError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/forgot-password", {
@@ -86,7 +92,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">
               Email address
@@ -97,12 +103,22 @@ export default function ForgotPasswordPage() {
               type="email"
               placeholder="name@example.com"
               autoComplete="email"
-              required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError(null);
+              }}
               disabled={loading}
-              className="h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500"
+              className={`h-10 text-sm bg-background/50 border-border/80 focus-visible:ring-violet-500/30 focus-visible:border-violet-500 ${
+                emailError ? "border-destructive/60 focus-visible:ring-destructive/30" : ""
+              }`}
             />
+            {emailError && (
+              <p className="text-[11px] text-destructive flex items-center gap-1 font-medium mt-1 animate-in fade-in">
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                {emailError}
+              </p>
+            )}
           </div>
 
           <Button

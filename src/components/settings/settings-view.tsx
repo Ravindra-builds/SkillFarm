@@ -991,42 +991,61 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
               <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Flame className="h-4 w-4 text-violet-600" /> Daily Feature Quotas
+                    <Flame className="h-4 w-4 text-violet-600" /> Daily Feature Quotas & Limits
                   </h4>
                   <span className="text-[11px] text-muted-foreground">Rolling 24-hour cycle</span>
                 </div>
 
-                <div className="space-y-3">
-                  {/* Quota 1 */}
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Quota 1: Chat */}
+                  <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">Mentor Chat Messages</span>
-                      <span className="text-muted-foreground font-mono">50 / day</span>
+                      <span className="font-medium text-foreground flex items-center gap-1.5">
+                        <Brain className="h-3.5 w-3.5 text-violet-500" /> Mentor Chat Messages
+                      </span>
+                      <span className="text-muted-foreground font-mono text-[11px]">50 / day</span>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-violet-600 w-[12%]" />
                     </div>
                   </div>
 
-                  {/* Quota 2 */}
-                  <div className="space-y-1.5">
+                  {/* Quota 2: Research */}
+                  <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">Deep Web Research Runs</span>
-                      <span className="text-muted-foreground font-mono">15 / day</span>
+                      <span className="font-medium text-foreground flex items-center gap-1.5">
+                        <Search className="h-3.5 w-3.5 text-blue-500" /> Deep Web Research Runs
+                      </span>
+                      <span className="text-muted-foreground font-mono text-[11px]">15 / day</span>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-blue-600 w-[8%]" />
                     </div>
                   </div>
 
-                  {/* Quota 3 */}
-                  <div className="space-y-1.5">
+                  {/* Quota 3: Roadmap */}
+                  <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">Multi-Mentor Parallel Synthesis</span>
-                      <span className="text-emerald-600 font-medium">Included</span>
+                      <span className="font-medium text-foreground flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-emerald-500" /> Roadmap Generations
+                      </span>
+                      <span className="text-muted-foreground font-mono text-[11px]">2 / day</span>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-emerald-600 w-[100%]" />
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-emerald-600 w-[20%]" />
+                    </div>
+                  </div>
+
+                  {/* Quota 4: Resume */}
+                  <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-foreground flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-amber-500" /> Resume Profile Sync
+                      </span>
+                      <span className="text-muted-foreground font-mono text-[11px]">2 / day</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-amber-600 w-[15%]" />
                     </div>
                   </div>
                 </div>
