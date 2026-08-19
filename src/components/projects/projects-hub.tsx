@@ -263,10 +263,10 @@ export function ProjectsHub() {
   if (!capstone) return null;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Subtle Guest Top Banner */}
       {isGuest && (
-        <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between gap-3 px-3.5 py-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
             <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
             <span className="font-medium">Create an account to save your projects and progress.</span>
@@ -278,63 +278,63 @@ export function ProjectsHub() {
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5 border-b pb-5">
-        <div className="space-y-2.5 flex-1 w-full">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 sm:gap-4 border-b pb-3.5">
+        <div className="space-y-1.5 flex-1 w-full">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
-              <Hammer className="h-6 w-6 text-violet-600 shrink-0" /> Main-Project Application Hub
+            <h1 className="font-heading text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
+              <Hammer className="h-5 w-5 text-violet-600 shrink-0" /> Main-Project Application Hub
             </h1>
-            <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold rounded-md">
-              One Unified Portfolio Project
+            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold rounded-md">
+              Portfolio Track
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground w-full max-w-3xl leading-relaxed">
-            Apply the concepts and mental models learned in your roadmap directly to build your single, production-grade Main-Project.
+            Apply roadmap concepts directly to build your production-grade portfolio project.
           </p>
-          <div className="flex items-center gap-2.5 sm:gap-3.5 text-xs text-muted-foreground pt-0.5 flex-wrap">
-            <span className="font-semibold text-foreground">{totalTasksCount} Total Implementation Tasks</span>
+          <div className="flex items-center gap-2.5 text-xs text-muted-foreground pt-0.5 flex-wrap">
+            <span className="font-semibold text-foreground">{totalTasksCount} Implementation Tasks</span>
             <span>•</span>
-            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ {totalTasksDone} Completed ({overallProgress}%)</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ {totalTasksDone} Done ({overallProgress}%)</span>
             <span>•</span>
-            <span className="text-violet-600 dark:text-violet-400 font-semibold">⚡ Week {selectedWeek} Active</span>
+            <span className="text-violet-600 dark:text-violet-400 font-semibold">Week {selectedWeek} Active</span>
           </div>
-          <div className="pt-1 max-w-md">
-            <Progress value={overallProgress} className="h-2 rounded-full" />
+          <div className="pt-0.5 max-w-md">
+            <Progress value={overallProgress} className="h-1.5 rounded-full" />
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full md:w-auto">
           <Button
             onClick={syncFromRoadmap}
             disabled={syncing}
             variant="outline"
-            className="rounded-xl text-xs sm:text-sm font-semibold h-9 px-3.5 gap-1.5 cursor-pointer"
+            className="rounded-xl text-xs font-semibold h-8.5 px-3 gap-1.5 cursor-pointer"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-            {syncing ? "Syncing..." : "Sync with Roadmap"}
+            <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Roadmap"}
           </Button>
           <Link href="/roadmap">
-            <Button className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs sm:text-sm font-semibold h-9 px-4 shadow-xs cursor-pointer">
-              View Learning Roadmap
+            <Button className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-8.5 px-3.5 shadow-xs cursor-pointer">
+              View Roadmap
             </Button>
           </Link>
         </div>
       </div>
 
       {/* Main-Project Overview Hero Card - Compact & Balanced */}
-      <div className="rounded-2xl border-2 border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 p-3.5 sm:p-4 shadow-xs space-y-2.5">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
           <div className="space-y-1 w-full">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-violet-600 text-white text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 uppercase tracking-wider rounded-md">
-                Primary Main-Project
+              <Badge className="bg-violet-600 text-white text-[10px] font-semibold px-2 py-0.2 uppercase tracking-wider rounded-md">
+                Primary Project
               </Badge>
               <span className="text-xs text-muted-foreground">{capstone.goalAlignment}</span>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
-              <FolderGit2 className="h-5 w-5 text-violet-600 shrink-0" /> {capstone.name}
+            <h2 className="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2 text-foreground">
+              <FolderGit2 className="h-4.5 w-4.5 text-violet-600 shrink-0" /> {capstone.name}
             </h2>
-            <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed max-w-3xl">
+            <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed max-w-3xl line-clamp-2">
               {capstone.description}
             </p>
           </div>
@@ -486,55 +486,52 @@ export function ProjectsHub() {
 
       {/* Active Week: Concept Context + Implementation Task Board */}
       <Card className="rounded-2xl border border-border/80 shadow-xs overflow-hidden">
-        <CardHeader className="p-4 sm:p-5 border-b bg-muted/20 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
-            <div className="space-y-1">
+        <CardHeader className="p-3 sm:p-3.5 border-b bg-muted/15 space-y-2">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
+            <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="flex items-center justify-center h-6 w-6 rounded-lg bg-violet-600 text-white font-bold text-xs">
+                <span className="flex items-center justify-center h-5 w-5 rounded-md bg-violet-600 text-white font-bold text-[10px]">
                   W{selectedWeek}
                 </span>
                 <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
-                  Topic: {currentTopic}
+                  {currentTopic}
                 </span>
               </div>
-              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight mt-0.5 text-foreground">
-                Week {selectedWeek} — Apply Learning to Main-Project
+              <CardTitle className="text-sm sm:text-base font-bold tracking-tight text-foreground">
+                Deliverable: <span className="text-violet-600 dark:text-violet-400">{currentFeature}</span>
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm text-foreground/80">
-                Feature Deliverable: <strong className="text-foreground">{currentFeature}</strong>
-              </CardDescription>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 self-start md:self-center">
+            <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
               <div className="text-left md:text-right">
-                <div className="text-xs sm:text-sm font-bold text-foreground">
-                  {activeWeekDoneCount} of {activeWeekTotal} Tasks Done
+                <div className="text-xs font-bold text-foreground">
+                  {activeWeekDoneCount} / {activeWeekTotal} Tasks
                 </div>
-                <div className="text-[11px] text-muted-foreground">{activeWeekProgress}% Complete</div>
+                <div className="text-[10px] text-muted-foreground">{activeWeekProgress}% Complete</div>
               </div>
               <Link
                 href={`/chat?mentor=${activeWeekContext?.mentorId || "backend"}&query=${encodeURIComponent(
                   `I am working on Week ${selectedWeek} of my Main-Project "${capstone.name}". The topic is "${currentTopic}" and deliverable is "${currentFeature}". Can you review my implementation plan and guide me on architectural best practices?`
                 )}`}
               >
-                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8 px-3 gap-1.5 cursor-pointer">
-                  <MessageSquare className="h-3.5 w-3.5 text-violet-600" /> Ask Mentor
+                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-7 px-2.5 gap-1 cursor-pointer">
+                  <MessageSquare className="h-3 w-3 text-violet-600" /> Ask Mentor
                 </Button>
               </Link>
             </div>
           </div>
 
-          {/* Context Banner: What You Learned (Concepts & Mental Models) */}
+          {/* Context Banner: Compact What You Learned & Mental Model Strip */}
           {activeWeekContext && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pt-0.5">
               {activeWeekContext.concepts && activeWeekContext.concepts.length > 0 && (
-                <div className="rounded-xl border bg-background/80 p-3.5 space-y-1.5 shadow-xs">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wider">
-                    <BookOpen className="h-3.5 w-3.5" /> What You Learned
+                <div className="rounded-lg border bg-background/90 p-2 space-y-0.5 shadow-2xs">
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 uppercase tracking-wider">
+                    <BookOpen className="h-2.5 w-2.5" /> Core Concepts
                   </span>
-                  <div className="flex flex-wrap gap-1 pt-0.5">
+                  <div className="flex flex-wrap gap-1">
                     {activeWeekContext.concepts.map((c, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs font-medium px-2 py-0.5 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 rounded-md">
+                      <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 rounded-md">
                         {c}
                       </Badge>
                     ))}
@@ -543,11 +540,11 @@ export function ProjectsHub() {
               )}
 
               {activeWeekContext.mentalModels && activeWeekContext.mentalModels.length > 0 && (
-                <div className="rounded-xl border bg-background/80 p-3.5 space-y-1.5 shadow-xs">
-                  <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
-                    <BrainCircuit className="h-3.5 w-3.5" /> Mental Model to Apply
+                <div className="rounded-lg border bg-background/90 p-2 space-y-0.5 shadow-2xs">
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 uppercase tracking-wider">
+                    <BrainCircuit className="h-2.5 w-2.5" /> Mental Model
                   </span>
-                  <p className="text-foreground/85 text-xs sm:text-sm leading-relaxed">
+                  <p className="text-foreground/85 text-[10px] leading-relaxed line-clamp-1">
                     {activeWeekContext.mentalModels[0]}
                   </p>
                 </div>
@@ -555,26 +552,26 @@ export function ProjectsHub() {
             </div>
           )}
 
-          <Progress value={activeWeekProgress} className="h-2 mt-1 rounded-full" />
+          <Progress value={activeWeekProgress} className="h-1 mt-0.5 rounded-full" />
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-5 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Target className="h-3.5 w-3.5 text-violet-600" /> Implementation Checklist
+        <CardContent className="p-3 sm:p-3.5 pt-2.5 space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Target className="h-3 w-3 text-violet-600" /> Implementation Checklist
             </span>
-            <span className="text-xs text-muted-foreground">Click task or checkmark to update progress</span>
+            <span className="text-[10px] text-muted-foreground">Click task or checkmark to toggle</span>
           </div>
 
           {activeWeekTasks.length > 0 ? (
-            <div className="space-y-2.5">
+            <div className="space-y-1.5">
               {activeWeekTasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`p-3.5 sm:p-4 rounded-xl border transition-all flex items-start gap-3.5 ${
+                  className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center gap-2.5 ${
                     task.completed
-                      ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10 text-muted-foreground"
-                      : "border-border/80 bg-card hover:bg-muted/40 text-foreground"
+                      ? "border-emerald-500/25 bg-emerald-500/[0.02] text-muted-foreground opacity-85"
+                      : "border-l-4 border-l-violet-600 border-border/80 bg-card hover:bg-muted/30 text-foreground shadow-2xs"
                   }`}
                 >
                   <button
@@ -583,17 +580,17 @@ export function ProjectsHub() {
                       e.stopPropagation();
                       toggleTask(task);
                     }}
-                    className="mt-0.5 shrink-0 rounded flex items-center justify-center p-0.5 focus:outline-hidden cursor-pointer"
+                    className="shrink-0 rounded flex items-center justify-center p-0.5 focus:outline-hidden cursor-pointer"
                     aria-label={`Toggle task: ${task.title}`}
                   >
                     <div
-                      className={`h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors ${
+                      className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
                         task.completed
                           ? "bg-emerald-600 border-emerald-600 text-white"
                           : "border-border bg-background hover:border-violet-500"
                       }`}
                     >
-                      {task.completed && <Check className="h-3 w-3 text-white stroke-[3]" />}
+                      {task.completed && <Check className="h-2.5 w-2.5 text-white stroke-[3]" />}
                     </div>
                   </button>
                   <div
@@ -604,7 +601,7 @@ export function ProjectsHub() {
                     className="min-w-0 flex-1 cursor-pointer select-none"
                   >
                     <p
-                      className={`text-xs sm:text-sm font-medium leading-relaxed ${
+                      className={`text-xs sm:text-sm font-medium leading-snug ${
                         task.completed
                           ? "line-through text-muted-foreground"
                           : "text-foreground"
@@ -614,7 +611,7 @@ export function ProjectsHub() {
                     </p>
                   </div>
                   {task.completed && (
-                    <Badge className="bg-emerald-600 text-white text-[10px] sm:text-xs font-semibold px-2 py-0.5 shrink-0 rounded-md">
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold px-1.5 py-0 shrink-0 rounded-md">
                       Done
                     </Badge>
                   )}
@@ -622,8 +619,8 @@ export function ProjectsHub() {
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed p-8 text-center text-xs text-muted-foreground">
-              No tasks listed for Week {selectedWeek}. Click &quot;Sync with Roadmap&quot; to generate.
+            <div className="rounded-xl border border-dashed p-6 text-center text-xs text-muted-foreground">
+              No tasks listed for Week {selectedWeek}. Click &quot;Sync Roadmap&quot; to generate.
             </div>
           )}
 

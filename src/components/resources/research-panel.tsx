@@ -123,54 +123,54 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
     } catch {}
 
     return (
-      <Card key={r.url} className="rounded-2xl border border-border/80 hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden bg-card">
-        <CardContent className="p-4 sm:p-5 space-y-3 flex-1 flex flex-col justify-between">
-          <div className="space-y-2">
+      <Card key={r.url} className="rounded-2xl border border-border/80 hover:shadow-sm transition-shadow flex flex-col justify-between overflow-hidden bg-card">
+        <CardContent className="p-3.5 sm:p-4 space-y-2.5 flex-1 flex flex-col justify-between">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {isDoc && (
-                  <Badge variant="secondary" className="text-[11px] px-2 py-0.5 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 font-semibold rounded-md">
-                    <BookOpen className="h-3 w-3 mr-1" /> Learn / Docs
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.2 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 font-semibold rounded-md">
+                    <BookOpen className="h-3 w-3 mr-1" /> Learn
                   </Badge>
                 )}
                 {isYt && (
-                  <Badge variant="secondary" className="text-[11px] px-2 py-0.5 bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20 font-semibold rounded-md">
-                    <Video className="h-3 w-3 mr-1" /> Watch / Video
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.2 bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/20 font-semibold rounded-md">
+                    <Video className="h-3 w-3 mr-1" /> Video
                   </Badge>
                 )}
                 {isGh && (
-                  <Badge variant="secondary" className="text-[11px] px-2 py-0.5 bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border border-zinc-500/20 font-semibold rounded-md">
-                    <Code2 className="h-3 w-3 mr-1" /> Code / Practice
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0.2 bg-zinc-500/10 text-zinc-800 dark:text-zinc-200 border border-zinc-500/20 font-semibold rounded-md">
+                    <Code2 className="h-3 w-3 mr-1" /> Repo
                   </Badge>
                 )}
                 {hostname && <span className="text-[11px] text-muted-foreground truncate">{hostname}</span>}
               </div>
 
               <div className="shrink-0">
-                <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <div className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.2 text-[11px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
                   <Star className="h-3 w-3 fill-amber-500 text-amber-500" /> {r.score.overall.toFixed(1)}
                 </div>
               </div>
             </div>
 
-            <h4 className="text-sm sm:text-base font-bold leading-snug line-clamp-2 text-foreground">{r.title}</h4>
+            <h4 className="text-xs sm:text-sm font-bold leading-snug line-clamp-2 text-foreground">{r.title}</h4>
             {r.description && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{r.description}</p>}
           </div>
 
-          <div className="space-y-3 pt-2">
-            <div className="rounded-xl bg-muted/40 p-3 border border-border/60 text-xs space-y-1.5">
-              <p className="font-semibold flex items-center gap-1.5 text-foreground">
+          <div className="space-y-2 pt-1">
+            <div className="rounded-xl bg-muted/40 p-2.5 border border-border/60 text-xs space-y-1">
+              <p className="text-[11px] font-semibold flex items-center gap-1.5 text-foreground">
                 <Sparkles className="h-3 w-3 text-violet-600 shrink-0" /> Why this was selected
               </p>
-              <p className="text-muted-foreground text-[11px] leading-relaxed">{r.score.reasoning}</p>
-              <div className="flex flex-wrap gap-1 pt-1 text-[10px]">
-                <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/20 font-medium">
-                  Authority {r.score.authority}
+              <p className="text-muted-foreground text-[10px] leading-relaxed line-clamp-2">{r.score.reasoning}</p>
+              <div className="flex flex-wrap gap-1 pt-0.5 text-[9px]">
+                <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-md border border-emerald-500/20 font-medium">
+                  Auth {r.score.authority}
                 </span>
-                <span className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md border border-blue-500/20 font-medium">
-                  Freshness {r.score.freshness}
+                <span className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-1.5 py-0.2 rounded-md border border-blue-500/20 font-medium">
+                  Fresh {r.score.freshness}
                 </span>
-                <span className="bg-violet-500/10 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-md border border-violet-500/20 font-medium">
+                <span className="bg-violet-500/10 text-violet-700 dark:text-violet-300 px-1.5 py-0.2 rounded-md border border-violet-500/20 font-medium">
                   Practical {r.score.practicalValue}
                 </span>
               </div>
@@ -180,7 +180,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-xl border bg-background px-3 text-xs font-semibold hover:bg-muted transition-colors shadow-xs"
+              className="inline-flex h-7.5 w-full items-center justify-center gap-1.5 rounded-xl border bg-background px-3 text-xs font-semibold hover:bg-muted transition-colors shadow-2xs"
             >
               Open Resource <ExternalLink className="h-3 w-3 ml-0.5" />
             </a>
@@ -191,21 +191,21 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Search Header Banner & Manual Search Input */}
-      <Card className="rounded-3xl border border-border/80 shadow-xs bg-card overflow-hidden">
-        <CardHeader className="p-4 sm:p-6 pb-3">
+      <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+        <CardHeader className="p-3.5 sm:p-5 pb-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2.5">
-                <Compass className="h-6 w-6 text-violet-600 shrink-0" /> Resource Discovery Engine
+              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
+                <Compass className="h-5 w-5 text-violet-600 shrink-0" /> Resource Discovery Engine
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm mt-1">
+              <CardDescription className="text-xs sm:text-sm mt-0.5">
                 Tavily, YouTube & GitHub resources automatically discovered for your roadmap topics, evaluated and deduplicated.
               </CardDescription>
             </div>
             <Link href="/roadmap">
-              <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8.5 gap-1.5">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8 gap-1.5">
                 <Layers className="h-3.5 w-3.5" /> Back to Roadmap
               </Button>
             </Link>

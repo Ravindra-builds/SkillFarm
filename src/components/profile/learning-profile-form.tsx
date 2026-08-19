@@ -317,72 +317,64 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
             </div>
           </div>
 
-          <CardContent className="p-4 sm:p-6 lg:p-7 space-y-4 sm:space-y-6">
+          <CardContent className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4">
             {/* Goal Statement Banner */}
-            <div className="rounded-xl sm:rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-violet-500/10 p-3.5 sm:p-4 space-y-1 sm:space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Target Goal
-                </span>
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">Roadmap Driver</span>
-              </div>
+            <div className="rounded-xl sm:rounded-2xl border border-violet-500/20 bg-violet-500/5 dark:bg-violet-500/10 p-3 sm:p-3.5 space-y-1">
+              <span className="text-[10px] sm:text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Target Goal
+              </span>
               <p className="font-heading text-sm sm:text-base font-semibold text-foreground leading-snug">
                 “{goal}”
               </p>
             </div>
 
             {/* Key Attributes Grid (Responsive: 2 columns on mobile, 4 on desktop with compact height) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
               {/* Level */}
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5 space-y-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3 space-y-0.5">
                 <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground font-medium">
                   <TrendingUp className="h-3 w-3 text-violet-500" /> Level
                 </div>
                 <p className="font-semibold text-xs sm:text-sm text-foreground capitalize">{level}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground line-clamp-1">{currentLevelConfig.desc}</p>
               </div>
 
               {/* Weekly Pace */}
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5 space-y-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3 space-y-0.5">
                 <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground font-medium">
                   <Clock className="h-3 w-3 text-blue-500" /> Pace
                 </div>
                 <p className="font-semibold text-xs sm:text-sm text-foreground">{weeklyHours}h / week</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">Milestone velocity</p>
               </div>
 
               {/* Learning Style */}
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5 space-y-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3 space-y-0.5">
                 <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground font-medium">
                   <Brain className="h-3 w-3 text-amber-500" /> Style
                 </div>
                 <p className="font-semibold text-xs sm:text-sm text-foreground capitalize">{style}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">Adaptive mentoring</p>
               </div>
 
               {/* Preferred Format */}
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 sm:p-3.5 space-y-0.5">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-2.5 sm:p-3 space-y-0.5">
                 <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground font-medium">
                   <BookOpen className="h-3 w-3 text-emerald-500" /> Format
                 </div>
                 <p className="font-semibold text-xs sm:text-sm text-foreground capitalize">{format}</p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground">Curated materials</p>
               </div>
             </div>
 
             {/* Known Skills Pill Cloud */}
-            <div className="space-y-1.5 sm:space-y-2 pt-0.5">
+            <div className="space-y-1.5 pt-0.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] sm:text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Code2 className="h-3.5 w-3.5 text-violet-600" /> Known Stack & Skills ({skills.length})
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-muted-foreground">Prerequisites active</span>
               </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {skills.map((s) => (
                   <span
                     key={s}
-                    className="rounded-lg sm:rounded-xl border border-violet-500/20 bg-violet-500/5 dark:bg-violet-500/10 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium text-foreground"
+                    className="rounded-lg sm:rounded-xl border border-violet-500/20 bg-violet-500/5 dark:bg-violet-500/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-medium text-foreground"
                   >
                     {s}
                   </span>

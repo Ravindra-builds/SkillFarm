@@ -97,12 +97,12 @@ export default async function DashboardPage() {
   const weeklyHours = profile?.weeklyHours ?? 10;
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+    <div className="mx-auto max-w-6xl p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-5">
       {/* Header Greeting & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b pb-5">
-        <div className="space-y-1.5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3.5">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">
+            <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
               Good day, {greetingName} 👋
             </h1>
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium rounded-md">
@@ -116,14 +116,14 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 flex-wrap w-full sm:w-auto">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap w-full sm:w-auto">
           <Link href="/chat" className="flex-1 sm:flex-initial">
-            <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white shadow-xs rounded-xl text-xs sm:text-sm font-semibold h-9 px-4">
+            <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white shadow-xs rounded-xl text-xs sm:text-sm font-semibold h-8.5 px-3.5">
               <MessageSquare className="h-4 w-4 mr-1.5" /> Ask Mentors
             </Button>
           </Link>
           <Link href="/roadmap" className="flex-1 sm:flex-initial">
-            <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm font-semibold h-9 px-4">
+            <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm font-semibold h-8.5 px-3.5">
               Roadmap <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>
           </Link>
@@ -165,9 +165,9 @@ export default async function DashboardPage() {
       />
 
       {/* Main Grid: Left (Roadmap & Actions) + Right (Mentors & Ongoing Topic Resources) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 sm:gap-5 items-start">
         {/* Left Column */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-5">
           <NextActionCard
             mentorLabel={currentNode?.mentorId ? `${currentNode.mentorId} Mentor` : "Tech Lead"}
             title={currentNode ? `Current Topic: ${currentNode.topic || currentNode.title}` : "Complete your learning profile"}
@@ -179,23 +179,23 @@ export default async function DashboardPage() {
 
           {/* Active Roadmap Progress — Clickable Interactive Track */}
           <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
-            <CardHeader className="p-4 sm:p-5 pb-3">
+            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-violet-500 shrink-0" /> Active Roadmap Track
                 </CardTitle>
                 <Link href="/roadmap">
-                  <Badge variant="secondary" className="text-xs px-2.5 py-0.5 hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer rounded-md">
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5 hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer rounded-md">
                     {nodesTotal} Milestones →
                   </Badge>
                 </Link>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Personalized curriculum based on “{goalText}” • Click any milestone to study details
+                Personalized curriculum based on “{goalText}” • Click milestone to open
               </p>
             </CardHeader>
 
-            <CardContent className="p-4 sm:p-5 pt-0 space-y-2.5">
+            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2">
               {nodes.length > 0 ? (
                 nodes.slice(0, 6).map((n) => {
                   const nodeTopic = n.topic || n.title;
@@ -203,7 +203,15 @@ export default async function DashboardPage() {
                     <Link
                       key={n.id}
                       href="/roadmap"
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border p-3 bg-card hover:bg-muted/40 hover:border-violet-500/40 transition-all shadow-xs group cursor-pointer"
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border p-2.5 sm:p-3 transition-all shadow-xs group cursor-pointer ${
+                        n.status === "current"
+                          ? "border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/40 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-2xs"
+                          : n.status === "completed"
+                          ? "border-emerald-500/25 bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05] opacity-90"
+                          : n.status === "next"
+                          ? "border-violet-500/30 border-dashed bg-card hover:bg-violet-500/[0.03]"
+                          : "border-border/40 bg-muted/20 hover:bg-muted/40 opacity-75"
+                      }`}
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div className="shrink-0 mt-0.5">
@@ -214,7 +222,7 @@ export default async function DashboardPage() {
                             </div>
                           )}
                           {n.status === "next" && <Circle className="h-4.5 w-4.5 text-violet-500" />}
-                          {n.status === "locked" && <Lock className="h-4 w-4 text-muted-foreground" />}
+                          {n.status === "locked" && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-0.5">
@@ -222,7 +230,9 @@ export default async function DashboardPage() {
                             <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-md">
                               Week {n.week ?? 1}
                             </span>
-                            <p className="text-xs sm:text-sm font-semibold leading-snug group-hover:text-violet-600 transition-colors text-foreground">
+                            <p className={`text-xs sm:text-sm font-semibold leading-snug group-hover:text-violet-600 transition-colors ${
+                              n.status === "current" ? "text-violet-600 dark:text-violet-400 font-bold" : "text-foreground"
+                            }`}>
                               {nodeTopic}
                             </p>
                           </div>
@@ -234,8 +244,8 @@ export default async function DashboardPage() {
                         <Badge variant="outline" className="text-[10px] capitalize rounded-md">
                           {n.mentorId}
                         </Badge>
-                        {n.status === "completed" && <Badge className="bg-emerald-600 text-white text-[10px] rounded-md">Done</Badge>}
-                        {n.status === "current" && <Badge className="bg-violet-600 text-white text-[10px] rounded-md">Current</Badge>}
+                        {n.status === "completed" && <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] rounded-md">✓ Done</Badge>}
+                        {n.status === "current" && <Badge className="bg-violet-600 text-white text-[10px] font-bold rounded-md">⚡ Active</Badge>}
                         {n.status === "next" && <Badge variant="secondary" className="text-[10px] rounded-md">Next</Badge>}
                       </div>
                     </Link>
@@ -263,18 +273,18 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-5">
           {/* Active AI Mentors */}
           <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
-            <CardHeader className="p-4 sm:p-5 pb-3">
+            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
                 <Brain className="h-4 w-4 text-violet-500 shrink-0" /> Your AI Engineering Team
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
+            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2.5">
               <MentorTeamCompact />
-              <div className="rounded-xl border border-amber-500/20 p-3 bg-amber-500/5 text-xs space-y-1">
-                <p className="font-semibold flex items-center gap-1 text-foreground">
+              <div className="rounded-xl border border-amber-500/20 p-2.5 bg-amber-500/5 text-xs space-y-1">
+                <p className="font-semibold flex items-center gap-1 text-foreground text-xs">
                   <Zap className="h-3.5 w-3.5 text-amber-500" /> Tech Lead Orchestrator
                 </p>
                 <p className="text-muted-foreground leading-relaxed text-[11px]">
@@ -286,7 +296,7 @@ export default async function DashboardPage() {
 
           {/* Recommended Resources for Current Ongoing Topic */}
           <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
-            <CardHeader className="p-4 sm:p-5 pb-3">
+            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="space-y-0.5">
                   <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
@@ -303,7 +313,7 @@ export default async function DashboardPage() {
                   <Link
                     href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
                   >
-                    <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 rounded-lg border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer">
+                    <Button size="sm" variant="outline" className="h-6.5 text-[11px] px-2 rounded-lg border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer">
                       View All →
                     </Button>
                   </Link>
@@ -311,19 +321,19 @@ export default async function DashboardPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
+            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2">
               {currentTopicPack && currentTopicPack.allResources.length > 0 ? (
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {currentTopicPack.allResources.slice(0, 3).map((r) => (
                     <ResourceCard key={r.url} r={r} compact />
                   ))}
 
                   <Link
                     href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode?.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
-                    className="block pt-1"
+                    className="block pt-0.5"
                   >
-                    <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-8 rounded-xl gap-1.5 shadow-xs">
-                      <Sparkles className="h-3 w-3 text-violet-600" /> Explore All {currentTopicPack.allResources.length} Evaluated Resources
+                    <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-7.5 rounded-xl gap-1.5 shadow-xs">
+                      <Sparkles className="h-3 w-3 text-violet-600" /> Explore All {currentTopicPack.allResources.length} Resources
                     </Button>
                   </Link>
                 </div>
