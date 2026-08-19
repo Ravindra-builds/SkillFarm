@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
 import {
@@ -16,7 +16,6 @@ import {
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function VerifyEmailForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const token = searchParams.get("token") || "";
@@ -27,9 +26,16 @@ function VerifyEmailForm() {
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Prevent double-invocation in React StrictMode
+  const verifiedAttemptRef = useRef(false);
+
   const handleVerify = useCallback(async (tokenToVerify: string) => {
+    if (verifiedAttemptRef.current) return;
+    verifiedAttemptRef.current = true;
+
     setVerifying(true);
     setError(null);
+
     try {
       const res = await fetch("/api/auth/verify-email", {
         method: "POST",
@@ -41,26 +47,30 @@ function VerifyEmailForm() {
 
       if (!res.ok) {
         setError(data.error || "This verification link is invalid or has expired. Please request a new one.");
+        setVerifying(false);
         return;
       }
 
+      setError(null);
       setVerified(true);
+      setVerifying(false);
+
+      // Fast, smooth redirect to dashboard
       setTimeout(() => {
         window.location.href = data.redirectUrl || "/dashboard";
-      }, 1500);
+      }, 500);
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
-    } finally {
       setVerifying(false);
     }
   }, []);
 
-  // Automatically verify when the user clicks the link in their email containing the token
+  // Automatically verify when the user lands via the email link
   useEffect(() => {
-    if (token && !verified && !verifying) {
+    if (token && !verifiedAttemptRef.current) {
       handleVerify(token);
     }
-  }, [token, verified, verifying, handleVerify]);
+  }, [token, handleVerify]);
 
   async function handleResend() {
     if (!email) {
@@ -102,7 +112,8 @@ function VerifyEmailForm() {
           : "Please check your registered email inbox to continue."
       }
     >
-      {error && (
+      {/* 🔒 Ensure error alert is NEVER shown if verification succeeded */}
+      {error && !verified && (
         <div
           role="alert"
           className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs flex items-center gap-2 text-destructive animate-in fade-in"
@@ -164,7 +175,7 @@ function VerifyEmailForm() {
               Check your email inbox
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              We sent a verification link {email ? `to ${email}` : "to your email address"}. You must click the link in your email to verify your identity and activate your account.
+              We sent a verification link {email ? `to ${email}` : "to your email address"}. Please click the button in your email to verify your identity and activate your account.
             </p>
           </div>
 

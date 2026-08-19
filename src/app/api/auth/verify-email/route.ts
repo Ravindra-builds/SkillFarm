@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getRateLimitRule } from "@/config";
 import {
   createEmailVerificationToken,
   consumeEmailVerificationToken,
@@ -25,21 +26,6 @@ export async function POST(req: Request) {
       req.headers.get("x-real-ip") ??
       "127.0.0.1";
 
-    // Rate limit: 10 requests per 10 minutes per IP
-    const rateCheck = await checkRateLimit(`verify:${ip}`, 10, 10 * 60);
-    if (!rateCheck.success) {
-      return new Response(
-        JSON.stringify({
-          error: AUTH_MESSAGES.RATE_LIMITED,
-          retryAfter: rateCheck.resetSec,
-        }),
-        {
-          status: 429,
-          headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) },
-        }
-      );
-    }
-
     const body = await req.json().catch(() => ({}));
     const parseResult = verifySchema.safeParse(body);
     if (!parseResult.success) {
@@ -52,6 +38,22 @@ export async function POST(req: Request) {
     const { action, email, token } = parseResult.data;
 
     if (action === "resend") {
+      // Rate limit resend requests specifically (e.g. max 5 per 10 minutes)
+      const rule = getRateLimitRule("verifyEmail");
+      const rateCheck = await checkRateLimit(`resend:${ip}`, rule.limit, rule.windowSec);
+      if (!rateCheck.success) {
+        return new Response(
+          JSON.stringify({
+            error: AUTH_MESSAGES.RATE_LIMITED,
+            retryAfter: rateCheck.resetSec,
+          }),
+          {
+            status: 429,
+            headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) },
+          }
+        );
+      }
+
       if (!email) {
         return new Response(
           JSON.stringify({ error: "Email address is required." }),

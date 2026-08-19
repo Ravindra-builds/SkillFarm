@@ -12,19 +12,20 @@
  */
 
 import { getRedis } from "@/lib/redis";
-
-export type UserPlanTier = "free" | "pro";
+import { PLAN_CONFIG, PlanTier } from "@/config";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+export type UserPlanTier = PlanTier;
+
 export const PLAN_LIMITS = {
   free: {
-    mentorMessages: isDev ? 500 : 20,
-    researchRuns: isDev ? 100 : 10,
+    mentorMessages: PLAN_CONFIG.free.quotas.mentorMessages.limit,
+    researchRuns: PLAN_CONFIG.free.quotas.researchRuns.limit,
   },
   pro: {
-    mentorMessages: Infinity,
-    researchRuns: Infinity,
+    mentorMessages: PLAN_CONFIG.pro.quotas.mentorMessages.limit,
+    researchRuns: PLAN_CONFIG.pro.quotas.researchRuns.limit,
   },
 } as const;
 

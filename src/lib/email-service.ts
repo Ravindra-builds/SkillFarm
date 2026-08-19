@@ -5,10 +5,11 @@
  * 1. SMTP / Gmail / Custom Mail provider (via nodemailer)
  * 2. Resend API (via RESEND_API_KEY)
  *
- * When neither is configured, logs a clear warning in the server console with setup instructions.
+ * Ultra-lightweight template (<3KB) ensuring zero clipping in Gmail/Outlook.
  */
 
 import nodemailer from "nodemailer";
+import { EMAIL_CONFIG, siteConfig } from "@/config";
 
 type SendEmailOptions = {
   to: string;
@@ -59,16 +60,16 @@ function getSmtpTransporter(): nodemailer.Transporter | null {
   return null;
 }
 
-export async function sendAuthEmail(options: SendEmailOptions): Promise<{ success: boolean; delivered: boolean }> {
-  const { to, subject, actionUrl, actionText, previewText, type } = options;
+function generateEmailHtml(options: {
+  subject: string;
+  previewText: string;
+  actionUrl: string;
+  actionText: string;
+}): string {
+  const { subject, previewText, actionUrl, actionText } = options;
+  const logoUrl = siteConfig.logoUrl;
 
-  const fromAddress =
-    process.env.EMAIL_FROM ||
-    process.env.EMAIL_SERVER_USER ||
-    process.env.GMAIL_USER ||
-    "SkillFarm <no-reply@skillfarm.ai>";
-
-  const htmlContent = `
+  return `
     <!DOCTYPE html>
     <html>
       <head>
@@ -80,11 +81,18 @@ export async function sendAuthEmail(options: SendEmailOptions): Promise<{ succes
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #0B0F17; padding: 40px 16px;">
           <tr>
             <td align="center">
-              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #171A23; border: 1px solid #252A3A; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-                <!-- Header -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 480px; background-color: #171A23; border: 1px solid #252A3A; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <!-- Header with Logo & Brand -->
                 <tr>
-                  <td align="center" style="padding: 36px 32px 20px 32px; border-bottom: 1px solid #252A3A;">
-                    <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">
+                  <td align="center" style="padding: 32px 24px 18px 24px; border-bottom: 1px solid #252A3A;">
+                    <img
+                      src="${logoUrl}"
+                      alt="SkillFarm"
+                      width="48"
+                      height="48"
+                      style="display: block; margin: 0 auto 10px auto; width: 48px; height: 48px; border-radius: 12px; border: 0;"
+                    />
+                    <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px;">
                       <span style="color: #FFFFFF;">Skill</span><span style="color: #7C5CFC;">Farm</span>
                     </div>
                     <div style="font-size: 12px; color: #9CA3AF;">
@@ -94,30 +102,25 @@ export async function sendAuthEmail(options: SendEmailOptions): Promise<{ succes
                 </tr>
                 <!-- Body -->
                 <tr>
-                  <td style="padding: 32px;">
-                    <h2 style="font-size: 18px; font-weight: 700; color: #FFFFFF; margin: 0 0 16px 0; text-align: center;">
+                  <td style="padding: 28px 24px;">
+                    <h2 style="font-size: 17px; font-weight: 700; color: #FFFFFF; margin: 0 0 12px 0; text-align: center;">
                       ${subject}
                     </h2>
-                    <p style="font-size: 14px; line-height: 1.6; color: #D1D5DB; margin: 0 0 28px 0; text-align: center;">
+                    <p style="font-size: 13px; line-height: 1.6; color: #D1D5DB; margin: 0 0 24px 0; text-align: center;">
                       ${previewText}
                     </p>
-                    <div style="text-align: center; margin-bottom: 28px;">
-                      <a href="${actionUrl}" style="display: inline-block; background-color: #7C5CFC; color: #FFFFFF; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px; box-shadow: 0 4px 12px rgba(124, 92, 252, 0.3);">
+                    <div style="text-align: center; margin: 8px 0;">
+                      <a href="${actionUrl}" style="display: inline-block; background-color: #7C5CFC; color: #FFFFFF; font-size: 13px; font-weight: 600; text-decoration: none; padding: 12px 32px; border-radius: 8px;">
                         ${actionText}
                       </a>
-                    </div>
-                    <p style="font-size: 12px; color: #9CA3AF; line-height: 1.5; margin: 0 0 16px 0; text-align: center;">
-                      Or copy and paste this link into your browser:
-                    </p>
-                    <div style="background-color: #0F1117; border: 1px solid #252A3A; border-radius: 6px; padding: 10px; font-size: 11px; word-break: break-all; color: #A78BFA; font-family: monospace; text-align: center;">
-                      ${actionUrl}
                     </div>
                   </td>
                 </tr>
                 <!-- Footer -->
                 <tr>
-                  <td style="padding: 20px 32px; background-color: #0F1117; border-top: 1px solid #252A3A; text-align: center; font-size: 11px; color: #6B7280;">
-                    If you didn't request this email, please ignore it or contact security.
+                  <td style="padding: 16px 24px; background-color: #0F1117; border-top: 1px solid #252A3A; text-align: center; font-size: 11px; color: #6B7280; line-height: 1.5;">
+                    Questions? Contact us at <a href="mailto:${siteConfig.supportEmail}" style="color: #7C5CFC; text-decoration: none;">${siteConfig.supportEmail}</a><br />
+                    If you didn't make this request, you can safely ignore this email.
                   </td>
                 </tr>
               </table>
@@ -127,6 +130,18 @@ export async function sendAuthEmail(options: SendEmailOptions): Promise<{ succes
       </body>
     </html>
   `;
+}
+
+export async function sendAuthEmail(options: SendEmailOptions): Promise<{ success: boolean; delivered: boolean }> {
+  const { to, subject, actionUrl, actionText, previewText, type } = options;
+
+  const fromAddress = EMAIL_CONFIG.from;
+  const htmlContent = generateEmailHtml({
+    subject,
+    previewText,
+    actionUrl,
+    actionText,
+  });
 
   let delivered = false;
 
@@ -185,7 +200,7 @@ export async function sendAuthEmail(options: SendEmailOptions): Promise<{ succes
   console.log(`║ 📧 SkillFarm Email Dispatch [Action: ${type.toUpperCase()}]`);
   console.log(`║ To:      ${to}`);
   console.log(`║ Subject: ${subject}`);
-  console.log(`║ Link:    ${actionUrl}`);
+  console.log(`║ Button:  ${actionText} -> ${actionUrl}`);
   if (!delivered) {
     console.log(`║`);
     console.log(`║ ⚠️  NOTE: Real email delivery is waiting for SMTP or Resend credentials.`);

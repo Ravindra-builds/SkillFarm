@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "SkillFarm" }],
   creator: "SkillFarm",
-  metadataBase: new URL("https://skillfarm.ai"),
+  metadataBase: new URL("https://skillfarm.in"),
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -48,12 +48,14 @@ export const metadata: Metadata = {
     description:
       "Your AI Engineering Team — learn what matters, get guidance from specialized experts, build real projects, and ship them into the real world.",
     siteName: "SkillFarm",
+    url: "https://skillfarm.in",
   },
   twitter: {
     card: "summary_large_image",
     title: "SkillFarm — Plant knowledge. Grow skills. Ship real things.",
     description:
       "Your AI Engineering Team — learn what matters, get guidance from specialized experts, build real projects, and ship them into the real world.",
+    creator: "@skillfarm_in",
   },
   icons: {
     icon: "/logo.png",

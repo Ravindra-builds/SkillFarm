@@ -939,10 +939,12 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   )}
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground">{user?.name ?? "Developer User"}</h3>
-                      <Badge className="text-[10px] bg-emerald-600 text-white">Free Developer Tier</Badge>
+                      <h3 className="font-semibold text-sm sm:text-base text-foreground">{user?.name ?? "Engineer"}</h3>
+                      <Badge className="text-[10px] bg-emerald-600 text-white">
+                        {authConfigured ? "SkillFarm Member" : "Guest Sandbox"}
+                      </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{user?.email ?? "developer@skillfarm.local"}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{user?.email ?? "user@skillfarm.in"}</p>
                   </div>
                 </div>
 
@@ -966,7 +968,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Auth Status
                   </span>
                   <p className="font-semibold text-xs sm:text-sm text-foreground">
-                    {authConfigured ? "Authenticated Session" : "Guest Sandbox"}
+                    {authConfigured ? "Authenticated" : "Guest Sandbox"}
                   </p>
                 </div>
 
@@ -974,7 +976,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
                     <CreditCard className="h-3.5 w-3.5 text-violet-500" /> Active Plan
                   </span>
-                  <p className="font-semibold text-xs sm:text-sm text-foreground">Developer (Free)</p>
+                  <p className="font-semibold text-xs sm:text-sm text-foreground">Standard Plan</p>
                 </div>
 
                 <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
@@ -999,7 +1001,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground">Mentor Chat Messages</span>
-                      <span className="text-muted-foreground font-mono">Unlimited (Dev Mode)</span>
+                      <span className="text-muted-foreground font-mono">50 / day</span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-violet-600 w-[12%]" />
@@ -1010,7 +1012,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground">Deep Web Research Runs</span>
-                      <span className="text-muted-foreground font-mono">Included</span>
+                      <span className="text-muted-foreground font-mono">15 / day</span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-blue-600 w-[8%]" />
@@ -1021,7 +1023,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground">Multi-Mentor Parallel Synthesis</span>
-                      <span className="text-emerald-600 font-medium">Active</span>
+                      <span className="text-emerald-600 font-medium">Included</span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-emerald-600 w-[100%]" />

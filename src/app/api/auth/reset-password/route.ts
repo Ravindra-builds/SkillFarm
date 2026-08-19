@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getRateLimitRule } from "@/config";
 import { consumePasswordResetToken, updateUserPassword } from "@/lib/password-auth";
 import { AUTH_MESSAGES } from "@/lib/auth-errors";
 
@@ -17,8 +18,8 @@ export async function POST(req: Request) {
       req.headers.get("x-real-ip") ??
       "127.0.0.1";
 
-    // Rate-limit: 10 attempts per minute per IP
-    const rateCheck = await checkRateLimit(`reset:${ip}`, 10, 60);
+    const rule = getRateLimitRule("resetPassword");
+    const rateCheck = await checkRateLimit(`reset:${ip}`, rule.limit, rule.windowSec);
     if (!rateCheck.success) {
       return new Response(
         JSON.stringify({

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getRateLimitRule } from "@/config";
 import {
   getUserCredential,
   verifyPassword,
@@ -23,8 +24,8 @@ export async function POST(req: Request) {
       req.headers.get("x-real-ip") ??
       "127.0.0.1";
 
-    // Rate-limit: 10 login attempts per minute per IP
-    const rateCheck = await checkRateLimit(`login:${ip}`, 10, 60);
+    const rule = getRateLimitRule("login");
+    const rateCheck = await checkRateLimit(`login:${ip}`, rule.limit, rule.windowSec);
     if (!rateCheck.success) {
       return new Response(
         JSON.stringify({

@@ -10,7 +10,7 @@ import {
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 describe("SkillFarm Authentication & Security Engine", () => {
-  const testEmail = "test.engineer@skillfarm.ai";
+  const testEmail = "test.engineer@skillfarm.in";
   const testPassword = "SuperSecretPassword123!";
 
   test("1. Password hashing generates a salt:hash string and verifies correctly", async () => {

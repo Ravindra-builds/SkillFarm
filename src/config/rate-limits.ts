@@ -1,15 +1,22 @@
 /**
- * Centralized Redis TTL & Rate Limit Configuration — Single Source of Truth
+ * Centralized Rate Limits & Cache TTL Configuration — Single Source of Truth
  *
- * Defines quotas, sliding-window durations, and Redis/memory cache TTLs across all features in SkillFarm:
- * - Roadmap generation & regeneration (2/day prod, 20/day dev)
- * - Resume upload & parsing analysis (2/day prod, 20/day dev)
- * - Mentor chat streaming (30/min prod, 120/min dev)
- * - Deep web research runs (15/day prod, 100/day dev)
- * - Topic resources endpoint (30/min prod, 120/min dev)
+ * Defines quotas, sliding-window durations, and Redis/memory cache TTLs across all features in SkillFarm.
  */
 
-export type RateLimitAction = "roadmap" | "resume" | "chat" | "research" | "topicResources";
+export type RateLimitAction =
+  | "login"
+  | "signup"
+  | "forgotPassword"
+  | "resetPassword"
+  | "verifyEmail"
+  | "otp"
+  | "roadmap"
+  | "resume"
+  | "chat"
+  | "research"
+  | "topicResources"
+  | "guestCreation";
 
 export type RateLimitRule = {
   limit: number;
@@ -20,6 +27,37 @@ export type RateLimitRule = {
 const isDev = process.env.NODE_ENV !== "production";
 
 export const RATE_LIMITS: Record<RateLimitAction, { prod: RateLimitRule; dev: RateLimitRule }> = {
+  // Auth Rate Limits (prevents brute-force, enumeration, and abuse)
+  login: {
+    prod: { limit: 10, windowSec: 60, description: "10 login attempts per minute" },
+    dev: { limit: 30, windowSec: 60, description: "30 login attempts per minute (dev)" },
+  },
+  signup: {
+    prod: { limit: 10, windowSec: 60, description: "10 signup attempts per minute" },
+    dev: { limit: 30, windowSec: 60, description: "30 signup attempts per minute (dev)" },
+  },
+  forgotPassword: {
+    prod: { limit: 5, windowSec: 900, description: "5 password reset requests per 15 minutes" },
+    dev: { limit: 20, windowSec: 900, description: "20 password reset requests per 15 minutes (dev)" },
+  },
+  resetPassword: {
+    prod: { limit: 10, windowSec: 60, description: "10 password update attempts per minute" },
+    dev: { limit: 30, windowSec: 60, description: "30 password update attempts per minute (dev)" },
+  },
+  verifyEmail: {
+    prod: { limit: 10, windowSec: 600, description: "10 email verification requests per 10 minutes" },
+    dev: { limit: 30, windowSec: 600, description: "30 email verification requests per 10 minutes (dev)" },
+  },
+  otp: {
+    prod: { limit: 5, windowSec: 60, description: "5 OTP attempts per minute" },
+    dev: { limit: 20, windowSec: 60, description: "20 OTP attempts per minute (dev)" },
+  },
+  guestCreation: {
+    prod: { limit: 20, windowSec: 600, description: "20 guest sessions per 10 minutes per IP" },
+    dev: { limit: 100, windowSec: 600, description: "100 guest sessions per 10 minutes (dev)" },
+  },
+
+  // Feature Rate Limits
   roadmap: {
     prod: { limit: 2, windowSec: 86400, description: "2 roadmap generations per day" },
     dev: { limit: 20, windowSec: 86400, description: "20 roadmap generations per day (dev)" },
@@ -67,5 +105,8 @@ export const CACHE_TTL = {
  */
 export function getRateLimitRule(action: RateLimitAction): RateLimitRule {
   const config = RATE_LIMITS[action];
+  if (!config) {
+    return { limit: 30, windowSec: 60, description: "30 requests per minute" };
+  }
   return isDev ? config.dev : config.prod;
 }
