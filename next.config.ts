@@ -37,11 +37,16 @@ const securityHeaders = [
   {
     // Content-Security-Policy
     // Allow: same-origin scripts/styles, Google fonts, Upstash, Neon, Tavily, Exa, YouTube embeds
-    // Disallow: inline eval (XSS vector), unknown origins
+    // 'unsafe-inline' is still required by Next.js App Router for inline bootstrap scripts.
+    //   → Long-term upgrade: migrate to nonce-based CSP (nextjs.org/docs/app/building-your-application/configuring/content-security-policy)
+    // 'unsafe-eval' is REMOVED — it was only needed by Turbopack in dev mode, never in production builds.
+    //   Next.js production bundles do not use eval().
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed by Next.js dev/turbopack; tighten in prod if possible
+      process.env.NODE_ENV === "development"
+        ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" // Turbopack HMR needs unsafe-eval in dev only
+        : "script-src 'self' 'unsafe-inline'",             // Production: no eval()
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://i.pravatar.cc https://*.googleusercontent.com",

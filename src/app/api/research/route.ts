@@ -2,6 +2,7 @@ import { z } from "zod";
 import { research } from "@/agents/research/research";
 import { auth } from "@/lib/auth";
 import { checkFeatureRateLimit, checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/ip";
 
 export const dynamic = "force-dynamic";
 
@@ -81,10 +82,7 @@ export async function GET(req: Request) {
   }
 
   // Rate-limit GET by IP (no auth on this endpoint)
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown";
+  const ip = getClientIp(req);
   const rateCheck = await checkRateLimit(`research-get:${ip}`, 10, 60);
   if (!rateCheck.success) {
     return new Response(

@@ -14,6 +14,7 @@
  */
 
 import { getRedis } from "@/lib/redis";
+import { randomInt } from "crypto";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
 const OTP_TTL_SECONDS = 10 * 60; // 10 minutes
@@ -29,7 +30,8 @@ function otpKey(email: string): string {
 
 export async function generateOTP(email: string): Promise<string> {
   const normalized = email.toLowerCase().trim();
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  // Use CSPRNG (crypto.randomInt) — NOT Math.random() which is predictable
+  const code = randomInt(100000, 1000000).toString();
 
   const redis = await getRedis();
   if (redis) {

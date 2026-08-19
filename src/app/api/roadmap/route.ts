@@ -11,6 +11,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const session = await auth();
+
+    // Return 401 if no session exists (no guest or authenticated session).
+    if (!session?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const userId = session?.user?.email ?? (session?.user as unknown as { id?: string })?.id ?? "guest-preview-user";
 
     let roadmap = await getRoadmap(userId);

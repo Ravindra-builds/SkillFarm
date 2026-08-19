@@ -3,6 +3,7 @@ import { generateOTP, verifyOTP } from "@/lib/otp-store";
 import { createCustomSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRateLimitRule } from "@/config";
+import { getClientIp } from "@/lib/ip";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +17,7 @@ const requestSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      req.headers.get("x-real-ip") ??
-      "127.0.0.1";
+    const ip = getClientIp(req);
     const rule = getRateLimitRule("otp");
     const rateCheck = await checkRateLimit(`otp:${ip}`, rule.limit, rule.windowSec);
     if (!rateCheck.success) {
@@ -41,7 +39,7 @@ export async function POST(req: Request) {
     const { action, email, code } = parsed.data;
 
     if (action === "send") {
-      const generated = generateOTP(email);
+      const generated = await generateOTP(email);
       // 🔒 SECURITY: Only include the preview code in non-production environments.
       // In production, this field is omitted — the code must arrive via email.
       return new Response(
@@ -62,7 +60,7 @@ export async function POST(req: Request) {
         });
       }
 
-      const valid = verifyOTP(email, code);
+      const valid = await verifyOTP(email, code);
       if (!valid) {
         return new Response(JSON.stringify({ error: "Invalid or expired OTP code" }), {
           status: 401,

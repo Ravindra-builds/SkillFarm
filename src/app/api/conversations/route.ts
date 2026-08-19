@@ -15,6 +15,13 @@ export async function GET() {
     const session = (await auth().catch(() => null)) as unknown as {
       user?: { email?: string; id?: string };
     } | null;
+
+    // Return 401 if there is no session at all (not even a guest session).
+    // Guest users carry a session cookie and will have a userId from getGuestUserId().
+    if (!session?.user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const userId =
       session?.user?.email ?? session?.user?.id ?? "guest-preview-user";
     const convs = await getConversations(userId);

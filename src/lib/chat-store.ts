@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { getDb } from "@/db";
 import { conversations, messages } from "@/db/schema";
 import { randomUUID } from "crypto";
@@ -59,7 +59,7 @@ const memMessages = new Map<string, ChatMessage[]>();
 export function formatTitleFromMessage(content: string): string {
   if (!content) return "New conversation";
 
-  let clean = content
+  const clean = content
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`[^`]*`/g, "")
     .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
@@ -462,8 +462,22 @@ export async function deleteConversation(
   if (!isDbAvailable()) return true;
 
   try {
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
-    await db.delete(conversations).where(eq(conversations.id, conversationId));
+    // Security: WHERE includes BOTH id AND userId to enforce ownership.
+    // Without this, any authenticated user could delete any conversation by ID (IDOR/BOLA).
+    const deleted = await db
+      .delete(conversations)
+      .where(and(eq(conversations.id, conversationId), eq(conversations.userId, dbUserId)))
+      .returning({ id: conversations.id });
+
+    // Also try original userId in case DB userId differs from mapped dbUserId
+    if (deleted.length === 0 && dbUserId !== userId) {
+      await db
+        .delete(conversations)
+        .where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)));
+    }
+
     return true;
   } catch (err) {
     console.error("[chat-store] deleteConversation failed:", err);
@@ -496,14 +510,16 @@ export async function updateConversationTitle(
   if (!isDbAvailable()) return true;
 
   try {
+    const dbUserId = await ensureDbUser({ id: userId, email: userId });
     const db = getDb();
+    // Security: WHERE includes BOTH id AND userId to enforce ownership (prevents IDOR).
     await (
       db.update(conversations) as unknown as {
         set: (v: Record<string, unknown>) => { where: (c: unknown) => Promise<void> };
       }
     )
       .set({ title: trimmed, updatedAt: new Date() } as Record<string, unknown>)
-      .where(eq(conversations.id, conversationId) as unknown as never);
+      .where(and(eq(conversations.id, conversationId), eq(conversations.userId, dbUserId)) as unknown as never);
     return true;
   } catch (err) {
     console.error("[chat-store] updateConversationTitle failed:", err);

@@ -15,7 +15,24 @@ import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const rawCallback = searchParams.get("callbackUrl");
+
+  // Security: Reject any callbackUrl that is not a same-origin relative path.
+  // An attacker can craft /login?callbackUrl=https://evil.com to redirect victims
+  // to a phishing site after login. Only allow paths starting with "/" and
+  // reject anything containing "://" or starting with "//".
+  const callbackUrl = (() => {
+    if (!rawCallback) return "/dashboard";
+    const trimmed = rawCallback.trim();
+    if (
+      trimmed.startsWith("/") &&
+      !trimmed.startsWith("//") &&
+      !trimmed.includes("://")
+    ) {
+      return trimmed;
+    }
+    return "/dashboard";
+  })();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
