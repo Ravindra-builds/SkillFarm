@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { getConversations, createConversation, getEmptyConversation } from "@/lib/chat-store";
 import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -27,8 +28,7 @@ export async function GET() {
     const convs = await getConversations(userId);
     return Response.json({ conversations: convs });
   } catch (err) {
-    console.error("[api/conversations] GET failed:", err);
-    return Response.json({ conversations: [] });
+    return createSafeErrorResponse(err, { endpoint: "api/conversations [GET]" });
   }
 }
 
@@ -83,7 +83,6 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
-    console.error("[api/conversations] POST failed:", err);
-    return Response.json({ error: "Failed to create conversation" }, { status: 500 });
+    return createSafeErrorResponse(err, { endpoint: "api/conversations [POST]" });
   }
 }

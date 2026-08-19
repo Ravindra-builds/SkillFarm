@@ -9,6 +9,7 @@ import {
   setCurrentCapstoneWeek,
 } from "@/lib/project-store";
 import { getRoadmap } from "@/lib/roadmap-store";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +47,7 @@ export async function GET() {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/projects GET] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to load capstone project" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/projects [GET]" });
   }
 }
 
@@ -125,10 +122,6 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/projects POST] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to update project" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/projects [POST]" });
   }
 }

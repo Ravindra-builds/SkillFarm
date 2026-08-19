@@ -3,6 +3,7 @@ import { research } from "@/agents/research/research";
 import { auth } from "@/lib/auth";
 import { checkFeatureRateLimit, checkRateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/ip";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -60,40 +61,39 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
     });
   } catch (err) {
-    console.error("[api/research] fatal:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return new Response(JSON.stringify({ error: "Research failed", message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/research [POST]" });
   }
 }
 
 // GET for simple testing: /api/research?query=hello
 // Note: rate-limited by IP to prevent abuse of paid API calls
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const query = url.searchParams.get("query");
-  if (!query) {
-    return new Response(JSON.stringify({ error: "Missing query param ?query=" }), {
-      status: 400,
+  try {
+    const url = new URL(req.url);
+    const query = url.searchParams.get("query");
+    if (!query) {
+      return new Response(JSON.stringify({ error: "Missing query param ?query=" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate-limit GET by IP (no auth on this endpoint)
+    const ip = getClientIp(req);
+    const rateCheck = await checkRateLimit(`research-get:${ip}`, 10, 60);
+    if (!rateCheck.success) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded.", retryAfter: rateCheck.resetSec }),
+        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) } }
+      );
+    }
+
+    const maxResults = parseInt(url.searchParams.get("maxResults") ?? "6", 10);
+    const result = await research(query, { maxResults: Math.min(Math.max(maxResults, 1), 10) });
+    return new Response(JSON.stringify(result), {
       headers: { "Content-Type": "application/json" },
     });
+  } catch (err) {
+    return createSafeErrorResponse(err, { endpoint: "api/research [GET]" });
   }
-
-  // Rate-limit GET by IP (no auth on this endpoint)
-  const ip = getClientIp(req);
-  const rateCheck = await checkRateLimit(`research-get:${ip}`, 10, 60);
-  if (!rateCheck.success) {
-    return new Response(
-      JSON.stringify({ error: "Rate limit exceeded.", retryAfter: rateCheck.resetSec }),
-      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rateCheck.resetSec) } }
-    );
-  }
-
-  const maxResults = parseInt(url.searchParams.get("maxResults") ?? "6", 10);
-  const result = await research(query, { maxResults: Math.min(Math.max(maxResults, 1), 10) });
-  return new Response(JSON.stringify(result), {
-    headers: { "Content-Type": "application/json" },
-  });
 }

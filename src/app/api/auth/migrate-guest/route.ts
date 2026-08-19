@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { isGuestSession } from "@/lib/guest";
 import { migrateGuestStateToUser } from "@/lib/migration";
+import { createSafeAuthErrorResponse } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -37,10 +38,6 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/auth/migrate-guest] error:", err);
-    return new Response(
-      JSON.stringify({ error: "Failed to migrate guest session" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeAuthErrorResponse(err, "Failed to migrate guest session", "api/auth/migrate-guest");
   }
 }

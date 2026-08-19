@@ -9,7 +9,8 @@ import {
 } from "@/lib/password-auth";
 import { createCustomSession } from "@/lib/session";
 import { sendAuthEmail } from "@/lib/email-service";
-import { AUTH_MESSAGES } from "@/lib/auth-errors";
+import { AUTH_MESSAGES, createSafeAuthErrorResponse } from "@/lib/auth-errors";
+import { getClientIp } from "@/lib/ip";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +22,7 @@ const verifySchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      req.headers.get("x-real-ip") ??
-      "127.0.0.1";
+    const ip = getClientIp(req);
 
     const body = await req.json().catch(() => ({}));
     const parseResult = verifySchema.safeParse(body);
@@ -123,10 +121,6 @@ export async function POST(req: Request) {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/auth/verify-email] error:", err);
-    return new Response(
-      JSON.stringify({ error: AUTH_MESSAGES.GENERIC_ERROR }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeAuthErrorResponse(err, AUTH_MESSAGES.GENERIC_ERROR, "api/auth/verify-email");
   }
 }

@@ -1,9 +1,4 @@
-/**
- * Centralized Safe Authentication Error Formatter & Error Messages
- *
- * Implements security requirement: Never reveal whether an email exists,
- * never leak database errors, stack traces, or provider internals.
- */
+import { generateErrorId } from "./friendly-errors";
 
 export const AUTH_MESSAGES = {
   INVALID_CREDENTIALS: "Email or password is incorrect. Please try again.",
@@ -22,6 +17,36 @@ export const AUTH_MESSAGES = {
   NAME_REQUIRED: "Please enter your first and last name.",
   ACCOUNT_CREATED: "Account created successfully. Redirecting to dashboard...",
 } as const;
+
+export function createSafeAuthErrorResponse(
+  err: unknown,
+  fallbackMessage: string = AUTH_MESSAGES.GENERIC_ERROR,
+  endpoint?: string
+): Response {
+  const errorId = generateErrorId();
+  const rawMessage = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  console.error(`🔴 [${errorId}]${endpoint ? ` [${endpoint}]` : ""}: ${rawMessage}`);
+  if (err instanceof Error && err.stack) {
+    console.error(`🔴 [${errorId}] Stack:`, err.stack);
+  }
+
+  const safeMessage = getSafeAuthErrorMessage(err) || fallbackMessage;
+
+  return new Response(
+    JSON.stringify({
+      error: safeMessage,
+      errorId,
+      message: safeMessage,
+    }),
+    {
+      status: 500,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Error-Id": errorId,
+      },
+    }
+  );
+}
 
 export function getSafeAuthErrorMessage(error: unknown): string {
   if (!error) return AUTH_MESSAGES.GENERIC_ERROR;

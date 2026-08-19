@@ -5,6 +5,7 @@ import { getClientIp } from "@/lib/ip";
 import { createPasswordResetToken, checkUserExists } from "@/lib/password-auth";
 import { sendAuthEmail } from "@/lib/email-service";
 import { AUTH_MESSAGES } from "@/lib/auth-errors";
+import { generateErrorId } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -71,13 +72,19 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/auth/forgot-password] error:", err);
+    const errorId = generateErrorId();
+    console.error(`🔴 [${errorId}] [api/auth/forgot-password]:`, err);
     return new Response(
       JSON.stringify({
         success: true,
         message: AUTH_MESSAGES.FORGOT_PASSWORD_SUCCESS,
       }),
-      { headers: { "Content-Type": "application/json" } }
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Error-Id": errorId,
+        },
+      }
     );
   }
 }

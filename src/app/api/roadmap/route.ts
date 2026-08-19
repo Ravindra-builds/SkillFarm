@@ -5,6 +5,7 @@ import { getRoadmap, saveRoadmap } from "@/lib/roadmap-store";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
 import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +50,7 @@ export async function GET() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/roadmap GET] fatal", err);
-    return new Response(JSON.stringify({ error: "Failed to load roadmap" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/roadmap [GET]" });
   }
 }
 
@@ -135,11 +132,6 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/roadmap POST] fatal", err);
-    const msg = err instanceof Error ? err.message : "Failed to generate roadmap";
-    return new Response(JSON.stringify({ error: msg }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/roadmap [POST]" });
   }
 }

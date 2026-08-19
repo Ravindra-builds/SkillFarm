@@ -2,6 +2,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { updateNodeStatus, updateNodeDetails, getRoadmap } from "@/lib/roadmap-store";
 import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -66,10 +67,6 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/roadmap/progress] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to update node progress" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/roadmap/progress" });
   }
 }

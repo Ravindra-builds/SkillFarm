@@ -2,6 +2,7 @@ import { getTopicResourcePack } from "@/agents/research/topic-research";
 import { auth } from "@/lib/auth";
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -86,16 +87,6 @@ export async function GET(req: Request) {
       }
     );
   } catch (err) {
-    console.error("[api/resources/topic] failed:", err);
-    return new Response(
-      JSON.stringify({
-        error: "Failed to retrieve topic resources",
-        message: err instanceof Error ? err.message : "Unknown error",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return createSafeErrorResponse(err, { endpoint: "api/resources/topic" });
   }
 }

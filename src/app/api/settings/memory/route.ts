@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getMemories, addMemory, deleteMemory } from "@/lib/memory/mem0";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,7 @@ export async function GET() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/settings/memory GET] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to load memories" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/settings/memory [GET]" });
   }
 }
 
@@ -48,11 +45,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/settings/memory POST] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to add memory" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/settings/memory [POST]" });
   }
 }
 
@@ -76,10 +69,6 @@ export async function DELETE(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/settings/memory DELETE] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to delete memory" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeErrorResponse(err, { endpoint: "api/settings/memory [DELETE]" });
   }
 }

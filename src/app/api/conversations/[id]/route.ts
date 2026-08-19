@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { deleteConversation, updateConversationTitle } from "@/lib/chat-store";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,7 @@ export async function PATCH(
     }
     return Response.json({ ok: true });
   } catch (err) {
-    console.error("[api/conversations/[id]] PATCH failed:", err);
-    return Response.json({ error: "Update failed" }, { status: 500 });
+    return createSafeErrorResponse(err, { endpoint: "api/conversations/[id] [PATCH]" });
   }
 }
 
@@ -48,7 +48,6 @@ export async function DELETE(
     await deleteConversation(id, userId);
     return Response.json({ ok: true });
   } catch (err) {
-    console.error("[api/conversations/[id]] DELETE failed:", err);
-    return Response.json({ error: "Delete failed" }, { status: 500 });
+    return createSafeErrorResponse(err, { endpoint: "api/conversations/[id] [DELETE]" });
   }
 }

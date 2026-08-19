@@ -4,6 +4,7 @@ import { createCustomSession } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRateLimitRule } from "@/config";
 import { getClientIp } from "@/lib/ip";
+import { createSafeAuthErrorResponse } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -83,10 +84,6 @@ export async function POST(req: Request) {
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400 });
   } catch (err) {
-    console.error("[api/auth/otp] error:", err);
-    return new Response(JSON.stringify({ error: "Authentication failed" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeAuthErrorResponse(err, "Authentication failed. Please try again.", "api/auth/otp");
   }
 }

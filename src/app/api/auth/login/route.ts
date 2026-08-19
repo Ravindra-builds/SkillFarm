@@ -9,7 +9,7 @@ import {
 } from "@/lib/password-auth";
 import { createCustomSession } from "@/lib/session";
 import { sendAuthEmail } from "@/lib/email-service";
-import { AUTH_MESSAGES } from "@/lib/auth-errors";
+import { AUTH_MESSAGES, createSafeAuthErrorResponse } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -103,10 +103,6 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/auth/login] error:", err);
-    return new Response(
-      JSON.stringify({ error: AUTH_MESSAGES.GENERIC_ERROR }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeAuthErrorResponse(err, AUTH_MESSAGES.GENERIC_ERROR, "api/auth/login");
   }
 }

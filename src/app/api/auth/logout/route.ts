@@ -1,4 +1,5 @@
 import { clearCustomSession } from "@/lib/session";
+import { createSafeAuthErrorResponse } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +10,6 @@ export async function POST() {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("[api/auth/logout] error:", err);
-    return new Response(JSON.stringify({ error: "Failed to sign out" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createSafeAuthErrorResponse(err, "Failed to sign out", "api/auth/logout");
   }
 }

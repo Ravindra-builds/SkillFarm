@@ -3,6 +3,7 @@ import { processAndStoreResume, saveResumeRecord, getLatestUserResume } from "@/
 import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { isGuestSession, checkGuestQuota, recordGuestAction, getGuestState, setGuestState, guestKeys, GUEST_CONFIG } from "@/lib/guest";
 import { uploadFileToR2, isR2Configured } from "@/lib/storage/r2";
+import { createSafeErrorResponse } from "@/lib/friendly-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -186,12 +187,7 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/settings/resume] error:", err);
-    const msg = err instanceof Error ? err.message : "Failed to parse resume";
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeErrorResponse(err, { endpoint: "api/settings/resume [POST]" });
   }
 }
 
@@ -217,10 +213,6 @@ export async function GET() {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/settings/resume] GET error:", err);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch resume record" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeErrorResponse(err, { endpoint: "api/settings/resume [GET]" });
   }
 }

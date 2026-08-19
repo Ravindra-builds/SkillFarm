@@ -3,7 +3,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getRateLimitRule } from "@/config";
 import { getClientIp } from "@/lib/ip";
 import { consumePasswordResetToken, updateUserPassword } from "@/lib/password-auth";
-import { AUTH_MESSAGES } from "@/lib/auth-errors";
+import { AUTH_MESSAGES, createSafeAuthErrorResponse } from "@/lib/auth-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +63,6 @@ export async function POST(req: Request) {
       { headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {
-    console.error("[api/auth/reset-password] error:", err);
-    return new Response(
-      JSON.stringify({ error: AUTH_MESSAGES.RESET_LINK_INVALID }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    return createSafeAuthErrorResponse(err, AUTH_MESSAGES.RESET_LINK_INVALID, "api/auth/reset-password");
   }
 }

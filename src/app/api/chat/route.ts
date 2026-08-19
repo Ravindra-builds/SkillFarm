@@ -588,22 +588,25 @@ export async function POST(req: Request) {
       } as unknown as Headers,
     });
   } catch (err) {
-    // Technical error with full stack trace logged exclusively to server terminal for debugging
-    console.error("🔴 [api/chat] Detailed server error:", err);
-    if (err instanceof Error && err.stack) {
-      console.error(err.stack);
-    }
-
-    const friendly = formatUserFacingError(err);
+    const friendly = formatUserFacingError(err, {
+      endpoint: "api/chat",
+    });
     return new Response(
       JSON.stringify({
         error: friendly.code,
+        errorId: friendly.errorId,
         title: friendly.title,
         message: friendly.message,
         suggestion: friendly.suggestion,
         retryable: friendly.retryable,
       }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      {
+        status: friendly.status,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Error-Id": friendly.errorId,
+        },
+      }
     );
   }
 }
