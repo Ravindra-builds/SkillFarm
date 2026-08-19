@@ -13,6 +13,7 @@ import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { checkPlanLimit, incrementPlanUsage } from "@/lib/subscription";
 import { detectScopeViolation } from "@/lib/scope-guard";
 import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
+import { isAllowedModel } from "@/config/models";
 import { formatUserFacingError } from "@/lib/friendly-errors";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { addMemory } from "@/lib/memory/mem0";
@@ -228,6 +229,18 @@ export async function POST(req: Request) {
       provider: requestedProvider,
       model: requestedModel,
     } = parsed.data;
+
+    // ── Server-Side Model Allowlist Validation ─────────────────────────────
+    if (requestedModel || requestedProvider) {
+      if (!isAllowedModel(requestedModel, requestedProvider)) {
+        return new Response(
+          JSON.stringify({
+            error: "Invalid or unsupported model selection. Please choose an active production model.",
+          }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
 
     // ── Routing mode ───────────────────────────────────────────────────────
     const isManual = mid ? isValidMentorId(mid) : false;

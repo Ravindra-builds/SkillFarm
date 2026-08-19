@@ -6,6 +6,7 @@ import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-scheduler";
 import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 import { createSafeErrorResponse } from "@/lib/friendly-errors";
+import { isAllowedModel } from "@/config/models";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,17 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
+
+    // ── Server-Side Model Allowlist Validation ─────────────────────────────
+    if (body.provider || body.model) {
+      if (!isAllowedModel(body.model, body.provider)) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or unsupported model selection. Please choose an active production model." }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const profile = await getLearningProfile(userId);
     if (!profile) {
       return new Response(

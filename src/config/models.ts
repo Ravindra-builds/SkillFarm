@@ -6,6 +6,7 @@
  * 2. Settings View ("AI & Models" configuration tab)
  * 3. In-Chat Model Switcher dropdown
  * 4. Client-side preference storage and model resolution
+ * 5. Production model allowlist & server-side validation
  */
 
 export type ProviderModelDefinition = {
@@ -19,7 +20,7 @@ export type ProviderModelDefinition = {
   default?: boolean;
 };
 
-// ── Google Gemini Models ───────────────────────────────────────
+// ── Google Gemini Models (Supported Production Models) ────────
 export const GEMINI_MODELS: ProviderModelDefinition[] = [
   {
     id: "gemini-3.5-flash",
@@ -32,15 +33,6 @@ export const GEMINI_MODELS: ProviderModelDefinition[] = [
     default: true,
   },
   {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
-    provider: "gemini",
-    providerName: "Google Gemini",
-    badge: "Multimodal Fast",
-    speed: "fast",
-    description: "Next-gen multimodal fast model",
-  },
-  {
     id: "gemini-3.1-flash-lite",
     name: "Gemini 3.1 Flash Lite",
     provider: "gemini",
@@ -51,7 +43,7 @@ export const GEMINI_MODELS: ProviderModelDefinition[] = [
   },
 ];
 
-// ── OpenAI Models ─────────────────────────────────────────────
+// ── OpenAI Models (Supported Production Models) ───────────────
 export const OPENAI_MODELS: ProviderModelDefinition[] = [
   {
     id: "gpt-4o-mini",
@@ -72,18 +64,9 @@ export const OPENAI_MODELS: ProviderModelDefinition[] = [
     speed: "smart",
     description: "Flagship omni model",
   },
-  {
-    id: "gpt-4-turbo",
-    name: "GPT-4 Turbo",
-    provider: "openai",
-    providerName: "OpenAI",
-    badge: "Deep Reasoning",
-    speed: "medium",
-    description: "High-capability reasoning",
-  },
 ];
 
-// ── Anthropic Claude Models ───────────────────────────────────
+// ── Anthropic Claude Models (Development/Non-Production Only) ─
 export const ANTHROPIC_MODELS: ProviderModelDefinition[] = [
   {
     id: "claude-3-5-sonnet-latest",
@@ -115,9 +98,43 @@ export const ANTHROPIC_MODELS: ProviderModelDefinition[] = [
   },
 ];
 
-// ── Unified Catalog ───────────────────────────────────────────
+const isDev = process.env.NODE_ENV !== "production";
+
+// ── Unified Active Catalog (Excludes Anthropic in Production) ─
 export const ALL_MODELS: ProviderModelDefinition[] = [
   ...GEMINI_MODELS,
   ...OPENAI_MODELS,
-  ...ANTHROPIC_MODELS,
+  ...(isDev ? ANTHROPIC_MODELS : []),
 ];
+
+/**
+ * Server-side model allowlist validator.
+ * Validates that a client-requested model/provider combination is permitted in production.
+ */
+export function isAllowedModel(modelId?: string | null, providerId?: string | null): boolean {
+  if (!modelId && !providerId) return true;
+
+  // Validate provider if explicitly specified
+  if (providerId) {
+    const p = providerId.trim().toLowerCase();
+    if (p === "anthropic" && !isDev) {
+      return false; // Anthropic is strictly disabled in production
+    }
+    if (p !== "gemini" && p !== "openai" && (p !== "anthropic" || !isDev)) {
+      return false;
+    }
+  }
+
+  // Validate model ID if explicitly specified
+  if (modelId) {
+    const targetModel = ALL_MODELS.find((m) => m.id === modelId.trim());
+    if (!targetModel) {
+      return false; // Not in allowed models list (e.g. gemini-2.0-flash, gpt-4-turbo, claude-3-opus in prod)
+    }
+    if (targetModel.provider === "anthropic" && !isDev) {
+      return false;
+    }
+  }
+
+  return true;
+}

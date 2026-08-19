@@ -413,7 +413,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
         {/* Tab 0: AI Providers & Model Selection */}
         <TabsContent value="models" className="space-y-5">
           {/* Provider Selection Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className={`grid grid-cols-1 ${anthropicModels.length > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-3 sm:gap-4`}>
             {/* Google Gemini Card */}
             <div
               className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
@@ -498,47 +498,49 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
               </div>
             </div>
 
-            {/* Anthropic Claude Card */}
-            <div
-              className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
-                llmPref.activeProviders.includes("anthropic")
-                  ? "border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 shadow-2xs"
-                  : "border-border/60 bg-card/40 opacity-70"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                    <Brain className="h-4 w-4" />
+            {/* Anthropic Claude Card (Hidden in production) */}
+            {anthropicModels.length > 0 && (
+              <div
+                className={`rounded-2xl border p-3.5 sm:p-4 transition-all ${
+                  llmPref.activeProviders.includes("anthropic")
+                    ? "border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 shadow-2xs"
+                    : "border-border/60 bg-card/40 opacity-70"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                      <Brain className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-xs sm:text-sm">Anthropic Claude</h3>
+                      <p className="text-[10px] sm:text-[11px] text-muted-foreground">Sonnet 3.5 & reasoning</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-xs sm:text-sm">Anthropic Claude</h3>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground">Sonnet 3.5 & reasoning</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleProvider("anthropic")}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {llmPref.activeProviders.includes("anthropic") ? (
+                      <ToggleRight className="h-6 w-6 text-amber-600" />
+                    ) : (
+                      <ToggleLeft className="h-6 w-6 text-muted-foreground" />
+                    )}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleToggleProvider("anthropic")}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {llmPref.activeProviders.includes("anthropic") ? (
-                    <ToggleRight className="h-6 w-6 text-amber-600" />
-                  ) : (
-                    <ToggleLeft className="h-6 w-6 text-muted-foreground" />
+                <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    {anthropicModels.length} models
+                  </Badge>
+                  {llmPref.provider === "anthropic" && (
+                    <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-0.5">
+                      <Check className="h-3 w-3" /> Default
+                    </span>
                   )}
-                </button>
+                </div>
               </div>
-              <div className="mt-3 flex items-center justify-between text-[11px]">
-                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
-                  {anthropicModels.length} models
-                </Badge>
-                {llmPref.provider === "anthropic" && (
-                  <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-0.5">
-                    <Check className="h-3 w-3" /> Default
-                  </span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Model Catalog Selection */}
@@ -667,8 +669,8 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 </div>
               )}
 
-              {/* Anthropic Models Section */}
-              {llmPref.activeProviders.includes("anthropic") && (
+              {/* Anthropic Models Section (Hidden in production) */}
+              {anthropicModels.length > 0 && llmPref.activeProviders.includes("anthropic") && (
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 uppercase tracking-wider">
                     <Brain className="h-3.5 w-3.5" /> Anthropic Claude Models

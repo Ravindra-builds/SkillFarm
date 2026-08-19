@@ -196,9 +196,9 @@ describe("Multi-LLM Provider Architecture", () => {
       expect(openAiModel.modelId).toBe("gpt-4o");
       expect(openAiModel.provider).toBe("openai");
 
-      const geminiModel = getLlmModel({ provider: "gemini", model: "gemini-2.0-flash" }) as unknown as { modelId: string; provider: string };
+      const geminiModel = getLlmModel({ provider: "gemini", model: "gemini-3.5-flash" }) as unknown as { modelId: string; provider: string };
       expect(geminiModel).toBeDefined();
-      expect(geminiModel.modelId).toBe("gemini-2.0-flash");
+      expect(geminiModel.modelId).toBe("gemini-3.5-flash");
       expect(geminiModel.provider).toBe("google");
     });
   });

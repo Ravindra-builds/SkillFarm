@@ -16,6 +16,8 @@ export const anthropicProvider: LlmProviderConfig = {
   name: "Anthropic Claude",
 
   isConfigured: () => {
+    // Anthropic Claude is strictly disabled in production
+    if (process.env.NODE_ENV === "production") return false;
     if (isMockModeForced()) return false;
     const key = process.env.ANTHROPIC_API_KEY;
     return !!key && !isPlaceholder(key);

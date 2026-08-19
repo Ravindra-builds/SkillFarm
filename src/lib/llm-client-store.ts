@@ -32,7 +32,6 @@ export const DEFAULT_PREFERENCE: LlmPreference = {
   selectedModel: "gemini-3.5-flash",
   enabledModels: [
     "gemini-3.5-flash",
-    "gemini-2.0-flash",
     "gemini-3.1-flash-lite",
     "gpt-4o-mini",
     "gpt-4o",
