@@ -31,6 +31,7 @@ import {
   BrainCircuit,
   Lightbulb,
   AlertOctagon,
+  ChevronRight,
 } from "lucide-react";
 import type { Roadmap, RoadmapNode } from "@/lib/roadmap-store";
 
@@ -438,9 +439,9 @@ export function RoadmapView() {
         </div>
       </div>
 
-      {/* Main-Project Application Showcase Hero - Compact & High Contrast */}
+      {/* Main-Project Application Showcase Hero - Distinct Violet Palette & Border */}
       {mainProject && (
-        <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 p-3.5 sm:p-4 shadow-xs space-y-2">
+        <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-3.5 sm:p-4.5 shadow-sm space-y-2.5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
             <div className="space-y-0.5 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -477,19 +478,19 @@ export function RoadmapView() {
         </div>
       )}
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-3 rounded-2xl border border-border/80 shadow-xs">
+      {/* Filter and Search Bar - Distinct Slate Container */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-muted/40 p-2.5 sm:p-3 rounded-2xl border-2 border-border/80 shadow-2xs">
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search topics, concepts, mental models..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-xs sm:text-sm rounded-xl"
+            className="pl-9 h-8.5 text-xs sm:text-sm rounded-xl bg-background"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 md:pb-0 flex-wrap">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 flex-nowrap md:flex-wrap">
           {(
             [
               { id: "all", label: "All Modules" },
@@ -501,10 +502,10 @@ export function RoadmapView() {
             <button
               key={tab.id}
               onClick={() => setStatusFilter(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer ${
                 statusFilter === tab.id
                   ? "bg-violet-600 text-white shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background border border-transparent hover:border-border/60"
               }`}
             >
               {tab.label}
@@ -514,37 +515,37 @@ export function RoadmapView() {
       </div>
 
       {/* Main Grid: Week-by-Week Milestones List + Detail Inspector */}
-      <div className="grid lg:grid-cols-[1.3fr_0.7fr] gap-5 sm:gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-4 sm:gap-5 items-start w-full min-w-0">
         {/* Left Column: Week-by-Week Milestone Timeline */}
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-4 sm:space-y-5 w-full min-w-0">
           {displayWeekGroups.map((group) => {
             const visibleNodesInWeek = group.nodes.filter((n) => filteredNodes.some((fn) => fn.id === n.id));
             if (visibleNodesInWeek.length === 0) return null;
 
             return (
-              <div key={group.weekNumber} className="space-y-3">
+              <div key={group.weekNumber} className="rounded-2xl border-2 border-border/80 bg-card/60 p-3 sm:p-4 space-y-3 shadow-xs w-full min-w-0 overflow-hidden">
                 {/* Week Header */}
-                <div className="flex items-center justify-between px-1 flex-wrap gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex items-center justify-center h-6 w-6 rounded-lg bg-violet-600/10 text-violet-600 dark:text-violet-400 font-bold text-xs">
+                <div className="flex items-center justify-between border-b border-border/50 pb-2.5 flex-wrap gap-2 w-full min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="flex items-center justify-center h-5.5 w-5.5 sm:h-6 sm:w-6 rounded-lg bg-violet-600 text-white font-bold text-[11px] sm:text-xs shrink-0 shadow-2xs">
                       W{group.weekNumber}
                     </span>
-                    <div>
-                      <h2 className="font-heading text-sm sm:text-base font-bold text-foreground">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-heading text-xs sm:text-sm md:text-base font-bold text-foreground truncate">
                         Week {group.weekNumber}: {group.nodes[0]?.topic || group.nodes[0]?.title}
                       </h2>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs text-muted-foreground hidden sm:inline">({group.totalHours}h estimated)</span>
-                    <Badge variant="outline" className="text-[11px] px-2 py-0.5 font-medium rounded-md">
-                      {group.doneCount}/{group.nodes.length} Completed
+                    <Badge variant="outline" className="text-[10px] sm:text-[11px] px-2 py-0.5 font-semibold bg-background border-border/70 rounded-md">
+                      {group.doneCount}/{group.nodes.length} Done
                     </Badge>
                   </div>
                 </div>
 
                 {/* Week Milestone Cards */}
-                <div className="space-y-2.5">
+                <div className="space-y-2.5 w-full min-w-0">
                   {visibleNodesInWeek.map((node) => {
                     const isSelected = selected?.id === node.id;
                     const nodeTopic = node.topic || node.title;
@@ -560,33 +561,33 @@ export function RoadmapView() {
                           setSelected(node);
                           setIsEditing(false);
                         }}
-                        className={`rounded-2xl border p-3.5 sm:p-4 transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                        className={`rounded-xl border p-3 sm:p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 w-full min-w-0 overflow-hidden ${
                           isSelected
-                            ? "border-violet-600 bg-violet-500/10 dark:bg-violet-500/15 shadow-sm ring-2 ring-violet-500/40"
+                            ? "border-2 border-violet-600 bg-violet-500/10 dark:bg-violet-500/15 shadow-sm ring-2 ring-violet-500/40"
                             : node.status === "current"
-                            ? "border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/40 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-xs"
+                            ? "border-2 border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/50 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-xs"
                             : node.status === "completed"
-                            ? "border-emerald-500/25 bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05] opacity-90"
+                            ? "border border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] hover:bg-emerald-500/[0.08] opacity-90"
                             : node.status === "next"
-                            ? "border-violet-500/30 border-dashed bg-card hover:bg-violet-500/[0.03]"
-                            : "border-border/40 bg-muted/20 hover:bg-muted/40 opacity-75"
+                            ? "border border-dashed border-violet-500/40 bg-card hover:bg-violet-500/[0.03]"
+                            : "border border-border/60 bg-muted/20 hover:bg-muted/40 opacity-75"
                         }`}
                       >
                         {/* Topic Header: Title, Icon, and High-Contrast Status Badge */}
-                        <div className="space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div className="space-y-1 w-full min-w-0">
+                          <div className="flex items-start justify-between gap-2 w-full min-w-0">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                               <div className="shrink-0 mt-0.5">
-                                {node.status === "completed" && <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />}
+                                {node.status === "completed" && <CheckCircle2 className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-emerald-500" />}
                                 {node.status === "current" && (
-                                  <div className="h-4.5 w-4.5 rounded-full border-2 border-violet-600 flex items-center justify-center">
+                                  <div className="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded-full border-2 border-violet-600 flex items-center justify-center">
                                     <div className="h-1.5 w-1.5 rounded-full bg-violet-600 animate-pulse" />
                                   </div>
                                 )}
-                                {node.status === "next" && <Circle className="h-4.5 w-4.5 text-violet-500" />}
+                                {node.status === "next" && <Circle className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-violet-500" />}
                                 {node.status === "locked" && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                               </div>
-                              <p className={`text-xs sm:text-sm font-bold tracking-tight leading-snug truncate sm:text-wrap ${
+                              <p className={`text-xs sm:text-sm font-bold tracking-tight leading-snug truncate ${
                                 node.status === "current" || isSelected ? "text-violet-600 dark:text-violet-400" : "text-foreground"
                               }`}>
                                 {nodeTopic}
@@ -600,7 +601,7 @@ export function RoadmapView() {
                                 </Badge>
                               ) : node.status === "current" ? (
                                 <Badge className="bg-violet-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md shadow-2xs">
-                                  ⚡ In Progress
+                                  ⚡ Active
                                 </Badge>
                               ) : node.status === "next" ? (
                                 <Badge variant="secondary" className="bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-md">
@@ -615,15 +616,15 @@ export function RoadmapView() {
                           </div>
 
                           {/* Concise Description (Line clamped) */}
-                          <p className="text-xs text-muted-foreground leading-relaxed pl-7 line-clamp-2">
+                          <p className="text-xs text-muted-foreground leading-relaxed pl-0 sm:pl-6 line-clamp-2">
                             {node.description}
                           </p>
                         </div>
 
                         {/* Streamlined Concept Chips & Project Link */}
-                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 pl-7 flex-wrap">
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/40 pl-0 sm:pl-6 flex-wrap w-full min-w-0">
                           {visibleConcepts.length > 0 && (
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="flex items-center gap-1 flex-wrap min-w-0">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Concepts:</span>
                               {visibleConcepts.map((concept, idx) => (
                                 <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-muted/60 text-foreground border border-border/50 rounded-md">
@@ -631,13 +632,13 @@ export function RoadmapView() {
                                 </Badge>
                               ))}
                               {remainingConceptsCount > 0 && (
-                                <span className="text-[10px] text-muted-foreground font-medium">+{remainingConceptsCount} more</span>
+                                <span className="text-[10px] text-muted-foreground font-medium">+{remainingConceptsCount}</span>
                               )}
                             </div>
                           )}
 
                           {capstoneFeature && (
-                            <div className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 font-medium truncate max-w-xs">
+                            <div className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 font-medium truncate max-w-full sm:max-w-xs">
                               <Hammer className="h-3 w-3 shrink-0" />
                               <span className="truncate">{capstoneFeature}</span>
                             </div>
@@ -645,7 +646,7 @@ export function RoadmapView() {
                         </div>
 
                         {/* Meta Row: Badges & Quick Action */}
-                        <div className="flex items-center justify-between pt-1.5 text-xs text-muted-foreground border-t border-border/30 flex-wrap gap-2 pl-7">
+                        <div className="flex items-center justify-between pt-1.5 text-xs text-muted-foreground border-t border-border/30 flex-wrap gap-1.5 pl-0 sm:pl-6 w-full min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize rounded-md">
                               {node.difficulty}
@@ -660,14 +661,9 @@ export function RoadmapView() {
                             )}
                           </div>
 
-                          <Link
-                            href={`/resources?topic=${encodeURIComponent(node.topic || node.title)}&week=${node.week ?? 1}&concepts=${encodeURIComponent((node.concepts || node.relatedConcepts || []).join(","))}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px] font-medium text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer">
-                              <BookOpen className="h-3 w-3 mr-1" /> Resources →
-                            </Button>
-                          </Link>
+                          <span className="text-[11px] text-violet-600 dark:text-violet-400 font-semibold group-hover:underline flex items-center gap-0.5">
+                            Inspect <ChevronRight className="h-3 w-3" />
+                          </span>
                         </div>
                       </div>
                     );
@@ -723,7 +719,7 @@ export function RoadmapView() {
         {/* Right Column: Interactive Detail Inspector & Editor */}
         <div className="space-y-3 lg:sticky lg:top-6">
           {selected ? (
-            <Card className="rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+            <Card className="rounded-2xl border-2 border-border/90 bg-card shadow-sm overflow-hidden">
               <CardHeader className="p-3.5 sm:p-4 border-b bg-muted/20 space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
@@ -825,7 +821,7 @@ export function RoadmapView() {
                   /* Display Concept-First Unified Sub-Cards */
                   <>
                     {/* Sub-Card 1: Core Learning Objectives & Mental Models */}
-                    <div className="rounded-xl border border-blue-500/20 bg-blue-500/[0.03] p-3 space-y-2">
+                    <div className="rounded-xl border-2 border-blue-500/25 bg-blue-500/[0.05] dark:bg-blue-500/10 p-3 space-y-2">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
                         <BookOpen className="h-3 w-3" /> Core Concepts & Objectives
                       </p>
@@ -842,7 +838,7 @@ export function RoadmapView() {
                       )}
 
                       {selected.mentalModels && selected.mentalModels.length > 0 && (
-                        <div className="flex items-start gap-1.5 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 text-foreground/90 text-[11px] leading-relaxed">
+                        <div className="flex items-start gap-1.5 bg-amber-500/15 p-2 rounded-lg border border-amber-500/30 text-foreground/90 text-[11px] leading-relaxed">
                           <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                           <span>{selected.mentalModels[0]}</span>
                         </div>
@@ -850,13 +846,13 @@ export function RoadmapView() {
                     </div>
 
                     {/* Sub-Card 2: Practical Drill & Main-Project Application */}
-                    <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.04] p-3 space-y-2">
+                    <div className="rounded-xl border-2 border-violet-500/30 bg-violet-500/[0.05] dark:bg-violet-500/10 p-3 space-y-2">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1">
                         <Hammer className="h-3 w-3" /> Apply to Main-Project: {selected.featureCompleted}
                       </p>
 
                       {selected.practicalTask && (
-                        <div className="flex items-start gap-1.5 text-muted-foreground text-[11px] bg-background/80 p-2 rounded-lg border border-border/60">
+                        <div className="flex items-start gap-1.5 text-muted-foreground text-[11px] bg-background p-2 rounded-lg border border-border/70">
                           <Target className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
                           <span><strong className="text-foreground">Drill:</strong> {selected.practicalTask}</span>
                         </div>

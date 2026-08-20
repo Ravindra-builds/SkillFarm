@@ -321,8 +321,8 @@ export function ProjectsHub() {
         </div>
       </div>
 
-      {/* Main-Project Overview Hero Card - Compact & Balanced */}
-      <div className="rounded-2xl border border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 p-3.5 sm:p-4 shadow-xs space-y-2.5">
+      {/* Main-Project Overview Hero Card - Rich Violet Palette & Border */}
+      <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-3.5 sm:p-4.5 shadow-sm space-y-2.5">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
           <div className="space-y-1 w-full">
             <div className="flex items-center gap-2 flex-wrap">
@@ -414,16 +414,16 @@ export function ProjectsHub() {
         )}
       </div>
 
-      {/* Week Timeline Navigation Bar */}
+      {/* Week Timeline Navigation Bar - Responsive Mobile Grid */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1 flex-wrap gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Main-Project Development Timeline
           </span>
-          <span className="text-xs text-muted-foreground">Click any unlocked week to view learning context and tasks</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">Click any unlocked week to view learning context and tasks</span>
         </div>
 
-        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-2.5">
           {weekNumbers.map((w) => {
             const isGuestLocked = isGuest && w > 2;
             const isUnlocked = !isGuestLocked && capstone.unlockedWeeks.includes(w);
@@ -445,24 +445,24 @@ export function ProjectsHub() {
                   if (!isUnlocked) return;
                   setSelectedWeek(w);
                 }}
-                className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-1.5 min-h-[74px] cursor-pointer ${
+                className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-1.5 min-h-[70px] sm:min-h-[74px] cursor-pointer ${
                   isSelected
-                    ? "border-violet-600 bg-violet-600 text-white shadow-xs ring-1.5 ring-violet-500/30"
+                    ? "border-2 border-violet-600 bg-violet-600 text-white shadow-sm ring-2 ring-violet-500/30 font-bold"
                     : isWeekCompleted
-                    ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-foreground"
+                    ? "border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-950 dark:text-emerald-200"
                     : isGuestLocked
-                    ? "border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-muted-foreground"
+                    ? "border border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-muted-foreground"
                     : isUnlocked
-                    ? "border-border/80 bg-card hover:bg-muted/60 text-foreground"
-                    : "border-border/40 bg-muted/20 opacity-60 cursor-not-allowed text-muted-foreground"
+                    ? "border-2 border-border/80 bg-card hover:bg-muted/60 text-foreground"
+                    : "border border-border/40 bg-muted/20 opacity-60 cursor-not-allowed text-muted-foreground"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[11px] font-bold uppercase tracking-wider ${isSelected ? "text-violet-200" : "text-muted-foreground"}`}>
+                  <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isSelected ? "text-violet-200" : "text-muted-foreground"}`}>
                     Week {w}
                   </span>
                   {isWeekCompleted ? (
-                    <CheckCircle2 className={`h-4 w-4 ${isSelected ? "text-white" : "text-emerald-500"}`} />
+                    <CheckCircle2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSelected ? "text-white" : "text-emerald-500"}`} />
                   ) : isGuestLocked ? (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400">
                       <Lock className="h-3 w-3" /> Locked
@@ -470,7 +470,7 @@ export function ProjectsHub() {
                   ) : !isUnlocked ? (
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (
-                    <span className={`text-[11px] font-bold ${isSelected ? "text-violet-100" : "text-violet-600 dark:text-violet-400"}`}>
+                    <span className={`text-[10px] sm:text-[11px] font-bold ${isSelected ? "text-violet-100" : "text-violet-600 dark:text-violet-400"}`}>
                       {wDone}/{wTasks.length}
                     </span>
                   )}
@@ -485,8 +485,8 @@ export function ProjectsHub() {
       </div>
 
       {/* Active Week: Concept Context + Implementation Task Board */}
-      <Card className="rounded-2xl border border-border/80 shadow-xs overflow-hidden">
-        <CardHeader className="p-3 sm:p-3.5 border-b bg-muted/15 space-y-2">
+      <Card className="rounded-2xl border-2 border-border/90 bg-card shadow-sm overflow-hidden">
+        <CardHeader className="p-3 sm:p-3.5 border-b bg-muted/30 space-y-2">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
@@ -525,13 +525,13 @@ export function ProjectsHub() {
           {activeWeekContext && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pt-0.5">
               {activeWeekContext.concepts && activeWeekContext.concepts.length > 0 && (
-                <div className="rounded-lg border bg-background/90 p-2 space-y-0.5 shadow-2xs">
+                <div className="rounded-xl border-2 border-blue-500/25 bg-blue-500/[0.06] dark:bg-blue-500/10 p-2 space-y-0.5 shadow-2xs">
                   <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 uppercase tracking-wider">
                     <BookOpen className="h-2.5 w-2.5" /> Core Concepts
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {activeWeekContext.concepts.map((c, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20 rounded-md">
+                      <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 rounded-md">
                         {c}
                       </Badge>
                     ))}
@@ -540,7 +540,7 @@ export function ProjectsHub() {
               )}
 
               {activeWeekContext.mentalModels && activeWeekContext.mentalModels.length > 0 && (
-                <div className="rounded-lg border bg-background/90 p-2 space-y-0.5 shadow-2xs">
+                <div className="rounded-xl border-2 border-amber-500/25 bg-amber-500/[0.06] dark:bg-amber-500/10 p-2 space-y-0.5 shadow-2xs">
                   <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 uppercase tracking-wider">
                     <BrainCircuit className="h-2.5 w-2.5" /> Mental Model
                   </span>
@@ -570,8 +570,8 @@ export function ProjectsHub() {
                   key={task.id}
                   className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center gap-2.5 ${
                     task.completed
-                      ? "border-emerald-500/25 bg-emerald-500/[0.02] text-muted-foreground opacity-85"
-                      : "border-l-4 border-l-violet-600 border-border/80 bg-card hover:bg-muted/30 text-foreground shadow-2xs"
+                      ? "border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05] text-muted-foreground opacity-85"
+                      : "border-2 border-l-4 border-l-violet-600 border-border/80 bg-background hover:bg-violet-500/[0.03] text-foreground shadow-2xs"
                   }`}
                 >
                   <button

@@ -178,7 +178,7 @@ export default async function DashboardPage() {
           />
 
           {/* Active Roadmap Progress — Clickable Interactive Track */}
-          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
             <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
@@ -205,12 +205,12 @@ export default async function DashboardPage() {
                       href="/roadmap"
                       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border p-2.5 sm:p-3 transition-all shadow-xs group cursor-pointer ${
                         n.status === "current"
-                          ? "border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/40 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-2xs"
+                          ? "border-2 border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/50 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-2xs"
                           : n.status === "completed"
-                          ? "border-emerald-500/25 bg-emerald-500/[0.02] hover:bg-emerald-500/[0.05] opacity-90"
+                          ? "border border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] hover:bg-emerald-500/[0.08] opacity-90"
                           : n.status === "next"
-                          ? "border-violet-500/30 border-dashed bg-card hover:bg-violet-500/[0.03]"
-                          : "border-border/40 bg-muted/20 hover:bg-muted/40 opacity-75"
+                          ? "border border-violet-500/40 border-dashed bg-card hover:bg-violet-500/[0.03]"
+                          : "border border-border/60 bg-muted/20 hover:bg-muted/40 opacity-75"
                       }`}
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
         {/* Right Column */}
         <div className="space-y-4 sm:space-y-5">
           {/* Active AI Mentors */}
-          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
             <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
                 <Brain className="h-4 w-4 text-violet-500 shrink-0" /> Your AI Engineering Team
@@ -283,7 +283,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2.5">
               <MentorTeamCompact />
-              <div className="rounded-xl border border-amber-500/20 p-2.5 bg-amber-500/5 text-xs space-y-1">
+              <div className="rounded-xl border-2 border-amber-500/25 p-2.5 bg-amber-500/[0.06] dark:bg-amber-500/10 text-xs space-y-1">
                 <p className="font-semibold flex items-center gap-1 text-foreground text-xs">
                   <Zap className="h-3.5 w-3.5 text-amber-500" /> Tech Lead Orchestrator
                 </p>
@@ -295,7 +295,7 @@ export default async function DashboardPage() {
           </Card>
 
           {/* Recommended Resources for Current Ongoing Topic */}
-          <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
             <CardHeader className="p-3.5 sm:p-4 pb-2.5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="space-y-0.5">

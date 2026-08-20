@@ -250,12 +250,12 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
       {/* Topic Resource Pack View (from Roadmap) */}
       {topicPack && (
         <div className="space-y-4">
-          {/* Topic Pack Banner */}
-          <div className="rounded-3xl border-2 border-violet-500/30 bg-violet-500/5 dark:bg-violet-500/10 p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1.5">
+          {/* Topic Pack Banner - Distinct Violet Gradient */}
+          <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+            <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 {week && (
-                  <span className="flex items-center justify-center h-6 w-6 rounded-lg bg-violet-600 text-white font-bold text-xs">
+                  <span className="flex items-center justify-center h-5.5 w-5.5 rounded-md bg-violet-600 text-white font-bold text-xs">
                     W{week}
                   </span>
                 )}
@@ -264,15 +264,15 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
                 </Badge>
                 {topicPack.cached && (
                   <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    ⚡ Cached & Evaluated
+                    ⚡ Evaluated
                   </span>
                 )}
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
                 {topicPack.topic}
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Curated learning materials organized into official documentation, video walkthroughs, and code examples.
+              <p className="text-xs text-muted-foreground">
+                Curated documentation, video walkthroughs, and code examples.
               </p>
             </div>
 
@@ -281,29 +281,29 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
               size="sm"
               onClick={() => topic && loadTopicResources(topic, concepts, week, true)}
               disabled={loading}
-              className="rounded-xl text-xs font-semibold h-8.5 px-3 gap-1.5 shrink-0 self-start sm:self-center"
+              className="rounded-xl text-xs font-semibold h-8 px-3 gap-1.5 shrink-0 self-start sm:self-center cursor-pointer"
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh Resources
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
           </div>
 
           {/* Category Filter Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 flex-wrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 flex-nowrap sm:flex-wrap no-scrollbar">
             {(
               [
-                { id: "all", label: `All Resources (${topicPack.allResources.length})`, icon: Layers },
-                { id: "learn", label: `📖 Learn & Docs (${topicPack.categories.learn.length})`, icon: BookOpen },
-                { id: "watch", label: `🎬 Watch (${topicPack.categories.watch.length})`, icon: Video },
-                { id: "practice", label: `🛠️ Practice & Code (${topicPack.categories.practice.length})`, icon: Code2 },
+                { id: "all", label: `All (${topicPack.allResources.length})`, icon: Layers },
+                { id: "learn", label: `📖 Docs (${topicPack.categories.learn.length})`, icon: BookOpen },
+                { id: "watch", label: `🎬 Video (${topicPack.categories.watch.length})`, icon: Video },
+                { id: "practice", label: `🛠️ Code (${topicPack.categories.practice.length})`, icon: Code2 },
               ] as const
             ).map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveCategory(tab.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                   activeCategory === tab.id
                     ? "bg-violet-600 text-white shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60 bg-card border border-border/60"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60 bg-card border border-border/80"
                 }`}
               >
                 {tab.label}
@@ -313,15 +313,15 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
 
           {/* Grouped or Filtered Resource Cards */}
           {activeCategory === "all" ? (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-5">
               {/* 1. Learn Section */}
               {topicPack.categories.learn.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 border-b pb-2">
+                <div className="rounded-2xl border-2 border-blue-500/25 bg-blue-500/[0.02] dark:bg-blue-500/[0.05] p-3.5 sm:p-4 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-blue-500/20 pb-2">
                     <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <h3 className="font-bold text-sm sm:text-base text-foreground">Official Documentation & In-Depth Guides</h3>
+                    <h3 className="font-bold text-xs sm:text-sm text-foreground">Official Documentation & In-Depth Guides</h3>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     {topicPack.categories.learn.map(renderResourceCard)}
                   </div>
                 </div>
@@ -329,12 +329,12 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
 
               {/* 2. Watch Section */}
               {topicPack.categories.watch.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 border-b pb-2">
+                <div className="rounded-2xl border-2 border-red-500/25 bg-red-500/[0.02] dark:bg-red-500/[0.05] p-3.5 sm:p-4 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-red-500/20 pb-2">
                     <Video className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    <h3 className="font-bold text-sm sm:text-base text-foreground">Video Explanations & Walkthroughs</h3>
+                    <h3 className="font-bold text-xs sm:text-sm text-foreground">Video Explanations & Walkthroughs</h3>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     {topicPack.categories.watch.map(renderResourceCard)}
                   </div>
                 </div>
@@ -342,19 +342,19 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
 
               {/* 3. Practice Section */}
               {topicPack.categories.practice.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 border-b pb-2">
-                    <Code2 className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
-                    <h3 className="font-bold text-sm sm:text-base text-foreground">GitHub Code Repositories & Real Implementations</h3>
+                <div className="rounded-2xl border-2 border-emerald-500/25 bg-emerald-500/[0.02] dark:bg-emerald-500/[0.05] p-3.5 sm:p-4 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-emerald-500/20 pb-2">
+                    <Code2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <h3 className="font-bold text-xs sm:text-sm text-foreground">GitHub Code Repositories & Real Implementations</h3>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
                     {topicPack.categories.practice.map(renderResourceCard)}
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-3">
               {activeCategory === "learn" && topicPack.categories.learn.map(renderResourceCard)}
               {activeCategory === "watch" && topicPack.categories.watch.map(renderResourceCard)}
               {activeCategory === "practice" && topicPack.categories.practice.map(renderResourceCard)}
