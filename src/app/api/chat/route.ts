@@ -445,8 +445,8 @@ export async function POST(req: Request) {
             deepContext,
             `You are ${mentor.config.name} — routed by orchestrator (reason: ${decision.reasoning}). Stay in scope.`
           ),
-          // Cap history to last 8 messages to control context window size and cost.
-          messages: [...history.slice(-8), { role: "user" as const, content: lastUserText }],
+          // Cap history to last 6 messages to control context window size and cost.
+          messages: [...history.slice(-6), { role: "user" as const, content: lastUserText }],
           temperature: 0.7,
           maxOutputTokens: 800,
           onFinish: async ({ text }) => {
@@ -567,8 +567,8 @@ export async function POST(req: Request) {
         deepContext,
         `You are ${mentor.config.name} — stay in scope.`
       ),
-      // Cap history to last 8 messages to control context window size and cost.
-      messages: [...history.slice(-8), { role: "user" as const, content: lastUserText }],
+      // Cap history to last 6 messages to control context window size and cost.
+      messages: [...history.slice(-6), { role: "user" as const, content: lastUserText }],
       temperature: 0.7,
       maxOutputTokens: isGuest ? GUEST_CONFIG.MAX_OUTPUT_TOKENS : 800,
       onFinish: async ({ text }) => {

@@ -123,7 +123,7 @@ export async function runOrchestratedChat(
     const streamResult = streamTextFn({
       model: getLlmModel({ provider: opts?.provider, model: opts?.model ?? mentor.model, role: "chat" }),
       system: mentor.prompt + deepCtxPrompt + researchPromptCtx,
-      messages: [...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })), { role: "user" as const, content: query }],
+      messages: [...history.slice(-6).map((h) => ({ role: h.role as "user" | "assistant", content: h.content })), { role: "user" as const, content: query }],
       temperature: 0.7,
       maxOutputTokens: 800,
       onFinish: async ({ text }) => {

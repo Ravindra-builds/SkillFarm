@@ -163,7 +163,7 @@ describe("Multi-LLM Provider Architecture", () => {
 
       const model = getLlmModel({ role: "chat" }) as unknown as { modelId: string; provider: string };
       expect(model).toBeDefined();
-      expect(model.modelId).toBe("gemini-3.5-flash");
+      expect(model.modelId).toBe("gemini-3.5-flash-lite");
       expect(model.provider).toBe("google");
     });
 

@@ -29,12 +29,10 @@ const STORAGE_KEY = "skillfarm:llm-preferences";
 
 export const DEFAULT_PREFERENCE: LlmPreference = {
   provider: "gemini",
-  selectedModel: "gemini-3.5-flash",
+  selectedModel: "gemini-3.5-flash-lite",
   enabledModels: [
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
     "gpt-4o-mini",
-    "gpt-4o",
   ],
   activeProviders: ["gemini", "openai"],
 };

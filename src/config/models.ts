@@ -23,23 +23,14 @@ export type ProviderModelDefinition = {
 // ── Google Gemini Models (Supported Production Models) ────────
 export const GEMINI_MODELS: ProviderModelDefinition[] = [
   {
-    id: "gemini-3.5-flash",
-    name: "Gemini 3.5 Flash",
+    id: "gemini-3.5-flash-lite",
+    name: "Gemini 3.5 Flash Lite",
     provider: "gemini",
     providerName: "Google Gemini",
-    badge: "Flagship Fast",
+    badge: "Lightweight & Fast",
     speed: "fast",
-    description: "Flagship fast & smart multimodal model",
+    description: "Lightweight, highly efficient and cost-effective production model",
     default: true,
-  },
-  {
-    id: "gemini-3.1-flash-lite",
-    name: "Gemini 3.1 Flash Lite",
-    provider: "gemini",
-    providerName: "Google Gemini",
-    badge: "Lightweight",
-    speed: "fast",
-    description: "Lightweight and efficient model",
   },
 ];
 
@@ -52,32 +43,13 @@ export const OPENAI_MODELS: ProviderModelDefinition[] = [
     providerName: "OpenAI",
     badge: "Fast & Efficient",
     speed: "fast",
-    description: "Fast, efficient and cost-effective",
+    description: "Fast, efficient and cost-effective production model",
     default: true,
-  },
-  {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "openai",
-    providerName: "OpenAI",
-    badge: "Flagship Omni",
-    speed: "smart",
-    description: "Flagship omni model",
   },
 ];
 
 // ── Anthropic Claude Models (Development/Non-Production Only) ─
 export const ANTHROPIC_MODELS: ProviderModelDefinition[] = [
-  {
-    id: "claude-3-5-sonnet-latest",
-    name: "Claude 3.5 Sonnet",
-    provider: "anthropic",
-    providerName: "Anthropic Claude",
-    badge: "Flagship",
-    speed: "smart",
-    description: "Most intelligent flagship model",
-    default: true,
-  },
   {
     id: "claude-3-5-haiku-latest",
     name: "Claude 3.5 Haiku",
@@ -85,16 +57,8 @@ export const ANTHROPIC_MODELS: ProviderModelDefinition[] = [
     providerName: "Anthropic Claude",
     badge: "Lightning Fast",
     speed: "fast",
-    description: "Lightning fast, lightweight model",
-  },
-  {
-    id: "claude-3-opus-latest",
-    name: "Claude 3 Opus",
-    provider: "anthropic",
-    providerName: "Anthropic Claude",
-    badge: "Deep Analysis",
-    speed: "smart",
-    description: "Deep reasoning and analysis",
+    description: "Lightning fast, lightweight model (dev only)",
+    default: true,
   },
 ];
 
