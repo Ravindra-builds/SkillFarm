@@ -253,6 +253,99 @@ export function KnowledgeGraph() {
     [draggingNodeId, isPanning, scale]
   );
 
+  // Mobile Touch Handlers (Pan, Pinch-to-Zoom, and Node Drag)
+  const touchDistanceRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      if ((e.target as HTMLElement).closest("[data-node-drag]")) return;
+      const touch = e.touches[0];
+      setIsPanning(true);
+      dragStart.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        panX: pan.x,
+        panY: pan.y,
+        nodeStartX: 0,
+        nodeStartY: 0,
+      };
+      touchDistanceRef.current = null;
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      touchDistanceRef.current = dist;
+      setIsPanning(false);
+    }
+  };
+
+  const handleNodeTouchStart = (e: React.TouchEvent, nodeId: string) => {
+    e.stopPropagation();
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    setDraggingNodeId(nodeId);
+    setSelectedNodeId(nodeId);
+
+    const currentPos = nodePositions.find((p) => p.node.id === nodeId);
+    if (currentPos) {
+      dragStart.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        panX: pan.x,
+        panY: pan.y,
+        nodeStartX: currentPos.x,
+        nodeStartY: currentPos.y,
+      };
+    }
+  };
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (draggingNodeId) {
+          const dx = (touch.clientX - dragStart.current.x) / scale;
+          const dy = (touch.clientY - dragStart.current.y) / scale;
+
+          setCustomPositions((prev) => ({
+            ...prev,
+            [draggingNodeId]: {
+              x: dragStart.current.nodeStartX + dx,
+              y: dragStart.current.nodeStartY + dy,
+            },
+          }));
+          return;
+        }
+
+        if (isPanning) {
+          const dx = touch.clientX - dragStart.current.x;
+          const dy = touch.clientY - dragStart.current.y;
+          setPan({
+            x: dragStart.current.panX + dx,
+            y: dragStart.current.panY + dy,
+          });
+        }
+      } else if (e.touches.length === 2 && touchDistanceRef.current !== null) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const diff = dist - touchDistanceRef.current;
+        if (Math.abs(diff) > 4) {
+          const zoomDelta = diff > 0 ? 0.02 : -0.02;
+          setScale((prev) => Math.min(Math.max(prev + zoomDelta, 0.5), 1.8));
+          touchDistanceRef.current = dist;
+        }
+      }
+    },
+    [draggingNodeId, isPanning, scale]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setIsPanning(false);
+    setDraggingNodeId(null);
+    touchDistanceRef.current = null;
+  }, []);
+
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
     setDraggingNodeId(null);
@@ -452,7 +545,11 @@ export function KnowledgeGraph() {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className={`w-full h-full cursor-${isPanning ? "grabbing" : "grab"} overflow-hidden relative`}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              className={`w-full h-full cursor-${isPanning ? "grabbing" : "grab"} overflow-hidden relative touch-none select-none`}
             >
               {/* Dot Grid Pattern */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
@@ -595,6 +692,7 @@ export function KnowledgeGraph() {
                       <div
                         data-node-drag="true"
                         onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                        onTouchStart={(e) => handleNodeTouchStart(e, node.id)}
                         onMouseEnter={() => setHoveredNodeId(node.id)}
                         onMouseLeave={() => setHoveredNodeId(null)}
                         className={`rounded-2xl border-2 px-3.5 py-3 text-left transition-shadow cursor-move shadow-sm w-60 bg-card/95 backdrop-blur-md flex flex-col justify-between gap-1.5 ${statusColor} ${
@@ -647,7 +745,7 @@ export function KnowledgeGraph() {
                   <span className="h-2 w-2 rounded-full bg-zinc-500" /> Upcoming
                 </span>
               </div>
-              <span className="text-[11px]">Click & drag any node to stretch and re-arrange the graph</span>
+              <span className="text-[11px]">Hold & drag to scroll/pan • Pinch to zoom • Drag nodes to re-arrange</span>
             </div>
           </div>
 

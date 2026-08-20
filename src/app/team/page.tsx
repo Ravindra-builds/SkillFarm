@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { auth, isAuthConfigured } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
@@ -32,11 +33,14 @@ export default async function TeamPage() {
   })();
 
   const user = (session as { user?: { name?: string | null; email?: string | null; image?: string | null } } | null)?.user ?? null;
-  const isMockUser = !configured && !user;
+
+  if (!user) {
+    redirect("/login?callbackUrl=/team");
+  }
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
+      <Sidebar user={user} authConfigured={configured} isMockUser={false} />
       <div className="flex flex-1 flex-col min-w-0">
         <Header user={user} authConfigured={configured} />
         <main className="flex-1 bg-muted/30 p-6">

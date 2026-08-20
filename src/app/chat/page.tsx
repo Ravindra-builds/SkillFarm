@@ -32,13 +32,12 @@ export default async function ChatPage({ searchParams }: Props) {
   })();
 
   const user = (session as unknown as { user?: { name?: string | null; email?: string | null; image?: string | null } } | null)?.user ?? null;
-  const isMockUser = !configured && !user;
 
-  if (configured && !user) {
+  if (!user) {
     redirect("/login?callbackUrl=/chat");
   }
 
-  const userId = (user?.email as string | undefined) ?? (user as unknown as { id?: string } | undefined)?.id ?? "guest-preview-user";
+  const userId = user.email ?? (user as unknown as { id?: string }).id ?? "guest";
   const isGuest = isGuestSession(userId);
   const sp = searchParams ? await searchParams : {};
   let conversationId: string | undefined = sp?.conversationId ?? undefined;
@@ -98,12 +97,12 @@ export default async function ChatPage({ searchParams }: Props) {
     initialConversations = [];
   }
 
-  const userName = user?.name ?? (isMockUser ? "Alex" : null);
+  const userName = user?.name ?? null;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* App sidebar — navigation */}
-      <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
+      <Sidebar user={user} authConfigured={configured} isMockUser={false} />
 
       {/* Main area */}
       <div className="flex flex-1 flex-col min-w-0 min-h-0">
@@ -125,7 +124,7 @@ export default async function ChatPage({ searchParams }: Props) {
               initialMessages={initialMessages}
               conversationId={conversationId ?? null}
               userName={userName}
-              isMockUser={isMockUser}
+              isMockUser={false}
               initialMentorId={initialMentorId}
               initialHandoffs={initialHandoffs}
             />

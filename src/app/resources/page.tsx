@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { auth, isAuthConfigured } from "@/lib/auth";
@@ -25,9 +26,12 @@ export default async function ResourcesPage({
     }
   })();
   const user = (session as unknown as { user?: { name?: string | null; email?: string | null; image?: string | null } } | null)?.user ?? null;
-  const isMockUser = !configured && !user;
 
-  const userId = (user?.email as string) ?? (user as unknown as { id?: string })?.id ?? "guest-preview-user";
+  if (!user) {
+    redirect("/login?callbackUrl=/resources");
+  }
+
+  const userId = user.email ?? (user as unknown as { id?: string }).id ?? "guest";
 
   let initialTopic = resolvedParams.topic;
   let initialWeek = resolvedParams.week ? parseInt(resolvedParams.week, 10) : undefined;
@@ -55,7 +59,7 @@ export default async function ResourcesPage({
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar user={user} authConfigured={configured} isMockUser={isMockUser} />
+      <Sidebar user={user} authConfigured={configured} isMockUser={false} />
       <div className="flex flex-1 flex-col min-w-0">
         <Header user={user} authConfigured={configured} />
         <main className="flex-1 bg-muted/30 p-4 sm:p-6 lg:p-8">

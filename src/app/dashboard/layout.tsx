@@ -27,14 +27,12 @@ export default async function DashboardLayout({
   }
   const user = (session as unknown as { user?: { name?: string | null; email?: string | null; image?: string | null } } | null)?.user ?? null;
 
-  // Protected dashboard: if Google is configured, require sign-in.
-  // If not configured (preview mode) OR auth failed, allow guest access so the shell remains demonstrable.
-  const isGuest = !user || isGuestSession(user.email);
-  const isMockUser = !configured && !user;
-
-  if (configured && !user) {
+  if (!user) {
     redirect("/login?callbackUrl=/dashboard");
   }
+
+  const isGuest = isGuestSession(user.email ?? "");
+  const isMockUser = false;
 
   return (
     <div className="min-h-screen bg-background">

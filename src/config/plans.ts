@@ -1,86 +1,63 @@
 /**
  * Subscription Plans & Feature Quotas Configuration
- * Single Source of Truth for tier limits, feature access, and display metadata.
+ *
+ * Single tier model: All users (guest and authenticated) operate under the Free / Standard tier in production
+ * and the Dev tier in development. Pro / Unlimited tier is disabled everywhere to prevent cost spikes.
+ * Quotas are dynamically linked to src/config/rate-limits.ts (Single Source of Truth).
  */
 
-export type PlanTier = "free" | "pro";
+import { RATE_LIMITS } from "./rate-limits";
+
+export type PlanTier = "standard" | "free";
 
 const isDev = process.env.NODE_ENV !== "production";
 
-export const PLAN_CONFIG: Record<
-  PlanTier,
-  {
-    name: string;
-    badge: string;
-    description: string;
-    quotas: {
-      mentorMessages: {
-        limit: number;
-        label: string;
-      };
-      researchRuns: {
-        limit: number;
-        label: string;
-      };
-      roadmapGenerations: {
-        limit: number;
-        label: string;
-      };
-      resumeUploads: {
-        limit: number;
-        label: string;
-      };
-    };
-  }
-> = {
-  free: {
-    name: "SkillFarm Free",
-    badge: "Free Plan",
-    description: "Standard access to AI mentors, roadmaps, and portfolio projects.",
-    quotas: {
-      mentorMessages: {
-        limit: isDev ? 500 : 50,
-        label: isDev ? "500 messages / day (Dev)" : "50 messages / day",
+export const PLAN_CONFIG = {
+  name: isDev ? "SkillFarm Dev" : "SkillFarm Free",
+  badge: isDev ? "Dev Plan" : "Free Plan",
+  description: isDev
+    ? "Development environment with dev-tier rate limits for local testing."
+    : "Standard access to AI mentors, personalized roadmaps, scored resources, and projects.",
+  quotas: {
+    mentorMessages: {
+      get limit() {
+        return isDev ? RATE_LIMITS.chat.dev.limit : RATE_LIMITS.chat.prod.limit;
       },
-      researchRuns: {
-        limit: isDev ? 100 : 15,
-        label: isDev ? "100 runs / day (Dev)" : "15 runs / day",
-      },
-      roadmapGenerations: {
-        limit: isDev ? 20 : 2,
-        label: isDev ? "20 / day (Dev)" : "2 / day",
-      },
-      resumeUploads: {
-        limit: isDev ? 20 : 2,
-        label: isDev ? "20 / day (Dev)" : "2 / day",
+      get label() {
+        const lim = isDev ? RATE_LIMITS.chat.dev.limit : RATE_LIMITS.chat.prod.limit;
+        return isDev ? `${lim} / min (Dev)` : `${lim} / day`;
       },
     },
-  },
-  pro: {
-    name: "SkillFarm Pro",
-    badge: "Pro Plan",
-    description: "Unlimited AI engineering mentorship, deep research, and instant career drills.",
-    quotas: {
-      mentorMessages: {
-        limit: Infinity,
-        label: "Unlimited",
+    researchRuns: {
+      get limit() {
+        return isDev ? RATE_LIMITS.research.dev.limit : RATE_LIMITS.research.prod.limit;
       },
-      researchRuns: {
-        limit: Infinity,
-        label: "Unlimited",
+      get label() {
+        const lim = isDev ? RATE_LIMITS.research.dev.limit : RATE_LIMITS.research.prod.limit;
+        return isDev ? `${lim} / day (Dev)` : `${lim} / day`;
       },
-      roadmapGenerations: {
-        limit: Infinity,
-        label: "Unlimited",
+    },
+    roadmapGenerations: {
+      get limit() {
+        return isDev ? RATE_LIMITS.roadmap.dev.limit : RATE_LIMITS.roadmap.prod.limit;
       },
-      resumeUploads: {
-        limit: Infinity,
-        label: "Unlimited",
+      get label() {
+        const lim = isDev ? RATE_LIMITS.roadmap.dev.limit : RATE_LIMITS.roadmap.prod.limit;
+        return isDev ? `${lim} / day (Dev)` : `${lim} / day`;
+      },
+    },
+    resumeUploads: {
+      get limit() {
+        return isDev ? RATE_LIMITS.resume.dev.limit : RATE_LIMITS.resume.prod.limit;
+      },
+      get label() {
+        const lim = isDev ? RATE_LIMITS.resume.dev.limit : RATE_LIMITS.resume.prod.limit;
+        return isDev ? `${lim} / day (Dev)` : `${lim} / day`;
       },
     },
   },
 };
 
-export function getPlanConfig(tier: PlanTier = "free") {
-  return PLAN_CONFIG[tier] || PLAN_CONFIG.free;
+export function getPlanConfig(_tier?: string) {
+  return PLAN_CONFIG;
 }

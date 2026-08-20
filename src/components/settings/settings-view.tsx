@@ -37,6 +37,7 @@ import {
   Clock,
 } from "lucide-react";
 import type { MemoryItem } from "@/lib/memory/mem0";
+import type { AccountQuotaStats } from "@/lib/subscription";
 import {
   ALL_MODELS,
   ModelOption,
@@ -49,12 +50,15 @@ import { ResumeUploader } from "@/components/resume/resume-uploader";
 type SettingsProps = {
   user?: { name?: string | null; email?: string | null; image?: string | null } | null;
   authConfigured?: boolean;
+  initialQuotaStats?: AccountQuotaStats | null;
 };
 
-export function SettingsView({ user, authConfigured }: SettingsProps) {
+export function SettingsView({ user, authConfigured, initialQuotaStats }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<string>("models");
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loadingMemories, setLoadingMemories] = useState(true);
+  const [quotaStats, setQuotaStats] = useState<AccountQuotaStats | null>(initialQuotaStats ?? null);
+  const [loadingQuotas, setLoadingQuotas] = useState(!initialQuotaStats);
   const [newMemory, setNewMemory] = useState("");
   const [addingMemory, setAddingMemory] = useState(false);
   const [memoryFilter, setMemoryFilter] = useState<string>("recent");
@@ -83,22 +87,47 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
     }
   }
 
+  async function refreshQuotas() {
+    setLoadingQuotas(true);
+    try {
+      const res = await fetch("/api/account/quotas");
+      if (res.ok) {
+        const data = await res.json();
+        setQuotaStats(data);
+      }
+    } catch (e) {
+      console.error("Failed to refresh account quotas", e);
+    } finally {
+      setLoadingQuotas(false);
+    }
+  }
+
   useEffect(() => {
     let ignore = false;
     async function fetchInitial() {
       try {
-        const res = await fetch("/api/settings/memory");
-        if (res.ok) {
-          const data = await res.json();
+        const [memRes, quotaRes] = await Promise.all([
+          fetch("/api/settings/memory"),
+          fetch("/api/account/quotas"),
+        ]);
+        if (memRes.ok) {
+          const data = await memRes.json();
           if (!ignore) {
             setMemories(data.memories ?? []);
           }
         }
+        if (quotaRes.ok) {
+          const qData = await quotaRes.json();
+          if (!ignore) {
+            setQuotaStats(qData);
+          }
+        }
       } catch (e) {
-        console.error("Failed to load initial memories", e);
+        console.error("Failed to load initial settings data", e);
       } finally {
         if (!ignore) {
           setLoadingMemories(false);
+          setLoadingQuotas(false);
         }
       }
     }
@@ -978,7 +1007,9 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
                     <CreditCard className="h-3.5 w-3.5 text-violet-500" /> Active Plan
                   </span>
-                  <p className="font-semibold text-xs sm:text-sm text-foreground">Standard Plan</p>
+                  <p className="font-semibold text-xs sm:text-sm text-foreground">
+                    {quotaStats?.planName ?? "SkillFarm Free"}
+                  </p>
                 </div>
 
                 <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
@@ -995,7 +1026,19 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
                     <Flame className="h-4 w-4 text-violet-600" /> Daily Feature Quotas & Limits
                   </h4>
-                  <span className="text-[11px] text-muted-foreground">Rolling 24-hour cycle</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-muted-foreground">Rolling 24-hour cycle</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshQuotas}
+                      disabled={loadingQuotas}
+                      className="h-6 w-6 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                      title="Refresh Quota Stats"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${loadingQuotas ? "animate-spin" : ""}`} />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1003,12 +1046,21 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5">
-                        <Brain className="h-3.5 w-3.5 text-violet-500" /> Mentor Chat Messages
+                        <Brain className="h-3.5 w-3.5 text-violet-500" /> {quotaStats?.quotas.mentorMessages.name ?? "Mentor Chat Messages"}
                       </span>
-                      <span className="text-muted-foreground font-mono text-[11px]">50 / day</span>
+                      <span className="text-muted-foreground font-mono text-[11px]">
+                        {quotaStats ? `${quotaStats.quotas.mentorMessages.current} / ${quotaStats.quotas.mentorMessages.label}` : "Loading..."}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-violet-600 w-[12%]" />
+                      <div
+                        className="h-full bg-violet-600 transition-all duration-300"
+                        style={{ width: `${quotaStats?.quotas.mentorMessages.percent ?? 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{`${quotaStats?.quotas.mentorMessages.remaining ?? 0} remaining today`}</span>
+                      <span>{quotaStats?.quotas.mentorMessages.percent ?? 0}% used</span>
                     </div>
                   </div>
 
@@ -1016,12 +1068,21 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5">
-                        <Search className="h-3.5 w-3.5 text-blue-500" /> Deep Web Research Runs
+                        <Search className="h-3.5 w-3.5 text-blue-500" /> {quotaStats?.quotas.researchRuns.name ?? "Deep Web Research Runs"}
                       </span>
-                      <span className="text-muted-foreground font-mono text-[11px]">15 / day</span>
+                      <span className="text-muted-foreground font-mono text-[11px]">
+                        {quotaStats ? `${quotaStats.quotas.researchRuns.current} / ${quotaStats.quotas.researchRuns.label}` : "Loading..."}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-blue-600 w-[8%]" />
+                      <div
+                        className="h-full bg-blue-600 transition-all duration-300"
+                        style={{ width: `${quotaStats?.quotas.researchRuns.percent ?? 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{`${quotaStats?.quotas.researchRuns.remaining ?? 0} remaining today`}</span>
+                      <span>{quotaStats?.quotas.researchRuns.percent ?? 0}% used</span>
                     </div>
                   </div>
 
@@ -1029,12 +1090,21 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5">
-                        <Layers className="h-3.5 w-3.5 text-emerald-500" /> Roadmap Generations
+                        <Layers className="h-3.5 w-3.5 text-emerald-500" /> {quotaStats?.quotas.roadmapGenerations.name ?? "Roadmap Generations"}
                       </span>
-                      <span className="text-muted-foreground font-mono text-[11px]">2 / day</span>
+                      <span className="text-muted-foreground font-mono text-[11px]">
+                        {quotaStats ? `${quotaStats.quotas.roadmapGenerations.current} / ${quotaStats.quotas.roadmapGenerations.label}` : "Loading..."}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-emerald-600 w-[20%]" />
+                      <div
+                        className="h-full bg-emerald-600 transition-all duration-300"
+                        style={{ width: `${quotaStats?.quotas.roadmapGenerations.percent ?? 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{`${quotaStats?.quotas.roadmapGenerations.remaining ?? 0} remaining today`}</span>
+                      <span>{quotaStats?.quotas.roadmapGenerations.percent ?? 0}% used</span>
                     </div>
                   </div>
 
@@ -1042,12 +1112,21 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5 text-amber-500" /> Resume Profile Sync
+                        <FileText className="h-3.5 w-3.5 text-amber-500" /> {quotaStats?.quotas.resumeUploads.name ?? "Resume Profile Sync"}
                       </span>
-                      <span className="text-muted-foreground font-mono text-[11px]">2 / day</span>
+                      <span className="text-muted-foreground font-mono text-[11px]">
+                        {quotaStats ? `${quotaStats.quotas.resumeUploads.current} / ${quotaStats.quotas.resumeUploads.label}` : "Loading..."}
+                      </span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-amber-600 w-[15%]" />
+                      <div
+                        className="h-full bg-amber-600 transition-all duration-300"
+                        style={{ width: `${quotaStats?.quotas.resumeUploads.percent ?? 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{`${quotaStats?.quotas.resumeUploads.remaining ?? 0} remaining today`}</span>
+                      <span>{quotaStats?.quotas.resumeUploads.percent ?? 0}% used</span>
                     </div>
                   </div>
                 </div>
@@ -1061,7 +1140,7 @@ export function SettingsView({ user, authConfigured }: SettingsProps) {
                 <div className="rounded-xl border border-border/60 overflow-hidden divide-y divide-border/40 text-xs">
                   <div className="p-3 bg-muted/20 flex items-center justify-between font-semibold">
                     <span>Feature</span>
-                    <span>Free vs Pro</span>
+                    <span>Status</span>
                   </div>
                   <div className="p-3 flex items-center justify-between">
                     <span className="text-muted-foreground">AI Engineering Mentors</span>

@@ -91,3 +91,49 @@ export async function checkFeatureRateLimit(
     description: rule.description,
   };
 }
+
+/**
+ * Gets the current usage and quota status for a feature without incrementing it.
+ */
+export async function getFeatureUsage(
+  userId: string,
+  action: RateLimitAction
+): Promise<{ current: number; limit: number; remaining: number; resetSec: number }> {
+  const rule: RateLimitRule = getRateLimitRule(action);
+  const key = `ratelimit:${action}:${userId}`;
+  const now = Date.now();
+
+  const redis = await getRedis();
+  if (redis) {
+    try {
+      const current = (await redis.get<number>(key)) ?? 0;
+      const ttl = await redis.ttl(key);
+      const parsedCurrent = typeof current === "number" ? current : parseInt(String(current || "0"), 10);
+      return {
+        current: Math.min(parsedCurrent, rule.limit),
+        limit: rule.limit,
+        remaining: Math.max(0, rule.limit - parsedCurrent),
+        resetSec: ttl > 0 ? ttl : rule.windowSec,
+      };
+    } catch {
+      // fallback to local store
+    }
+  }
+
+  const entry = localStore.get(key);
+  if (!entry || now > entry.resetTime) {
+    return {
+      current: 0,
+      limit: rule.limit,
+      remaining: rule.limit,
+      resetSec: rule.windowSec,
+    };
+  }
+
+  return {
+    current: Math.min(entry.count, rule.limit),
+    limit: rule.limit,
+    remaining: Math.max(0, rule.limit - entry.count),
+    resetSec: Math.max(1, Math.ceil((entry.resetTime - now) / 1000)),
+  };
+}

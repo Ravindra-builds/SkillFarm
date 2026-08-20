@@ -67,15 +67,15 @@ export const RATE_LIMITS: Record<RateLimitAction, { prod: RateLimitRule; dev: Ra
     dev: { limit: 20, windowSec: 86400, description: "20 resume uploads per day (dev)" },
   },
   chat: {
-    prod: { limit: 20, windowSec: 60, description: "20 messages per minute" },
+    prod: { limit: 15, windowSec: 86400, description: "15 messages per day" },
     dev: { limit: 120, windowSec: 60, description: "120 messages per minute (dev)" },
   },
   research: {
-    prod: { limit: 15, windowSec: 86400, description: "15 research runs per day" },
+    prod: { limit: 5, windowSec: 86400, description: "5 research runs per day" },
     dev: { limit: 100, windowSec: 86400, description: "100 research runs per day (dev)" },
   },
   topicResources: {
-    prod: { limit: 30, windowSec: 60, description: "30 topic resource queries per minute" },
+    prod: { limit: 10, windowSec: 60, description: "10 topic resource queries per minute" },
     dev: { limit: 120, windowSec: 60, description: "120 topic resource queries per minute (dev)" },
   },
 };

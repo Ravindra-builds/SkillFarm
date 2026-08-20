@@ -181,12 +181,12 @@ export async function POST(req: Request) {
     } | null;
     userId = session?.user?.email ?? session?.user?.id ?? "guest-preview-user";
 
-    // ── Rate Limiting (Centralized rule) ──────────────────────────────────
+    // ── Rate Limiting (Centralized rule: 15 messages/day in prod, 120/min in dev) ────
     const rateCheck = await checkFeatureRateLimit(userId, "chat");
     if (!rateCheck.success) {
       return new Response(
         JSON.stringify({
-          error: "Rate limit exceeded. Please wait before sending more messages.",
+          error: `Daily message limit reached (${rateCheck.limit} messages). Please check back tomorrow.`,
           retryAfter: rateCheck.resetSec,
         }),
         {
@@ -198,19 +198,6 @@ export async function POST(req: Request) {
         }
       );
     }
-
-    // ── Subscription Plan Check ────────────────────────────────────────────
-    const planCheck = await checkPlanLimit(userId, "mentorMessages");
-    if (!planCheck.allowed) {
-      return new Response(
-        JSON.stringify({
-          error: `Free plan limit reached (${planCheck.currentUsage}/${planCheck.maxLimit} messages). Upgrade to Pro for unlimited AI mentor access.`,
-          isPlanLimit: true,
-        }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    await incrementPlanUsage(userId, "mentorMessages");
 
     // ── Parse & validate body ──────────────────────────────────────────────
     const json = await req.json();

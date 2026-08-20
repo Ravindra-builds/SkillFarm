@@ -40,8 +40,8 @@ type SidebarProps = {
 
 export function Sidebar({ user, authConfigured, isMockUser }: SidebarProps) {
   const pathname = usePathname();
-  const displayName = user?.name ?? (isMockUser ? "Alex (guest)" : "Guest");
-  const displayEmail = user?.email ?? (isMockUser ? "guest preview" : "Sign in to save");
+  const displayName = user?.name ?? "Guest";
+  const displayEmail = user?.email ?? "Sign in to save";
 
   return (
     <aside className="hidden lg:flex w-[280px] shrink-0 flex-col border-r bg-card/60 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40">

@@ -23,7 +23,7 @@ import type { NextRequest } from "next/server";
 const SESSION_COOKIE = "skillfarm_session";
 const LEGACY_COOKIE = "SkillFarm_session";
 
-// Routes that require authentication when auth is configured
+// Routes that require authentication
 const PROTECTED_PATTERNS = [
   "/dashboard",
   "/chat",
@@ -32,32 +32,21 @@ const PROTECTED_PATTERNS = [
   "/resources",
   "/knowledge",
   "/settings",
+  "/team",
 ];
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_PATTERNS.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
-function isAuthConfigured(): boolean {
-  // Check if Google OAuth is configured (same logic as auth.ts, duplicated here
-  // because middleware runs at the edge and can't import server-only modules)
-  const googleId = process.env.AUTH_GOOGLE_ID ?? process.env.GOOGLE_CLIENT_ID;
-  const googleSecret = process.env.AUTH_GOOGLE_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
-  if (!googleId || !googleSecret) return false;
-  const isPlaceholder = (v: string) =>
-    v.includes("your-google") || v.includes("replace-with") || v.length < 8;
-  return !isPlaceholder(googleId) && !isPlaceholder(googleSecret);
-}
-
 function hasAnySession(req: NextRequest): boolean {
-  // Custom cookie (OTP login or guest) — presence is enough here;
-  // full signature verification happens server-side
+  // Custom cookie (Password / OTP login or guest session)
   const customCookie =
     req.cookies.get(SESSION_COOKIE)?.value ||
     req.cookies.get(LEGACY_COOKIE)?.value;
   if (customCookie && customCookie.length > 10) return true;
 
-  // NextAuth session cookie (next-auth.session-token or __Secure-next-auth.session-token)
+  // NextAuth session cookie (Google OAuth)
   const nextAuthCookie =
     req.cookies.get("next-auth.session-token")?.value ||
     req.cookies.get("__Secure-next-auth.session-token")?.value ||
@@ -76,17 +65,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // If auth is not configured, allow everyone through (preview/mock mode)
-  if (!isAuthConfigured()) {
-    return NextResponse.next();
-  }
-
-  // If user has any session (custom or NextAuth), allow through
+  // If user has any session (custom, guest, or NextAuth), allow through
   if (hasAnySession(req)) {
     return NextResponse.next();
   }
 
-  // No session + auth is configured → redirect to login
+  // No session → redirect to login
   const loginUrl = new URL("/login", req.url);
   loginUrl.searchParams.set("callbackUrl", pathname);
   return NextResponse.redirect(loginUrl);

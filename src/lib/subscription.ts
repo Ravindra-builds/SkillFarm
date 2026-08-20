@@ -1,81 +1,52 @@
 /**
  * Subscription Architecture & Feature Gate
  *
- * Plan limits:
- * - Free tier : Generous limits in dev/preview (500 messages), 50 mentor messages in prod
- * - Pro tier  : Unlimited
+ * All users (guest and authenticated) operate under the single standard tier:
+ * - Production : Strict free-tier limits (Single source of truth: RATE_LIMITS in rate-limits.ts)
+ * - Development: Generous dev-tier limits for local testing
  *
- * Storage strategy:
- * - Redis (Upstash): preferred in production — usage counters persist across
- *   serverless cold starts and Vercel worker restarts. Keys expire daily.
- * - In-memory Map : fallback when Redis is not configured (local dev / preview).
+ * Pro / Unlimited tier is completely removed and unlinked to eliminate any risk of API bill spikes.
  */
 
-import { getRedis } from "@/lib/redis";
-import { PLAN_CONFIG, PlanTier } from "@/config";
+import { PLAN_CONFIG, getPlanConfig } from "@/config/plans";
+import { getFeatureUsage } from "@/lib/rate-limit";
 
-const isDev = process.env.NODE_ENV !== "production";
-
-export type UserPlanTier = PlanTier;
+export type UserPlanTier = "free" | "standard";
 
 export const PLAN_LIMITS = {
-  free: {
-    mentorMessages: PLAN_CONFIG.free.quotas.mentorMessages.limit,
-    researchRuns: PLAN_CONFIG.free.quotas.researchRuns.limit,
+  get free() {
+    return {
+      mentorMessages: PLAN_CONFIG.quotas.mentorMessages.limit,
+      researchRuns: PLAN_CONFIG.quotas.researchRuns.limit,
+      roadmapGenerations: PLAN_CONFIG.quotas.roadmapGenerations.limit,
+      resumeUploads: PLAN_CONFIG.quotas.resumeUploads.limit,
+    };
   },
-  pro: {
-    mentorMessages: PLAN_CONFIG.pro.quotas.mentorMessages.limit,
-    researchRuns: PLAN_CONFIG.pro.quotas.researchRuns.limit,
+  get standard() {
+    return {
+      mentorMessages: PLAN_CONFIG.quotas.mentorMessages.limit,
+      researchRuns: PLAN_CONFIG.quotas.researchRuns.limit,
+      roadmapGenerations: PLAN_CONFIG.quotas.roadmapGenerations.limit,
+      resumeUploads: PLAN_CONFIG.quotas.resumeUploads.limit,
+    };
   },
-} as const;
+};
 
-type FeatureKey = keyof typeof PLAN_LIMITS.free;
+type FeatureKey = "mentorMessages" | "researchRuns" | "roadmapGenerations" | "resumeUploads";
 
-// In-memory fallback maps (used only when Redis is not configured)
-const memUsageStore = new Map<string, Record<FeatureKey, number>>();
-const memPlanStore = new Map<string, UserPlanTier>();
-
-// Redis key helpers
-const usageKey = (userId: string) => `skillfarm:usage:${userId}`;
-const planKey = (userId: string) => `skillfarm:plan:${userId}`;
-
-/** Get the plan tier for a user. Defaults to "free" (or "pro" for preview testing in dev). */
-export async function getUserPlan(userId: string): Promise<UserPlanTier> {
-  const redis = await getRedis();
-  if (redis) {
-    try {
-      const tier = await redis.get<string>(planKey(userId));
-      if (tier) return (tier === "pro" ? "pro" : "free") as UserPlanTier;
-    } catch {
-      // fall through to memory
-    }
-  }
-  return memPlanStore.get(userId) ?? (isDev ? "pro" : "free");
+/** Get the plan tier for a user. All users use the free/standard plan tier. */
+export async function getUserPlan(_userId?: string): Promise<UserPlanTier> {
+  return "free";
 }
 
-/** Set the plan tier for a user (called when they upgrade/downgrade). */
-export async function setUserPlan(userId: string, plan: UserPlanTier): Promise<void> {
-  const redis = await getRedis();
-  if (redis) {
-    try {
-      await redis.set(planKey(userId), plan);
-      return;
-    } catch {
-      // fall through to memory
-    }
-  }
-  memPlanStore.set(userId, plan);
+/** Set the plan tier (no-op since only free/standard plan exists). */
+export async function setUserPlan(_userId: string, _plan: UserPlanTier): Promise<void> {
+  // Single tier architecture
 }
 
-/** Reset usage counter for a user (useful for testing or daily reset). */
-export async function resetPlanUsage(userId: string): Promise<void> {
-  const redis = await getRedis();
-  if (redis) {
-    try {
-      await redis.del(usageKey(userId));
-    } catch {}
-  }
-  memUsageStore.delete(userId);
+/** Reset usage counter for a user. */
+export async function resetPlanUsage(_userId: string): Promise<void> {
+  // Managed by rate limiter sliding window
 }
 
 /** Check whether a user is within their plan's limit for a given feature. */
@@ -83,51 +54,100 @@ export async function checkPlanLimit(
   userId: string,
   feature: FeatureKey
 ): Promise<{ allowed: boolean; plan: UserPlanTier; currentUsage: number; maxLimit: number }> {
-  const plan = await getUserPlan(userId);
-  const maxLimit = PLAN_LIMITS[plan][feature];
+  const maxLimit = PLAN_LIMITS.free[feature];
+  const usage = await getFeatureUsage(
+    userId,
+    feature === "mentorMessages" ? "chat" : feature === "researchRuns" ? "research" : feature === "roadmapGenerations" ? "roadmap" : "resume"
+  );
 
-  if (maxLimit === Infinity) {
-    return { allowed: true, plan, currentUsage: 0, maxLimit: Infinity };
-  }
-
-  const redis = await getRedis();
-  if (redis) {
-    try {
-      const raw = await redis.hget<number>(usageKey(userId), feature);
-      const currentUsage = typeof raw === "number" ? raw : parseInt(String(raw ?? "0"), 10);
-      return { allowed: currentUsage < maxLimit, plan, currentUsage, maxLimit };
-    } catch {
-      // fall through to memory
-    }
-  }
-
-  // Memory fallback
-  const userUsage = memUsageStore.get(userId) ?? { mentorMessages: 0, researchRuns: 0 };
-  const currentUsage = userUsage[feature] ?? 0;
-  return { allowed: currentUsage < maxLimit, plan, currentUsage, maxLimit };
+  return {
+    allowed: usage.current < maxLimit,
+    plan: "free",
+    currentUsage: usage.current,
+    maxLimit,
+  };
 }
 
-/** Increment usage counter for a feature. Called after a successful request. */
-export async function incrementPlanUsage(userId: string, feature: FeatureKey): Promise<void> {
-  const redis = await getRedis();
-  if (redis) {
-    try {
-      const key = usageKey(userId);
-      await redis.hincrby(key, feature, 1);
-      const ttl = await redis.ttl(key);
-      if (ttl < 0) {
-        await redis.expire(key, 86400);
-      }
-      return;
-    } catch {
-      // fall through to memory
-    }
-  }
+/** Increment usage counter for a feature. */
+export async function incrementPlanUsage(_userId: string, _feature: FeatureKey): Promise<void> {
+  // Increments are recorded by rate limiter during checkFeatureRateLimit
+}
 
-  // Memory fallback
-  const userUsage = memUsageStore.get(userId) ?? { mentorMessages: 0, researchRuns: 0 };
-  userUsage[feature] = (userUsage[feature] ?? 0) + 1;
-  memUsageStore.set(userId, userUsage);
+export type QuotaItem = {
+  name: string;
+  current: number;
+  limit: number;
+  label: string;
+  percent: number;
+  remaining: number;
+};
+
+export type AccountQuotaStats = {
+  plan: UserPlanTier;
+  planName: string;
+  planBadge: string;
+  planDescription: string;
+  quotas: {
+    mentorMessages: QuotaItem;
+    researchRuns: QuotaItem;
+    roadmapGenerations: QuotaItem;
+    resumeUploads: QuotaItem;
+  };
+};
+
+/**
+ * Returns dynamic account and feature quota statistics linked to the single source of truth.
+ */
+export async function getUserAccountQuotaStats(userId: string): Promise<AccountQuotaStats> {
+  const [chatUsage, researchUsage, roadmapUsage, resumeUsage] = await Promise.all([
+    getFeatureUsage(userId, "chat"),
+    getFeatureUsage(userId, "research"),
+    getFeatureUsage(userId, "roadmap"),
+    getFeatureUsage(userId, "resume"),
+  ]);
+
+  const planCfg = getPlanConfig();
+
+  return {
+    plan: "free",
+    planName: planCfg.name,
+    planBadge: planCfg.badge,
+    planDescription: planCfg.description,
+    quotas: {
+      mentorMessages: {
+        name: "Mentor Chat Messages",
+        current: chatUsage.current,
+        limit: planCfg.quotas.mentorMessages.limit,
+        label: planCfg.quotas.mentorMessages.label,
+        percent: Math.min(100, Math.round((chatUsage.current / Math.max(1, planCfg.quotas.mentorMessages.limit)) * 100)),
+        remaining: chatUsage.remaining,
+      },
+      researchRuns: {
+        name: "Deep Web Research Runs",
+        current: researchUsage.current,
+        limit: planCfg.quotas.researchRuns.limit,
+        label: planCfg.quotas.researchRuns.label,
+        percent: Math.min(100, Math.round((researchUsage.current / Math.max(1, planCfg.quotas.researchRuns.limit)) * 100)),
+        remaining: researchUsage.remaining,
+      },
+      roadmapGenerations: {
+        name: "Roadmap Generations",
+        current: roadmapUsage.current,
+        limit: planCfg.quotas.roadmapGenerations.limit,
+        label: planCfg.quotas.roadmapGenerations.label,
+        percent: Math.min(100, Math.round((roadmapUsage.current / Math.max(1, planCfg.quotas.roadmapGenerations.limit)) * 100)),
+        remaining: roadmapUsage.remaining,
+      },
+      resumeUploads: {
+        name: "Resume Profile Sync",
+        current: resumeUsage.current,
+        limit: planCfg.quotas.resumeUploads.limit,
+        label: planCfg.quotas.resumeUploads.label,
+        percent: Math.min(100, Math.round((resumeUsage.current / Math.max(1, planCfg.quotas.resumeUploads.limit)) * 100)),
+        remaining: resumeUsage.remaining,
+      },
+    },
+  };
 }
 
 /** @deprecated Use async checkPlanLimit() instead */
@@ -135,16 +155,9 @@ export function checkPlanLimitSync(
   userId: string,
   feature: FeatureKey
 ): { allowed: boolean; plan: UserPlanTier; currentUsage: number; maxLimit: number } {
-  const plan = memPlanStore.get(userId) ?? (isDev ? "pro" : "free");
-  const maxLimit = PLAN_LIMITS[plan][feature];
-  const userUsage = memUsageStore.get(userId) ?? { mentorMessages: 0, researchRuns: 0 };
-  const currentUsage = userUsage[feature] ?? 0;
-  return { allowed: currentUsage < maxLimit, plan, currentUsage, maxLimit };
+  const maxLimit = PLAN_LIMITS.free[feature];
+  return { allowed: true, plan: "free", currentUsage: 0, maxLimit };
 }
 
 /** @deprecated Use async incrementPlanUsage() instead */
-export function incrementPlanUsageSync(userId: string, feature: FeatureKey): void {
-  const userUsage = memUsageStore.get(userId) ?? { mentorMessages: 0, researchRuns: 0 };
-  userUsage[feature] = (userUsage[feature] ?? 0) + 1;
-  memUsageStore.set(userId, userUsage);
-}
+export function incrementPlanUsageSync(_userId: string, _feature: FeatureKey): void {}

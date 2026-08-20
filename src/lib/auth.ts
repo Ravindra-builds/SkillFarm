@@ -135,16 +135,7 @@ export const auth = (async () => {
     };
   }
 
-  // Provide isolated per-browser guest identity
-  const guestId = await getGuestUserId();
-  return {
-    user: {
-      id: guestId,
-      name: "Alex (Guest)",
-      email: `${guestId}@skillfarm.local`,
-      image: null,
-    },
-  };
+  return null;
 }) as unknown as typeof nextAuth.auth;
 
 /** Convenience helper — use in server components / API routes */

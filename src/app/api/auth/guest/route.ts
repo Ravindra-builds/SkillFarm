@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const uniqueGuestId = `guest_${randomUUID().slice(0, 12)}`;
-    await createCustomSession(`${uniqueGuestId}@skillfarm.local`, "Alex (Guest)", true);
+    await createCustomSession(`${uniqueGuestId}@skillfarm.local`, "Guest User", true);
     return new Response(JSON.stringify({ success: true, redirectUrl: "/dashboard" }), {
       headers: { "Content-Type": "application/json" },
     });
