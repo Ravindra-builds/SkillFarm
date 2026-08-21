@@ -36,9 +36,9 @@ export default async function ResourcesPage({
   let initialTopic = resolvedParams.topic;
   let initialWeek = resolvedParams.week ? parseInt(resolvedParams.week, 10) : undefined;
   let initialConcepts = resolvedParams.concepts ? resolvedParams.concepts.split(",").map((c) => c.trim()).filter(Boolean) : undefined;
-  let fallbackQuery = resolvedParams.query || "Best resources to learn Node.js, PostgreSQL and AI Engineering";
+  let initialQuery = resolvedParams.query;
 
-  if (!initialTopic) {
+  if (!initialTopic && !initialQuery) {
     try {
       const roadmap = await getRoadmap(userId);
       const currentNode = roadmap?.nodes.find((n) => n.status === "current") ?? roadmap?.nodes.find((n) => n.status === "next") ?? roadmap?.nodes[0];
@@ -49,11 +49,17 @@ export default async function ResourcesPage({
       } else {
         const profile = await getLearningProfile(userId);
         if (profile?.goal) {
-          fallbackQuery = `Best resources to learn ${profile.goal}`;
+          initialTopic = profile.goal;
+        } else {
+          // Clean standard topic that reliably hits cache
+          initialTopic = "Full Stack Web Development & System Design";
+          initialConcepts = ["Architecture", "Databases", "APIs"];
         }
       }
     } catch (err) {
       console.error("[resources/page] failed to build dynamic topic/query:", err);
+      initialTopic = "Full Stack Web Development & System Design";
+      initialConcepts = ["Architecture", "Databases", "APIs"];
     }
   }
 
@@ -68,7 +74,7 @@ export default async function ResourcesPage({
               initialTopic={initialTopic}
               initialWeek={initialWeek}
               initialConcepts={initialConcepts}
-              initialQuery={fallbackQuery}
+              initialQuery={initialQuery}
             />
           </div>
         </main>

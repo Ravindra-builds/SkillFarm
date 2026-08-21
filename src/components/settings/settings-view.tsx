@@ -309,12 +309,15 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
 
   const hasHiddenMemories = memoryFilter !== "recent" && filteredMemories.length > maxDisplayLimit;
 
+  const validEnabledModels = ALL_MODELS.filter((m) => llmPref.enabledModels.includes(m.id));
+  const activeCatalogModels = ALL_MODELS.filter((m) => llmPref.activeProviders.includes(m.provider));
+
   // Tab definitions
   const tabsList = [
     {
       id: "models",
       title: "AI & Models",
-      badge: `${llmPref.enabledModels.length} Active`,
+      badge: `${validEnabledModels.length} Active`,
       icon: Cpu,
     },
     {
@@ -572,185 +575,128 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
             )}
           </div>
 
-          {/* Model Catalog Selection */}
-          <Card className="rounded-2xl border border-border/80">
-            <CardHeader className="p-4 sm:p-6 pb-3">
+          {/* Model Catalog Selection - Unified Single Row Layout with Provider Palettes */}
+          <Card className="rounded-2xl border-2 border-border/80 bg-card shadow-xs">
+            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/50">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
                     <Cpu className="h-4 w-4 text-violet-600" /> Active Model Catalog for Chat
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
-                    Toggle which models appear in the Chat input dropdown. Click &ldquo;Set Default&rdquo; to choose your primary model.
+                    Toggle which models appear in the Chat input dropdown. Click &ldquo;Set default&rdquo; to choose your primary model.
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-xs">
-                  {llmPref.enabledModels.length} models active
+                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20">
+                  {validEnabledModels.length} of {activeCatalogModels.length} enabled
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 space-y-6">
-              {/* Gemini Models Section */}
-              {llmPref.activeProviders.includes("gemini") && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                    <Sparkles className="h-3.5 w-3.5" /> Google Gemini Models
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {geminiModels.map((model) => {
-                      const isEnabled = llmPref.enabledModels.includes(model.id);
-                      const isDefault = llmPref.selectedModel === model.id;
-                      return (
-                        <div
-                          key={model.id}
-                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
-                            isEnabled
-                              ? "border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10"
-                              : "border-border/60 bg-card opacity-60"
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
-                              <input
-                                type="checkbox"
-                                checked={isEnabled}
-                                onChange={() => handleToggleModel(model.id)}
-                                className="h-4 w-4 rounded text-blue-600 accent-blue-600 cursor-pointer"
-                                aria-label={`Enable ${model.name}`}
-                              />
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
-                          </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
-                            {isDefault ? (
-                              <Badge className="bg-blue-600 text-white text-[10px] py-0 px-2">Default</Badge>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                              >
-                                Set default
-                              </Button>
-                            )}
-                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+            <CardContent className="p-4 sm:p-5">
+              <div className={`grid grid-cols-1 ${activeCatalogModels.length === 2 ? "sm:grid-cols-2" : activeCatalogModels.length >= 3 ? "sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"} gap-3.5`}>
+                {activeCatalogModels.map((model) => {
+                  const isEnabled = llmPref.enabledModels.includes(model.id);
+                  const isDefault = llmPref.selectedModel === model.id;
+                  const isGemini = model.provider === "gemini";
+                  const isOpenAi = model.provider === "openai";
 
-              {/* OpenAI Models Section */}
-              {llmPref.activeProviders.includes("openai") && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 uppercase tracking-wider">
-                    <Zap className="h-3.5 w-3.5" /> OpenAI Models
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {openAiModels.map((model) => {
-                      const isEnabled = llmPref.enabledModels.includes(model.id);
-                      const isDefault = llmPref.selectedModel === model.id;
-                      return (
-                        <div
-                          key={model.id}
-                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
-                            isEnabled
-                              ? "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10"
-                              : "border-border/60 bg-card opacity-60"
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
-                              <input
-                                type="checkbox"
-                                checked={isEnabled}
-                                onChange={() => handleToggleModel(model.id)}
-                                className="h-4 w-4 rounded text-emerald-600 accent-emerald-600 cursor-pointer"
-                                aria-label={`Enable ${model.name}`}
-                              />
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
-                          </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
-                            {isDefault ? (
-                              <Badge className="bg-emerald-600 text-white text-[10px] py-0 px-2">Default</Badge>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                              >
-                                Set default
-                              </Button>
-                            )}
-                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                  const providerBorderClass = isGemini
+                    ? isEnabled
+                      ? "border-2 border-blue-500/40 bg-blue-500/[0.04] dark:bg-blue-500/10 shadow-2xs"
+                      : "border border-border/60 bg-card/60 opacity-60"
+                    : isOpenAi
+                    ? isEnabled
+                      ? "border-2 border-emerald-500/40 bg-emerald-500/[0.04] dark:bg-emerald-500/10 shadow-2xs"
+                      : "border border-border/60 bg-card/60 opacity-60"
+                    : isEnabled
+                    ? "border-2 border-amber-500/40 bg-amber-500/[0.04] dark:bg-amber-500/10 shadow-2xs"
+                    : "border border-border/60 bg-card/60 opacity-60";
 
-              {/* Anthropic Models Section (Hidden in production) */}
-              {anthropicModels.length > 0 && llmPref.activeProviders.includes("anthropic") && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 uppercase tracking-wider">
-                    <Brain className="h-3.5 w-3.5" /> Anthropic Claude Models
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {anthropicModels.map((model) => {
-                      const isEnabled = llmPref.enabledModels.includes(model.id);
-                      const isDefault = llmPref.selectedModel === model.id;
-                      return (
-                        <div
-                          key={model.id}
-                          className={`rounded-xl border p-3 sm:p-3.5 transition-all flex flex-col justify-between ${
-                            isEnabled
-                              ? "border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10"
-                              : "border-border/60 bg-card opacity-60"
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs text-foreground">{model.name}</span>
-                              <input
-                                type="checkbox"
-                                checked={isEnabled}
-                                onChange={() => handleToggleModel(model.id)}
-                                className="h-4 w-4 rounded text-amber-600 accent-amber-600 cursor-pointer"
-                                aria-label={`Enable ${model.name}`}
-                              />
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">{model.description}</p>
+                  const badgeClass = isGemini
+                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                    : isOpenAi
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+
+                  const defaultBadgeColor = isGemini
+                    ? "bg-blue-600 text-white"
+                    : isOpenAi
+                    ? "bg-emerald-600 text-white"
+                    : "bg-amber-600 text-white";
+
+                  return (
+                    <div
+                      key={model.id}
+                      className={`rounded-2xl p-3.5 sm:p-4 transition-all flex flex-col justify-between gap-3 ${providerBorderClass}`}
+                    >
+                      <div className="space-y-2">
+                        {/* Header: Provider badge & checkbox */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="flex items-center justify-center h-6 w-6 rounded-lg bg-background border shadow-2xs">
+                              {isGemini ? (
+                                <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                              ) : isOpenAi ? (
+                                <Zap className="h-3.5 w-3.5 text-emerald-600" />
+                              ) : (
+                                <Brain className="h-3.5 w-3.5 text-amber-600" />
+                              )}
+                            </span>
+                            <Badge variant="outline" className={`text-[10px] font-semibold px-2 py-0.2 rounded-md ${badgeClass}`}>
+                              {model.providerName}
+                            </Badge>
                           </div>
-                          <div className="mt-3 pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
-                            {isDefault ? (
-                              <Badge className="bg-amber-600 text-white text-[10px] py-0 px-2">Default</Badge>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleSetDefaultModel(model)}
-                                className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                              >
-                                Set default
-                              </Button>
-                            )}
-                            <span className="font-mono text-muted-foreground truncate max-w-[110px]">{model.id}</span>
-                          </div>
+
+                          <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-muted-foreground hover:text-foreground font-medium">
+                            <span className="text-[10px] hidden sm:inline">{isEnabled ? "Enabled" : "Disabled"}</span>
+                            <input
+                              type="checkbox"
+                              checked={isEnabled}
+                              onChange={() => handleToggleModel(model.id)}
+                              className={`h-4 w-4 rounded cursor-pointer ${
+                                isGemini ? "accent-blue-600" : isOpenAi ? "accent-emerald-600" : "accent-amber-600"
+                              }`}
+                              aria-label={`Enable ${model.name}`}
+                            />
+                          </label>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+
+                        {/* Model Name & Description */}
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-xs sm:text-sm text-foreground">{model.name}</h4>
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted/60 text-muted-foreground font-medium">
+                              {model.badge}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground leading-snug mt-1">{model.description}</p>
+                        </div>
+                      </div>
+
+                      {/* Footer: Default status & Model ID */}
+                      <div className="pt-2 border-t border-border/50 flex items-center justify-between text-[11px] gap-2">
+                        {isDefault ? (
+                          <Badge className={`${defaultBadgeColor} text-[10px] font-bold py-0.5 px-2 rounded-md shadow-2xs`}>
+                            ✓ Primary Default
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleSetDefaultModel(model)}
+                            className="h-6 text-[10px] font-semibold px-2 text-muted-foreground hover:text-foreground hover:bg-muted/60 cursor-pointer rounded-md"
+                          >
+                            Set as default
+                          </Button>
+                        )}
+                        <span className="font-mono text-[10px] text-muted-foreground truncate max-w-[120px]" title={model.id}>
+                          {model.id}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

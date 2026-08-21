@@ -59,6 +59,18 @@ export async function cacheSet(key: string, value: unknown, ttlSec = 3600): Prom
   memCache.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 });
 }
 
+export async function cacheDel(key: string): Promise<void> {
+  const redis = await getRedis();
+  if (redis) {
+    try {
+      await redis.del(key);
+    } catch (err) {
+      console.error("[cache] redis del failed:", err);
+    }
+  }
+  memCache.delete(key);
+}
+
 export function normalizeQuery(query: string): string {
   const STOP_WORDS = new Set(["how", "to", "do", "i", "the", "a", "an", "best", "way", "what", "is", "for", "in", "with", "please", "show", "me", "can", "you"]);
   return query
@@ -79,4 +91,44 @@ export function semanticCacheKey(category: string, query: string): string {
 export function cacheKeyForResearch(query: string, sources: string[]): string {
   const normalized = normalizeQuery(query) || query.toLowerCase().trim().replace(/\s+/g, " ").slice(0, 100);
   return `research:${sources.sort().join(",")}:${normalized}`;
+}
+
+const memLocks = new Map<string, number>();
+
+/**
+ * Single-flight atomic lock helper to prevent concurrent duplicate execution
+ * of expensive operations (e.g. roadmap generation, topic research, resume processing).
+ */
+export async function acquireLock(key: string, ttlSec = 45): Promise<boolean> {
+  const lockKey = `lock:${key}`;
+  const now = Date.now();
+  const redis = await getRedis();
+
+  if (redis) {
+    try {
+      const res = await redis.set(lockKey, "1", { nx: true, ex: ttlSec });
+      return res === "OK";
+    } catch (err) {
+      console.error("[cache] redis acquireLock error, using local fallback:", err);
+    }
+  }
+
+  // Local memory lock fallback
+  const existingExpiry = memLocks.get(lockKey);
+  if (existingExpiry && now < existingExpiry) {
+    return false;
+  }
+  memLocks.set(lockKey, now + ttlSec * 1000);
+  return true;
+}
+
+export async function releaseLock(key: string): Promise<void> {
+  const lockKey = `lock:${key}`;
+  const redis = await getRedis();
+  if (redis) {
+    try {
+      await redis.del(lockKey);
+    } catch {}
+  }
+  memLocks.delete(lockKey);
 }

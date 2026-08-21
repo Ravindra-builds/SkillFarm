@@ -84,8 +84,8 @@ export const RATE_LIMITS: Record<RateLimitAction, { prod: RateLimitRule; dev: Ra
  * Centralized Cache TTLs (in seconds) for Redis & In-Memory Cache
  */
 export const CACHE_TTL = {
-  // 7-day TTL for pre-evaluated topic resource packs (maximizes cross-user cache hits)
-  TOPIC_RESOURCE_PACK_TTL: 7 * 86400, // 604,800s
+  // 30-day TTL for pre-evaluated topic resource packs (maximizes cross-user cache hits for evergreen curricula)
+  TOPIC_RESOURCE_PACK_TTL: 30 * 86400, // 2,592,000s (30 days)
 
   // 1-hour TTL for raw ad-hoc manual research queries
   RESEARCH_QUERY_TTL: 3600, // 3,600s

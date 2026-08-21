@@ -30,11 +30,8 @@ const STORAGE_KEY = "skillfarm:llm-preferences";
 export const DEFAULT_PREFERENCE: LlmPreference = {
   provider: "gemini",
   selectedModel: "gemini-3.5-flash-lite",
-  enabledModels: [
-    "gemini-3.5-flash-lite",
-    "gpt-4o-mini",
-  ],
-  activeProviders: ["gemini", "openai"],
+  enabledModels: ALL_MODELS.map((m) => m.id),
+  activeProviders: Array.from(new Set(ALL_MODELS.map((m) => m.provider))),
 };
 
 export function getStoredLlmPreference(): LlmPreference {
@@ -43,12 +40,46 @@ export function getStoredLlmPreference(): LlmPreference {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PREFERENCE;
     const parsed = JSON.parse(raw);
+
+    const validModelIds = new Set<string>(ALL_MODELS.map((m) => m.id));
+    const validProviders = new Set<string>(ALL_MODELS.map((m) => m.provider));
+
+    // Filter enabledModels strictly to valid models currently in ALL_MODELS
+    const filteredEnabled = Array.isArray(parsed.enabledModels)
+      ? parsed.enabledModels.filter((id: unknown): id is string => typeof id === "string" && validModelIds.has(id))
+      : [];
+
+    const enabledModels =
+      filteredEnabled.length > 0
+        ? filteredEnabled
+        : ALL_MODELS.map((m) => m.id);
+
+    // Ensure selectedModel is valid and present in enabledModels
+    const selectedModel =
+      typeof parsed.selectedModel === "string" && validModelIds.has(parsed.selectedModel) && enabledModels.includes(parsed.selectedModel)
+        ? parsed.selectedModel
+        : enabledModels[0] || ALL_MODELS[0]?.id || "gemini-3.5-flash-lite";
+
+    // Filter activeProviders strictly to active providers
+    const filteredProviders = Array.isArray(parsed.activeProviders)
+      ? parsed.activeProviders.filter((p: unknown): p is string => typeof p === "string" && validProviders.has(p))
+      : [];
+
+    const activeProviders =
+      filteredProviders.length > 0
+        ? filteredProviders
+        : Array.from(new Set(ALL_MODELS.map((m) => m.provider)));
+
+    const provider: "gemini" | "openai" | "anthropic" =
+      typeof parsed.provider === "string" && validProviders.has(parsed.provider)
+        ? (parsed.provider as "gemini" | "openai" | "anthropic")
+        : (ALL_MODELS.find((m) => m.id === selectedModel)?.provider ?? "gemini");
+
     return {
-      ...DEFAULT_PREFERENCE,
-      ...parsed,
-      enabledModels: Array.isArray(parsed.enabledModels) && parsed.enabledModels.length > 0
-        ? parsed.enabledModels
-        : DEFAULT_PREFERENCE.enabledModels,
+      provider,
+      selectedModel,
+      enabledModels,
+      activeProviders,
     };
   } catch {
     return DEFAULT_PREFERENCE;

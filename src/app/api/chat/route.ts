@@ -16,7 +16,7 @@ import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 import { isAllowedModel } from "@/config/models";
 import { formatUserFacingError } from "@/lib/friendly-errors";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
-import { addMemory } from "@/lib/memory/mem0";
+import { addMemory, shouldPersistChatMemory } from "@/lib/memory/mem0";
 import {
   isGuestSession,
   checkGuestQuota,
@@ -401,7 +401,7 @@ export async function POST(req: Request) {
         decision = await routeQuery(
           lastUserText,
           deepContext
-            ? `${deepContext.profileSummary}\n${deepContext.memoriesSummary}`
+            ? deepContext.profileSummary
             : profile
             ? `Goal: ${profile.goal}, Level: ${profile.currentLevel}, Known: ${profile.knownSkills.join(", ")}`
             : undefined,
@@ -451,11 +451,13 @@ export async function POST(req: Request) {
           maxOutputTokens: 800,
           onFinish: async ({ text }) => {
             await saveMessage(conversationId!, "assistant", text, mentorId).catch(() => {});
-            addMemory(
-              userId,
-              `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
-              "chat_interaction"
-            ).catch(() => {});
+            if (shouldPersistChatMemory(lastUserText, history.length, isHandoffFlow)) {
+              addMemory(
+                userId,
+                `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
+                "chat_interaction"
+              ).catch(() => {});
+            }
           },
         });
 
@@ -573,11 +575,13 @@ export async function POST(req: Request) {
       maxOutputTokens: isGuest ? GUEST_CONFIG.MAX_OUTPUT_TOKENS : 800,
       onFinish: async ({ text }) => {
         await saveMessage(conversationId!, "assistant", text, mentorId).catch(() => {});
-        addMemory(
-          userId,
-          `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
-          "chat_interaction"
-        ).catch(() => {});
+        if (shouldPersistChatMemory(lastUserText, history.length)) {
+          addMemory(
+            userId,
+            `User asked about "${lastUserText.slice(0, 100)}" — Mentor gave ${mentorId} guidance: ${text.slice(0, 140)}...`,
+            "chat_interaction"
+          ).catch(() => {});
+        }
       },
     });
 

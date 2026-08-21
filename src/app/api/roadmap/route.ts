@@ -7,6 +7,7 @@ import { scheduleRoadmapResearch } from "@/agents/research/roadmap-research-sche
 import { isGuestSession, checkGuestQuota, recordGuestAction } from "@/lib/guest";
 import { createSafeErrorResponse } from "@/lib/friendly-errors";
 import { isAllowedModel } from "@/config/models";
+import { acquireLock, releaseLock } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -121,28 +122,41 @@ export async function POST(req: Request) {
       await recordGuestAction(userId, "roadmap");
     }
 
-    const roadmap = await generateRoadmap({
-      userId,
-      profile,
-      provider: body.provider,
-      model: body.model,
-    });
+    const lockKey = `roadmap:${userId}`;
+    const acquired = await acquireLock(lockKey, 45);
+    if (!acquired) {
+      return new Response(
+        JSON.stringify({ error: "Roadmap generation is currently in progress. Please wait a moment." }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
+    }
 
-    await saveRoadmap(userId, roadmap);
+    try {
+      const roadmap = await generateRoadmap({
+        userId,
+        profile,
+        provider: body.provider,
+        model: body.model,
+      });
 
-    // Non-blocking rolling 2-week resource discovery
-    scheduleRoadmapResearch(roadmap, profile.currentLevel).catch(() => {});
+      await saveRoadmap(userId, roadmap);
 
-    return new Response(
-      JSON.stringify({
-        ...roadmap,
-        rateLimit: {
-          remaining: rateCheck.remaining,
-          limit: rateCheck.limit,
-        },
-      }),
-      { headers: { "Content-Type": "application/json" } }
-    );
+      // Non-blocking rolling 2-week resource discovery
+      scheduleRoadmapResearch(roadmap, profile.currentLevel).catch(() => {});
+
+      return new Response(
+        JSON.stringify({
+          ...roadmap,
+          rateLimit: {
+            remaining: rateCheck.remaining,
+            limit: rateCheck.limit,
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    } finally {
+      await releaseLock(lockKey);
+    }
   } catch (err) {
     return createSafeErrorResponse(err, { endpoint: "api/roadmap [POST]" });
   }

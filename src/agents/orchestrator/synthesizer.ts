@@ -3,7 +3,7 @@ import { getMentor } from "@/agents/mentors";
 import type { MentorId } from "@/config/mentors";
 import { synthesizerSystemPrompt } from "./prompt";
 import { getLearningProfile } from "@/lib/learning-profile";
-import { addMemory } from "@/lib/memory/mem0";
+import { addMemory, shouldPersistChatMemory } from "@/lib/memory/mem0";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
 import { getLlmModel, isLlmConfigured, getActiveLlmProvider } from "@/lib/llm";
 
@@ -133,7 +133,9 @@ export async function streamSynthesis(
       if (opts?.conversationId && opts?.saveMessage) {
         await opts.saveMessage(opts.conversationId, "assistant", text, mentorIds.join(",")).catch(() => {});
       }
-      addMemory(userId, `Multi-mentor advice synthesized (${mentorIds.join(" + ")}) for: "${query.slice(0, 100)}"`).catch(() => {});
+      if (shouldPersistChatMemory(query, 0, true)) {
+        addMemory(userId, `Multi-mentor advice synthesized (${mentorIds.join(" + ")}) for: "${query.slice(0, 100)}"`).catch(() => {});
+      }
     },
   });
 

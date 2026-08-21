@@ -13,6 +13,7 @@ import { userMemories } from "@/db/schema";
 import { ensureDbUser } from "@/lib/users";
 import { isMockModeForced } from "@/lib/env";
 import { isGuestSession } from "@/lib/guest";
+import { cacheGet, cacheSet, cacheDel } from "@/lib/cache";
 
 export type MemoryItem = {
   id: string;
@@ -21,6 +22,18 @@ export type MemoryItem = {
   score?: number;
   createdAt?: string;
 };
+
+// Circuit breaker for Mem0 Cloud API to prevent repetitive timeouts during cloud outages / rate limits
+let mem0CircuitBreakerUntil = 0;
+
+function isMem0CloudAvailable(): boolean {
+  return Date.now() >= mem0CircuitBreakerUntil;
+}
+
+function tripMem0CircuitBreaker(reason: string) {
+  mem0CircuitBreakerUntil = Date.now() + 5 * 60 * 1000; // 5 minutes
+  console.warn(`[mem0] Circuit breaker tripped for 5 min (${reason}). Bypassing Mem0 Cloud to serve directly from PostgreSQL with 0ms delay.`);
+}
 
 // In-memory cache & fallback when database is unconfigured or user is in guest mode
 const localMemoryStore = new Map<string, MemoryItem[]>(); // userId -> memories[]
@@ -50,6 +63,42 @@ const RESUME_CATEGORIES = new Set([
 ]);
 
 /**
+ * Evaluates whether a chat message turn represents a high-signal milestone or periodic checkpoint
+ * that warrants persisting to long-term memory.
+ */
+export function shouldPersistChatMemory(query: string, historyLength = 0, isHandoff = false): boolean {
+  if (isHandoff) return true;
+  if (!query || query.trim().length < 5) return false;
+
+  const q = query.toLowerCase();
+
+  // Explicit milestone, preference, stack choice, or recall intent
+  const isHighSignal =
+    q.includes("remember") ||
+    q.includes("i prefer") ||
+    q.includes("i'm switching") ||
+    q.includes("i am switching") ||
+    q.includes("my goal") ||
+    q.includes("i'm targeting") ||
+    q.includes("i am targeting") ||
+    q.includes("i built") ||
+    q.includes("i decided") ||
+    q.includes("my stack") ||
+    q.includes("my experience") ||
+    q.includes("note that") ||
+    q.includes("keep in mind");
+
+  if (isHighSignal) return true;
+
+  // Periodic checkpoint: every 6th message turn
+  if (historyLength > 0 && (historyLength + 1) % 6 === 0) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Add or update a long-term memory item for a user.
  * Automatically deduplicates matching memories and syncs to both PostgreSQL and Mem0 Cloud for authenticated users.
  * Guest users are strictly isolated to in-memory/local storage without consuming external resources.
@@ -67,8 +116,8 @@ export async function addMemory(
   const apiKey = process.env.MEM0_API_KEY;
   const shouldReplace = options?.replaceCategory ?? RESUME_CATEGORIES.has(category);
 
-  // 1. Sync to Mem0 Cloud API (Protected: strictly skipped for Guest Mode)
-  if (!isGuest && apiKey && !isPlaceholderKey(apiKey)) {
+  // 1. Sync to Mem0 Cloud API (Protected: strictly skipped for Guest Mode & tripped circuit breaker)
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey) && isMem0CloudAvailable()) {
     try {
       const res = await fetch("https://api.mem0.ai/v1/memories/", {
         method: "POST",
@@ -82,14 +131,18 @@ export async function addMemory(
           infer: true, // Automatically deduplicates and merges similar memories
           metadata: { category },
         }),
+        signal: AbortSignal.timeout(1500),
       });
 
       if (res.ok) {
         const data = await res.json();
         console.log(`[mem0] Cloud memory synchronized for ${userId}:`, data);
+      } else if (res.status === 429 || res.status >= 500) {
+        tripMem0CircuitBreaker(`HTTP ${res.status}`);
       }
     } catch (err) {
-      console.error("[mem0] Mem0 Cloud API call failed:", err);
+      console.error("[mem0] Mem0 Cloud API call failed, persisting locally/DB:", err);
+      tripMem0CircuitBreaker(err instanceof Error ? err.message : "timeout/error");
     }
   }
 
@@ -151,6 +204,10 @@ export async function addMemory(
           : currentLocal.filter((m) => m.memory.toLowerCase() !== cleanText.toLowerCase());
         localMemoryStore.set(userId, [memoryItem, ...filteredLocal].slice(0, 100));
 
+        // Invalidate context cache & memories list cache
+        cacheDel(`user-ctx:${userId}`).catch(() => {});
+        cacheDel(`memories-list:${userId}`).catch(() => {});
+
         return { success: true, memory: memoryItem };
       }
     } catch (dbErr) {
@@ -175,7 +232,9 @@ export async function addMemory(
   }
 
   updatedList.unshift(newItem);
-  localMemoryStore.set(userId, updatedList.slice(0, 100));
+  // Invalidate context cache & memories list cache so fresh memory is immediately accessible
+  cacheDel(`user-ctx:${userId}`).catch(() => {});
+  cacheDel(`memories-list:${userId}`).catch(() => {});
 
   return { success: true, memory: newItem };
 }
@@ -183,19 +242,34 @@ export async function addMemory(
 /**
  * Retrieve relevant long-term memories for a user.
  * Strategy:
- * 1. If Mem0 Cloud API is configured and query is present, use Mem0 semantic search (most accurate).
+ * 0. If querying general list (!query), check fast 5-minute Redis/memory cache.
+ * 1. If Mem0 Cloud API is configured, healthy, and query is present, use Mem0 semantic search.
  * 2. Fall back to PostgreSQL `user_memories` table (fast, local persistence).
  * 3. Fall back to in-memory local cache.
  */
 export async function getMemories(userId: string, query?: string): Promise<MemoryItem[]> {
   const isGuest = isGuestSession(userId);
   const apiKey = process.env.MEM0_API_KEY;
+  const listCacheKey = `memories-list:${userId}`;
+  const isGeneralListQuery = !query || !query.trim();
 
-  // 1. If Mem0 Cloud API is configured, search semantic memories (Skipped for Guest Mode)
-  if (!isGuest && apiKey && !isPlaceholderKey(apiKey)) {
+  // 0. Check fast cache for general memory list requests (e.g. Settings / Dashboard)
+  if (isGeneralListQuery) {
+    try {
+      const cached = await cacheGet<MemoryItem[]>(listCacheKey);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        return cached;
+      }
+    } catch {
+      // Non-fatal cache miss
+    }
+  }
+
+  // 1. If Mem0 Cloud API is configured & healthy, search semantic memories (Skipped for Guest Mode & Tripped Breaker)
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey) && isMem0CloudAvailable()) {
     try {
       let res: Response;
-      if (query && query.trim()) {
+      if (!isGeneralListQuery) {
         res = await fetch("https://api.mem0.ai/v1/memories/search/", {
           method: "POST",
           headers: {
@@ -203,16 +277,18 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
             Authorization: `Token ${apiKey}`,
           },
           body: JSON.stringify({
-            query: query.trim(),
+            query: query!.trim(),
             user_id: userId,
             limit: 10,
           }),
+          signal: AbortSignal.timeout(1500),
         });
       } else {
         res = await fetch(`https://api.mem0.ai/v1/memories/?user_id=${encodeURIComponent(userId)}`, {
           headers: {
             Authorization: `Token ${apiKey}`,
           },
+          signal: AbortSignal.timeout(1500),
         });
       }
 
@@ -220,7 +296,7 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
         const data = await res.json();
         const items = Array.isArray(data) ? data : data.results ?? [];
         if (items.length > 0) {
-          return items.map((m: Record<string, unknown>) => {
+          const parsedItems: MemoryItem[] = items.map((m: Record<string, unknown>) => {
             const meta = (m.metadata as Record<string, unknown>) ?? {};
             return {
               id: String(m.id ?? `mem_${Date.now()}`),
@@ -230,10 +306,19 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
               createdAt: String(m.created_at ?? m.createdAt ?? new Date().toISOString()),
             };
           });
+
+          if (isGeneralListQuery) {
+            cacheSet(listCacheKey, parsedItems, 300).catch(() => {});
+          }
+
+          return parsedItems;
         }
+      } else if (res.status === 429 || res.status >= 500) {
+        tripMem0CircuitBreaker(`HTTP ${res.status}`);
       }
     } catch (err) {
-      console.error("[mem0] Mem0 Cloud search failed, falling back to PostgreSQL user_memories:", err);
+      console.warn("[mem0] Mem0 Cloud search failed/timed out, falling back immediately to PostgreSQL user_memories:", err);
+      tripMem0CircuitBreaker(err instanceof Error ? err.message : "timeout/error");
     }
   }
 
@@ -258,11 +343,12 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
           createdAt: r.createdAt.toISOString(),
         }));
 
-        if (!query || !query.trim()) {
+        if (isGeneralListQuery) {
+          cacheSet(listCacheKey, items, 300).catch(() => {});
           return items;
         }
 
-        const q = query.toLowerCase();
+        const q = query!.toLowerCase();
         // Priority matching: resume context, skills, projects, and relevant keywords
         const matched = items.filter((m) => {
           const cat = (m.category || "").toLowerCase();
@@ -279,9 +365,13 @@ export async function getMemories(userId: string, query?: string): Promise<Memor
 
   // 3. Fallback local memory store
   const memories = localMemoryStore.get(userId) ?? [];
-  if (!query || !query.trim()) return memories.slice(0, 100);
+  if (isGeneralListQuery) {
+    const list = memories.slice(0, 100);
+    cacheSet(listCacheKey, list, 300).catch(() => {});
+    return list;
+  }
 
-  const q = query.toLowerCase();
+  const q = query!.toLowerCase();
   const matched = memories.filter((m) => {
     const cat = (m.category || "").toLowerCase();
     if (cat === "resume_summary" || cat === "skills") return true;
@@ -310,15 +400,16 @@ export async function deleteMemory(userId: string, memoryId: string): Promise<bo
     }
   }
 
-  // 2. Delete from Mem0 Cloud API (Skipped for Guest Mode)
+  // 2. Delete from Mem0 Cloud API (Skipped for Guest Mode & Tripped Breaker)
   const apiKey = process.env.MEM0_API_KEY;
-  if (!isGuest && apiKey && !isPlaceholderKey(apiKey) && !memoryId.startsWith("mem_")) {
+  if (!isGuest && apiKey && !isPlaceholderKey(apiKey) && isMem0CloudAvailable() && !memoryId.startsWith("mem_")) {
     try {
       await fetch(`https://api.mem0.ai/v1/memories/${encodeURIComponent(memoryId)}/`, {
         method: "DELETE",
         headers: {
           Authorization: `Token ${apiKey}`,
         },
+        signal: AbortSignal.timeout(1500),
       });
     } catch (err) {
       console.error("[mem0] Mem0 Cloud delete failed:", err);
@@ -329,6 +420,10 @@ export async function deleteMemory(userId: string, memoryId: string): Promise<bo
   const existing = localMemoryStore.get(userId) ?? [];
   const updated = existing.filter((m) => m.id !== memoryId);
   localMemoryStore.set(userId, updated);
+
+  // Invalidate context cache & memories list cache on delete
+  cacheDel(`user-ctx:${userId}`).catch(() => {});
+  cacheDel(`memories-list:${userId}`).catch(() => {});
 
   return true;
 }

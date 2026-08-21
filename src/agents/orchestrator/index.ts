@@ -6,7 +6,7 @@ import { getLearningProfile } from "@/lib/learning-profile";
 import { research, formatResourcesForPrompt } from "@/agents/research/research";
 import { wrapUntrustedData } from "@/agents/mentors/tools";
 import { getDeepUserContext } from "@/lib/memory/ingestion";
-import { addMemory } from "@/lib/memory/mem0";
+import { addMemory, shouldPersistChatMemory } from "@/lib/memory/mem0";
 import { getLlmModel, isLlmConfigured } from "@/lib/llm";
 
 /**
@@ -128,7 +128,9 @@ export async function runOrchestratedChat(
       maxOutputTokens: 800,
       onFinish: async ({ text }) => {
         await saveMessage(conversationId, "assistant", text, mentorId).catch(() => {});
-        addMemory(userId, `User asked "${query.slice(0, 100)}" — Mentor responded with ${mentorId} guidance`).catch(() => {});
+        if (shouldPersistChatMemory(query, history.length)) {
+          addMemory(userId, `User asked "${query.slice(0, 100)}" — Mentor responded with ${mentorId} guidance`).catch(() => {});
+        }
       },
     });
     return streamResult.toUIMessageStreamResponse({

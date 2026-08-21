@@ -15,11 +15,8 @@ import {
   Video,
   Code2,
   Layers,
-  ArrowRight,
   ShieldCheck,
   RefreshCw,
-  FolderGit2,
-  Clock,
   Compass,
 } from "lucide-react";
 import type { ScoredResource } from "@/agents/research/scorer";
@@ -41,7 +38,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
   const [activeCategory, setActiveCategory] = useState<"all" | "learn" | "watch" | "practice">("all");
 
   // Manual Search State
-  const [manualQuery, setManualQuery] = useState(initialQuery ?? "");
+  const [manualQuery, setManualQuery] = useState(initialQuery ?? initialTopic ?? "");
   const [manualResults, setManualResults] = useState<ScoredResource[] | null>(null);
   const [manualMeta, setManualMeta] = useState<{ cached: boolean; sourcesUsed: string[]; durationMs: number } | null>(null);
 
@@ -51,15 +48,20 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
 
   useEffect(() => {
     if (initialTopic) {
-      setTopic(initialTopic);
-      setWeek(initialWeek);
-      setConcepts(initialConcepts);
       loadTopicResources(initialTopic, initialConcepts, initialWeek);
     } else if (initialQuery) {
-      setManualQuery(initialQuery);
       runManualSearch(initialQuery);
     }
   }, [initialTopic, initialWeek, initialConcepts, initialQuery]);
+
+  function handleSelectTopic(t: string, c?: string[], w?: number) {
+    setTopic(t);
+    setWeek(w);
+    setConcepts(c);
+    setManualQuery(t);
+    setManualResults(null);
+    loadTopicResources(t, c, w);
+  }
 
   async function loadTopicResources(t: string, c?: string[], w?: number, forceRefresh = false) {
     if (!t.trim()) return;
@@ -231,6 +233,29 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
             >
               {loading ? "Searching..." : "Search"}
             </Button>
+          </div>
+
+          {/* Popular Cached Topic Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-violet-600" /> Popular Topics:
+            </span>
+            {[
+              "PostgreSQL Architecture",
+              "System Design & Microservices",
+              "Redis Caching & Performance",
+              "Docker & Containerization",
+              "Web Security & Authentication",
+            ].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => handleSelectTopic(s)}
+                className="text-[11px] px-2.5 py-0.5 rounded-lg border border-border/80 bg-background/90 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-600 dark:hover:text-violet-400 text-foreground transition-all cursor-pointer shadow-2xs font-medium"
+              >
+                {s}
+              </button>
+            ))}
           </div>
 
           {manualMeta && (

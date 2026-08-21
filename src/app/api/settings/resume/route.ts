@@ -4,6 +4,7 @@ import { checkFeatureRateLimit } from "@/lib/rate-limit";
 import { isGuestSession, checkGuestQuota, recordGuestAction, getGuestState, setGuestState, guestKeys, GUEST_CONFIG } from "@/lib/guest";
 import { uploadFileToR2, isR2Configured } from "@/lib/storage/r2";
 import { createSafeErrorResponse } from "@/lib/friendly-errors";
+import { acquireLock, releaseLock } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -109,83 +110,96 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Process and store in Mem0 / Memory
-    const result = await processAndStoreResume(userId, {
-      pdfBuffer,
-      text: textContent,
-    });
-
-    // 2. Cloudflare R2 Upload (for authenticated users when R2 is configured)
-    let r2UploadResult: { key: string; url: string | null } | null = null;
-    if (!isGuest && isR2Configured() && fileBufferToStore) {
-      try {
-        r2UploadResult = await uploadFileToR2({
-          userId,
-          fileBuffer: fileBufferToStore,
-          fileName,
-          contentType: fileMime,
-        });
-      } catch (r2Err) {
-        console.error("[api/settings/resume] R2 upload warning:", r2Err);
-      }
+    const lockKey = `resume:${userId}`;
+    const acquired = await acquireLock(lockKey, 30);
+    if (!acquired) {
+      return new Response(
+        JSON.stringify({ error: "Resume analysis is already in progress. Please wait a moment." }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // 3. Save Resume record to PostgreSQL database (or guest Redis cache)
-    let resumeRecordId: string | null = null;
-    if (!isGuest) {
-      resumeRecordId = await saveResumeRecord(userId, {
-        fileName,
-        fileSize,
-        fileType: fileMime,
-        storageKey: r2UploadResult?.key ?? null,
-        storageUrl: r2UploadResult?.url ?? null,
-        structured: result.structured,
+    try {
+      // 1. Process and store in Mem0 / Memory
+      const result = await processAndStoreResume(userId, {
+        pdfBuffer,
+        text: textContent,
       });
-    } else {
-      const guestResume = {
-        id: "guest-resume",
-        userId,
-        fileName,
-        fileSize,
-        fileType: fileMime,
-        storageKey: null,
-        storageUrl: null,
-        extractedSkills: result.structured.skills,
-        suggestedLevel: result.structured.suggestedLevel,
-        targetRole: result.structured.targetRole,
-        summary: result.structured.summary,
-        parsedData: result.structured,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      await setGuestState(guestKeys.profile(userId) + ":resume", guestResume, GUEST_CONFIG.SESSION_TTL);
-      resumeRecordId = "guest-resume";
-    }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        resumeId: resumeRecordId,
-        storage: r2UploadResult ? {
-          key: r2UploadResult.key,
-          url: r2UploadResult.url,
-        } : null,
-        parsed: {
+      // 2. Cloudflare R2 Upload (for authenticated users when R2 is configured)
+      let r2UploadResult: { key: string; url: string | null } | null = null;
+      if (!isGuest && isR2Configured() && fileBufferToStore) {
+        try {
+          r2UploadResult = await uploadFileToR2({
+            userId,
+            fileBuffer: fileBufferToStore,
+            fileName,
+            contentType: fileMime,
+          });
+        } catch (r2Err) {
+          console.error("[api/settings/resume] R2 upload warning:", r2Err);
+        }
+      }
+
+      // 3. Save Resume record to PostgreSQL database (or guest Redis cache)
+      let resumeRecordId: string | null = null;
+      if (!isGuest) {
+        resumeRecordId = await saveResumeRecord(userId, {
+          fileName,
+          fileSize,
+          fileType: fileMime,
+          storageKey: r2UploadResult?.key ?? null,
+          storageUrl: r2UploadResult?.url ?? null,
+          structured: result.structured,
+        });
+      } else {
+        const guestResume = {
+          id: "guest-resume",
+          userId,
+          fileName,
+          fileSize,
+          fileType: fileMime,
+          storageKey: null,
+          storageUrl: null,
           extractedSkills: result.structured.skills,
-          experienceSummary: result.structured.summary,
-          keyProjects: result.structured.projects.map((p) => `${p.name}: ${p.description}`),
           suggestedLevel: result.structured.suggestedLevel,
           targetRole: result.structured.targetRole,
-          structured: result.structured,
-        },
-        memoriesStored: result.memoriesStored,
-        rateLimit: {
-          remaining: rateCheck.remaining,
-          limit: rateCheck.limit,
-        },
-      }),
-      { headers: { "Content-Type": "application/json" } }
-    );
+          summary: result.structured.summary,
+          parsedData: result.structured,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        await setGuestState(guestKeys.profile(userId) + ":resume", guestResume, GUEST_CONFIG.SESSION_TTL);
+        resumeRecordId = "guest-resume";
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          resumeId: resumeRecordId,
+          storage: r2UploadResult ? {
+            key: r2UploadResult.key,
+            url: r2UploadResult.url,
+          } : null,
+          parsed: {
+            extractedSkills: result.structured.skills,
+            experienceSummary: result.structured.summary,
+            keyProjects: result.structured.projects.map((p) => `${p.name}: ${p.description}`),
+            suggestedLevel: result.structured.suggestedLevel,
+            targetRole: result.structured.targetRole,
+            structured: result.structured,
+          },
+          memoriesStored: result.memoriesStored,
+          rateLimit: {
+            remaining: rateCheck.remaining,
+            limit: rateCheck.limit,
+          },
+        }),
+        { headers: { "Content-Type": "application/json" } }
+      );
+    } finally {
+      await releaseLock(lockKey);
+    }
   } catch (err) {
     return createSafeErrorResponse(err, { endpoint: "api/settings/resume [POST]" });
   }

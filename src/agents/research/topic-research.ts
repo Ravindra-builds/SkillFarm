@@ -14,7 +14,7 @@ import { searchTavily } from "@/lib/search/tavily";
 import { searchGithub } from "@/lib/search/github";
 import { searchYoutube } from "@/lib/search/youtube";
 import { scoreResource, dedupeByUrl, sortByScore, type ScoredResource } from "./scorer";
-import { cacheGet, cacheSet, normalizeQuery } from "@/lib/cache";
+import { cacheGet, cacheSet, cacheDel, acquireLock, releaseLock, normalizeQuery } from "@/lib/cache";
 import { CACHE_TTL } from "@/config/rate-limits";
 import { isDbAvailable } from "@/lib/env";
 import { getDb } from "@/db";
@@ -171,126 +171,148 @@ export async function getTopicResourcePack(opts: TopicResearchOptions): Promise<
     }
   }
 
-  // 2. Build deterministic queries
-  const queries = buildTopicQueries(topic, concepts, level);
-  const sourcesUsed: string[] = [];
-
-  // 3. Parallel external searches with graceful error isolation
-  const [webRes, githubRes, youtubeRes] = await Promise.all([
-    (async () => {
-      try {
-        const r = await searchTavily({ query: queries.web, maxResults: 5 });
-        sourcesUsed.push("tavily");
-        return r;
-      } catch (err) {
-        console.error(`[topic-research] web search failed for "${topic}":`, err);
-        return [];
-      }
-    })(),
-    (async () => {
-      try {
-        const r = await searchGithub(queries.github, 2);
-        sourcesUsed.push("github");
-        return r;
-      } catch (err) {
-        console.error(`[topic-research] github search failed for "${topic}":`, err);
-        return [];
-      }
-    })(),
-    (async () => {
-      try {
-        const r = await searchYoutube(queries.youtube, 2);
-        sourcesUsed.push("youtube");
-        return r;
-      } catch (err) {
-        console.error(`[topic-research] youtube search failed for "${topic}":`, err);
-        return [];
-      }
-    })(),
-  ]);
-
-  // 4. Score and organize into categories
-  const learnList: ScoredResource[] = [];
-  const watchList: ScoredResource[] = [];
-  const practiceList: ScoredResource[] = [];
-
-  for (const r of webRes) {
-    const isGh = r.url.includes("github.com");
-    const isYt = r.url.includes("youtube.com") || r.url.includes("youtu.be");
-    const src = isGh ? "github" : isYt ? "youtube" : r.url.includes("docs.") || r.url.includes("mozilla.org") ? "docs" : "article";
-
-    const scored = scoreResource({
-      url: r.url,
-      title: r.title,
-      content: r.content,
-      source: src,
-      publishedAt: r.published_date,
-    });
-
-    if (isGh) {
-      practiceList.push(scored);
-    } else if (isYt) {
-      watchList.push(scored);
-    } else {
-      learnList.push(scored);
+  // 2. Single-flight lock deduplication: if another worker is currently fetching this topic, wait and re-check cache
+  const lockKey = `topic:${normalized}`;
+  const acquired = await acquireLock(lockKey, 30);
+  if (!acquired) {
+    // Wait briefly for the concurrent fetch to finish and populate the shared cache
+    await new Promise((r) => setTimeout(r, 400));
+    const newlyCached = await cacheGet<TopicResourcePack>(cacheKey);
+    if (newlyCached && newlyCached.allResources && newlyCached.allResources.length > 0) {
+      return {
+        ...newlyCached,
+        cached: true,
+        durationMs: Date.now() - start,
+      };
     }
   }
 
-  for (const r of youtubeRes) {
-    watchList.push(
-      scoreResource({
+  try {
+    // 3. Build deterministic queries
+    const queries = buildTopicQueries(topic, concepts, level);
+    const sourcesUsed: string[] = [];
+
+    // 4. Parallel external searches with graceful error isolation
+    const [webRes, githubRes, youtubeRes] = await Promise.all([
+      (async () => {
+        try {
+          const r = await searchTavily({ query: queries.web, maxResults: 5 });
+          sourcesUsed.push("tavily");
+          return r;
+        } catch (err) {
+          console.error(`[topic-research] web search failed for "${topic}":`, err);
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const r = await searchGithub(queries.github, 2);
+          sourcesUsed.push("github");
+          return r;
+        } catch (err) {
+          console.error(`[topic-research] github search failed for "${topic}":`, err);
+          return [];
+        }
+      })(),
+      (async () => {
+        try {
+          const r = await searchYoutube(queries.youtube, 2);
+          sourcesUsed.push("youtube");
+          return r;
+        } catch (err) {
+          console.error(`[topic-research] youtube search failed for "${topic}":`, err);
+          return [];
+        }
+      })(),
+    ]);
+
+    // 5. Score and organize into categories
+    const learnList: ScoredResource[] = [];
+    const watchList: ScoredResource[] = [];
+    const practiceList: ScoredResource[] = [];
+
+    for (const r of webRes) {
+      const isGh = r.url.includes("github.com");
+      const isYt = r.url.includes("youtube.com") || r.url.includes("youtu.be");
+      const src = isGh ? "github" : isYt ? "youtube" : r.url.includes("docs.") || r.url.includes("mozilla.org") ? "docs" : "article";
+
+      const scored = scoreResource({
         url: r.url,
         title: r.title,
         content: r.content,
-        source: "youtube",
-        publishedAt: r.publishedAt,
-      })
-    );
+        source: src,
+        publishedAt: r.published_date,
+      });
+
+      if (isGh) {
+        practiceList.push(scored);
+      } else if (isYt) {
+        watchList.push(scored);
+      } else {
+        learnList.push(scored);
+      }
+    }
+
+    for (const r of youtubeRes) {
+      watchList.push(
+        scoreResource({
+          url: r.url,
+          title: r.title,
+          content: r.content,
+          source: "youtube",
+          publishedAt: r.publishedAt,
+        })
+      );
+    }
+
+    for (const r of githubRes) {
+      practiceList.push(
+        scoreResource({
+          url: r.url,
+          title: r.title,
+          content: r.content,
+          source: "github",
+          publishedAt: r.updated_at,
+          stars: r.stars,
+        })
+      );
+    }
+
+    // Deduplicate and sort per category
+    const dedupedLearn = sortByScore(dedupeByUrl(learnList)).slice(0, 4);
+    const dedupedWatch = sortByScore(dedupeByUrl(watchList)).slice(0, 2);
+    const dedupedPractice = sortByScore(dedupeByUrl(practiceList)).slice(0, 2);
+
+    const allResources = dedupeByUrl([...dedupedLearn, ...dedupedWatch, ...dedupedPractice]);
+
+    const pack: TopicResourcePack = {
+      topic,
+      normalizedTopic: normalized,
+      categories: {
+        learn: dedupedLearn,
+        watch: dedupedWatch,
+        practice: dedupedPractice,
+      },
+      allResources,
+      cached: false,
+      sourcesUsed,
+      durationMs: Date.now() - start,
+    };
+
+    // 6. Cache with centralized TTL (30 days) so all users studying this topic reuse the results
+    if (useCache && allResources.length > 0) {
+      await cacheSet(cacheKey, pack, CACHE_TTL.TOPIC_RESOURCE_PACK_TTL).catch(() => {});
+    }
+
+    // 7. Asynchronously persist to DB without blocking
+    if (allResources.length > 0) {
+      persistResourcesToDb(allResources).catch(() => {});
+    }
+
+    return pack;
+  } finally {
+    if (acquired) {
+      await releaseLock(lockKey);
+    }
   }
-
-  for (const r of githubRes) {
-    practiceList.push(
-      scoreResource({
-        url: r.url,
-        title: r.title,
-        content: r.content,
-        source: "github",
-        publishedAt: r.updated_at,
-        stars: r.stars,
-      })
-    );
-  }
-
-  // Deduplicate and sort per category
-  const dedupedLearn = sortByScore(dedupeByUrl(learnList)).slice(0, 4);
-  const dedupedWatch = sortByScore(dedupeByUrl(watchList)).slice(0, 2);
-  const dedupedPractice = sortByScore(dedupeByUrl(practiceList)).slice(0, 2);
-
-  const allResources = dedupeByUrl([...dedupedLearn, ...dedupedWatch, ...dedupedPractice]);
-
-  const pack: TopicResourcePack = {
-    topic,
-    normalizedTopic: normalized,
-    categories: {
-      learn: dedupedLearn,
-      watch: dedupedWatch,
-      practice: dedupedPractice,
-    },
-    allResources,
-    cached: false,
-    sourcesUsed,
-    durationMs: Date.now() - start,
-  };
-
-  // 5. Cache with centralized TTL (7 days) so all users studying this topic reuse the results
-  if (useCache && allResources.length > 0) {
-    await cacheSet(cacheKey, pack, CACHE_TTL.TOPIC_RESOURCE_PACK_TTL).catch(() => {});
-  }
-
-  // 6. Asynchronously persist to DB without blocking
-  if (allResources.length > 0) {
-    persistResourcesToDb(allResources).catch(() => {});
-  }
-
-  return pack;
 }
