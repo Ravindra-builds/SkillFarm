@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MentorTeamGrid } from "@/components/dashboard/mentor-team";
 import { ThemeDropdown } from "@/components/theme/theme-dropdown";
+import { UserNavDropdown } from "@/components/layout/user-nav-dropdown";
 import {
   Sparkles,
   ArrowRight,
@@ -96,8 +97,6 @@ export default async function LandingPage() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeDropdown />
-
             <Link href="/dashboard">
               <Button variant="ghost" size="sm" className="text-xs font-semibold rounded-xl">
                 Dashboard
@@ -105,39 +104,19 @@ export default async function LandingPage() {
             </Link>
 
             {user ? (
-              <div className="flex items-center gap-2">
-                <Link href="/dashboard" className="flex items-center gap-2 group">
-                  {user.image ? (
-                    <img
-                      src={user.image}
-                      alt={user.name ?? "User"}
-                      className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/30 group-hover:ring-primary transition-all shadow-2xs"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold ring-2 ring-primary/30 shadow-2xs">
-                      {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "U"}
-                    </div>
-                  )}
-                  <span className="text-xs font-bold text-foreground hidden md:inline">
-                    {user.name?.split(" ")[0] ?? "Profile"}
-                  </span>
-                </Link>
-                <Link href="/login">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground" title="Sign Out">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
+              <UserNavDropdown user={user} showNameOnDesktop={true} />
             ) : (
               <Link href="/login">
                 <Button
                   size="sm"
                   className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-xl shadow-2xs"
                 >
-                  Sign In <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  Sign in
                 </Button>
               </Link>
             )}
+
+            <ThemeDropdown />
           </div>
         </div>
       </header>

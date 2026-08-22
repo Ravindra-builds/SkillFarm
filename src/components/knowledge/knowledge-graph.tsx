@@ -399,9 +399,11 @@ export function KnowledgeGraph() {
         <CardDescription className="text-xs sm:text-sm max-w-md mx-auto">
           Save your learning profile to generate your structured Concept-First knowledge system.
         </CardDescription>
-        <Button onClick={() => (window.location.href = "/dashboard")} className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-9 px-4">
-          Go to Dashboard
-        </Button>
+        <Link href="/dashboard">
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold h-9 px-4 shadow-2xs cursor-pointer">
+            Go to Dashboard
+          </Button>
+        </Link>
       </Card>
     );
   }

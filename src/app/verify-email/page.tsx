@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
 import {
@@ -16,6 +16,7 @@ import {
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function VerifyEmailForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const token = searchParams.get("token") || "";
@@ -57,7 +58,7 @@ function VerifyEmailForm() {
 
       // Fast, smooth redirect to dashboard
       setTimeout(() => {
-        window.location.href = data.redirectUrl || "/dashboard";
+        router.push(data.redirectUrl || "/dashboard");
       }, 500);
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));

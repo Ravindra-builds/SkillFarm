@@ -126,7 +126,7 @@ export function ProjectsHub() {
     // Auto-unlock check
     const weekTasks = updatedTasks.filter((t) => t.week === task.week);
     const weekAllDone = weekTasks.length > 0 && weekTasks.every((t) => t.completed);
-    let unlocked = [...capstone.unlockedWeeks];
+    const unlocked = [...capstone.unlockedWeeks];
     let nextCurrent = capstone.currentWeek;
 
     if (weekAllDone && !unlocked.includes(task.week + 1)) {
@@ -242,9 +242,11 @@ export function ProjectsHub() {
             <Button onClick={load} variant="outline" size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium">
               Retry
             </Button>
-            <Button onClick={() => (window.location.href = "/roadmap")} size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white">
-              Go to Roadmap
-            </Button>
+            <Link href="/roadmap">
+              <Button size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs cursor-pointer">
+                Go to Roadmap
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -630,7 +632,7 @@ export function ProjectsHub() {
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
                 <span className="leading-relaxed">
-                  <strong className="font-bold">Week {selectedWeek} Deliverable Complete!</strong> All tasks applied to Main-Project. Next week's module is now unlocked in your timeline.
+                  <strong className="font-bold">Week {selectedWeek} Deliverable Complete!</strong> All tasks applied to Main-Project. Next week&apos;s module is now unlocked in your timeline.
                 </span>
               </div>
               {selectedWeek < weekNumbers.length && (

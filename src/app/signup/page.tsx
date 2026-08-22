@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function SignupForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
@@ -58,7 +59,8 @@ function SignupForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        window.location.href = callbackUrl;
+        router.push(callbackUrl);
+        router.refresh();
       } else {
         setError(data.error || AUTH_MESSAGES.GENERIC_ERROR);
       }
@@ -136,7 +138,7 @@ function SignupForm() {
         return;
       }
 
-      window.location.href = data.redirectUrl || "/verify-email";
+      router.push(data.redirectUrl || "/verify-email");
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {

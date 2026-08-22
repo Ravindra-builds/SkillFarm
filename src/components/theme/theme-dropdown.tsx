@@ -13,7 +13,13 @@ const THEME_ICONS: Record<ThemeId, React.ComponentType<{ className?: string }>> 
   aurora: Flame,
 };
 
-export function ThemeDropdown({ className }: { className?: string }) {
+export function ThemeDropdown({
+  className,
+  align = "right",
+}: {
+  className?: string;
+  align?: "left" | "right";
+}) {
   const { theme, setTheme, currentTheme, themes } = useTheme();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,9 +80,14 @@ export function ThemeDropdown({ className }: { className?: string }) {
         <ActiveIcon className="h-4 w-4 text-primary" />
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Dropdown Menu - Screen Boundary Safe */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-64 origin-top-right rounded-2xl border border-border/80 bg-card p-1.5 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 focus:outline-none">
+        <div
+          className={cn(
+            "absolute top-full mt-2 z-50 w-60 sm:w-64 max-w-[calc(100vw-24px)] rounded-2xl border border-border/80 bg-card p-1.5 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in-0 zoom-in-95 focus:outline-none",
+            align === "left" ? "left-0 origin-top-left" : "right-0 origin-top-right"
+          )}
+        >
           <div className="px-3 py-2 border-b border-border/60 mb-1 flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Select Theme</span>
             <span className="text-[10px] font-medium text-primary">4 Presets</span>

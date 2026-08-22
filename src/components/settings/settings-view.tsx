@@ -424,7 +424,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                 </div>
 
                 <div className="mt-2">
-                  <p className={`text-xs font-semibold tracking-tight ${isSelected ? "text-white" : "text-foreground"}`}>
+                  <p className={`text-xs font-semibold tracking-tight ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
                     {tab.title}
                   </p>
                 </div>

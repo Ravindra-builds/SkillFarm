@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
@@ -24,9 +25,9 @@ export default function DashboardError({
           <p className="text-sm font-mono bg-muted p-3 rounded-lg border overflow-auto">{error.message}</p>
           <div className="flex gap-2">
             <Button onClick={() => reset()}>Try again</Button>
-            <Button variant="outline" onClick={() => (window.location.href = "/login")}>
-              Go to login
-            </Button>
+            <Link href="/login">
+              <Button variant="outline">Go to login</Button>
+            </Link>
           </div>
           <p className="text-xs text-muted-foreground">
             If this persists, check <code className="font-mono bg-muted px-1 rounded">.env.local</code> — placeholders like <code>ep-xxx</code> / <code>your-google</code> are treated as not configured and should not crash. See <code>SETUP.md</code>.

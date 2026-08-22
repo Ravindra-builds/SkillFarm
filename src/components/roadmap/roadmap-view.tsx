@@ -338,9 +338,11 @@ export function RoadmapView() {
             <Button onClick={load} variant="outline" size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium border-border/80">
               Retry Loading
             </Button>
-            <Button onClick={() => (window.location.href = "/dashboard")} size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs">
-              Go to Dashboard
-            </Button>
+            <Link href="/dashboard">
+              <Button size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs cursor-pointer">
+                Go to Dashboard
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

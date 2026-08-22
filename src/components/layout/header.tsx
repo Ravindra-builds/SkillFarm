@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ThemeDropdown } from "@/components/theme/theme-dropdown";
+import { UserNavDropdown } from "@/components/layout/user-nav-dropdown";
 
 export type NavItem = {
   href: string;
@@ -53,6 +54,9 @@ type HeaderProps = {
 export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Mobile drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -114,7 +118,7 @@ export function Header({ user }: HeaderProps) {
     <header className="sticky top-0 z-30 flex h-[64px] items-center justify-between border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6">
       <div className="flex items-center gap-2 min-w-0">
         {/* Mobile menu drawer */}
-        <Sheet>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger
             render={
               <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 rounded-lg shrink-0">
@@ -124,9 +128,14 @@ export function Header({ user }: HeaderProps) {
           />
           <SheetContent side="left" className="p-0 w-[280px] bg-card text-foreground border-r border-border shadow-2xl flex flex-col justify-between">
             <div>
-              {/* Brand Header */}
-              <div className="flex h-[64px] items-center gap-3 px-5 border-b border-border/80">
-                <div className="relative flex h-9.5 w-9.5 shrink-0 items-center justify-center">
+              {/* Brand Header - Clickable Link to Home Page */}
+              <Link
+                href="/"
+                onClick={() => setDrawerOpen(false)}
+                className="flex h-[64px] items-center gap-3 px-5 border-b border-border/80 group cursor-pointer hover:bg-muted/40 transition-colors"
+                title="Go to SkillFarm Home"
+              >
+                <div className="relative flex h-9.5 w-9.5 shrink-0 items-center justify-center group-hover:scale-105 transition-transform">
                   <Image src="/logo.png" alt="SkillFarm Logo" width={38} height={38} className="h-full w-full object-contain" />
                 </div>
                 <div>
@@ -140,7 +149,7 @@ export function Header({ user }: HeaderProps) {
                     Plant knowledge. Grow skills.
                   </p>
                 </div>
-              </div>
+              </Link>
 
               {/* Drawer Links */}
               <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-170px)]">
@@ -151,6 +160,7 @@ export function Header({ user }: HeaderProps) {
                     <Link
                       key={i.href}
                       href={i.href}
+                      onClick={() => setDrawerOpen(false)}
                       className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                         isActive
                           ? "bg-primary text-primary-foreground shadow-2xs font-bold"
@@ -293,30 +303,17 @@ export function Header({ user }: HeaderProps) {
       </div>
 
       {/* Right Header Navigation */}
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-2.5 sm:gap-2 shrink-0">
         <ThemeDropdown />
 
-        <Link href="/settings">
+        <Link href="/settings" className="hidden sm:inline-flex">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" title="Settings">
             <Settings className="h-4 w-4" />
           </Button>
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-2">
-            {user.image ? (
-              <img src={user.image} alt={user.name ?? "user"} className="h-7 w-7 rounded-full object-cover ring-1 ring-border shrink-0" />
-            ) : (
-              <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold ring-1 ring-border shrink-0">
-                {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "?"}
-              </div>
-            )}
-            <Link href="/login" className="hidden sm:inline-flex">
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" title="Sign Out">
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
+          <UserNavDropdown user={user} />
         ) : (
           <Link href="/login">
             <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-2xs">

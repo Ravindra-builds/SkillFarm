@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { AlertCircle, Loader2, Sparkles } from "lucide-react";
 import { AUTH_MESSAGES, getSafeAuthErrorMessage } from "@/lib/auth-errors";
 
 function LoginForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get("callbackUrl");
 
@@ -65,7 +66,8 @@ function LoginForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        window.location.href = callbackUrl;
+        router.push(callbackUrl);
+        router.refresh();
       } else {
         setError(data.error || AUTH_MESSAGES.GENERIC_ERROR);
       }
@@ -113,14 +115,15 @@ function LoginForm() {
 
       if (!res.ok) {
         if (data.requiresVerification && data.redirectUrl) {
-          window.location.href = data.redirectUrl;
+          router.push(data.redirectUrl);
           return;
         }
         setError(data.error || AUTH_MESSAGES.INVALID_CREDENTIALS);
         return;
       }
 
-      window.location.href = data.redirectUrl || callbackUrl;
+      router.push(data.redirectUrl || callbackUrl);
+      router.refresh();
     } catch (err) {
       setError(getSafeAuthErrorMessage(err));
     } finally {
