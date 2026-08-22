@@ -269,29 +269,22 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
   // ══════════════════════════════════════════════════════════════════════════
   if (!isEditing) {
     return (
-      <div className="space-y-3 sm:space-y-4">
-        {/* Card 1: Primary Target Goal & Profile Header - Rich Violet Palette */}
-        <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-4 sm:p-5 shadow-sm space-y-3">
+      <div className="space-y-4">
+        {/* Card 1: Primary Target Goal & Profile Header */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-violet-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                <span className="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
                   <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </span>
-                <h2 className="font-heading text-base sm:text-lg lg:text-xl font-bold tracking-tight text-foreground">
+                <h2 className="font-heading text-base sm:text-lg font-bold tracking-tight text-foreground">
                   Personalized Learning Profile
                 </h2>
                 <Badge variant="outline" className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.2 sm:py-0.5 font-medium ${currentLevelConfig.badgeColor}`}>
                   <TrendingUp className="h-3 w-3 mr-1" /> {currentLevelConfig.label}
                 </Badge>
-                <Badge className="bg-emerald-600 text-white text-[10px] sm:text-[11px] px-2 py-0.2">
-                  Active Context
-                </Badge>
               </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground line-clamp-1 sm:line-clamp-none">
-                {userName ? `Tailored for ${userName}. ` : ""}
-                Mentors synthesize guidance, project drills, and roadmaps around this core profile.
-              </p>
             </div>
 
             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
@@ -299,10 +292,10 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                 variant="outline"
                 size="sm"
                 onClick={toggleResumeUploader}
-                className="h-8 px-3 rounded-xl border-border/80 bg-background/90 text-xs font-medium gap-1.5 transition-all text-foreground hover:bg-muted cursor-pointer shadow-2xs"
+                className="h-8 px-3 rounded-xl border-border/80 bg-background text-xs font-medium gap-1.5 transition-all text-foreground hover:bg-muted cursor-pointer shadow-2xs"
                 title="Upload resume to parse context"
               >
-                <FileText className="h-3.5 w-3.5 text-violet-600" />
+                <FileText className="h-3.5 w-3.5 text-primary" />
                 <span>Upload Resume</span>
               </Button>
 
@@ -310,7 +303,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(true)}
-                className="h-8 px-3 sm:px-4 rounded-xl border-violet-500/40 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="h-8 px-3 sm:px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold gap-1.5 transition-all shadow-2xs cursor-pointer"
               >
                 <Pencil className="h-3.5 w-3.5" /> Edit Profile
               </Button>
@@ -318,8 +311,8 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
 
           {/* Goal Statement Callout */}
-          <div className="rounded-xl border-2 border-violet-500/30 bg-violet-500/[0.08] dark:bg-violet-500/15 p-3 sm:p-3.5 space-y-1 shadow-2xs">
-            <span className="text-[10px] sm:text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider flex items-center gap-1">
+          <div className="rounded-xl border border-primary/30 bg-primary/[0.06] p-3 sm:p-3.5 space-y-1 shadow-2xs">
+            <span className="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1">
               <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Core Target Goal
             </span>
             <p className="font-heading text-sm sm:text-base font-bold text-foreground leading-snug">
@@ -328,43 +321,43 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
         </div>
 
-        {/* Card 2: Learning Cadence & Architecture Strategy - Structured Grid Card */}
-        <div className="rounded-2xl border-2 border-border/80 bg-card p-3.5 sm:p-4.5 space-y-2.5 shadow-xs">
+        {/* Card 2: Learning Cadence & Architecture Strategy */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 space-y-3 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 text-blue-500" /> Learning Cadence & Study Preferences
+              <Clock className="h-3.5 w-3.5 text-primary" /> Learning Cadence & Study Preferences
             </span>
             <span className="text-[11px] text-muted-foreground">Adjustable at any time</span>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {/* Level */}
-            <div className="rounded-xl border-2 border-violet-500/25 bg-violet-500/[0.05] dark:bg-violet-500/10 p-2.5 sm:p-3 space-y-0.5 shadow-2xs">
-              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-violet-600 dark:text-violet-400 font-semibold">
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-0.5 shadow-2xs">
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-primary font-semibold">
                 <TrendingUp className="h-3 w-3" /> Experience Level
               </div>
               <p className="font-bold text-xs sm:text-sm text-foreground capitalize">{level}</p>
             </div>
 
             {/* Weekly Pace */}
-            <div className="rounded-xl border-2 border-blue-500/25 bg-blue-500/[0.05] dark:bg-blue-500/10 p-2.5 sm:p-3 space-y-0.5 shadow-2xs">
-              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-semibold">
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-0.5 shadow-2xs">
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-primary font-semibold">
                 <Clock className="h-3 w-3" /> Weekly Commitment
               </div>
               <p className="font-bold text-xs sm:text-sm text-foreground">{weeklyHours} Hours / Week</p>
             </div>
 
             {/* Learning Style */}
-            <div className="rounded-xl border-2 border-amber-500/25 bg-amber-500/[0.05] dark:bg-amber-500/10 p-2.5 sm:p-3 space-y-0.5 shadow-2xs">
-              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 font-semibold">
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-0.5 shadow-2xs">
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-primary font-semibold">
                 <Brain className="h-3 w-3" /> Learning Style
               </div>
               <p className="font-bold text-xs sm:text-sm text-foreground capitalize">{style}</p>
             </div>
 
             {/* Preferred Format */}
-            <div className="rounded-xl border-2 border-emerald-500/25 bg-emerald-500/[0.05] dark:bg-emerald-500/10 p-2.5 sm:p-3 space-y-0.5 shadow-2xs">
-              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-0.5 shadow-2xs">
+              <div className="flex items-center gap-1 text-[10px] sm:text-xs text-primary font-semibold">
                 <BookOpen className="h-3 w-3" /> Preferred Format
               </div>
               <p className="font-bold text-xs sm:text-sm text-foreground capitalize">{format}</p>
@@ -372,11 +365,11 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
         </div>
 
-        {/* Card 3: Technical Skills Inventory & Stack - Dedicated Tech Card */}
-        <div className="rounded-2xl border-2 border-border/80 bg-card p-3.5 sm:p-4.5 space-y-2.5 shadow-xs">
+        {/* Card 3: Technical Skills Inventory & Stack */}
+        <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 space-y-3 shadow-2xs">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Code2 className="h-3.5 w-3.5 text-violet-600" /> Known Stack & Skills ({skills.length})
+              <Code2 className="h-3.5 w-3.5 text-primary" /> Known Stack & Skills ({skills.length})
             </span>
             <span className="text-[11px] text-muted-foreground">Used for AI prerequisite mapping</span>
           </div>
@@ -385,7 +378,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
             {skills.map((s) => (
               <span
                 key={s}
-                className="rounded-lg sm:rounded-xl border-2 border-violet-500/20 bg-violet-500/5 dark:bg-violet-500/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-foreground shadow-2xs"
+                className="rounded-lg sm:rounded-xl border border-border/80 bg-muted/40 px-2.5 py-1 text-[11px] sm:text-xs font-semibold text-foreground shadow-2xs"
               >
                 {s}
               </span>
@@ -407,15 +400,15 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
   // EDIT MODE: Streamlined & compact on mobile with clear presets
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <Card className="rounded-2xl sm:rounded-3xl border border-violet-500/40 bg-card shadow-md overflow-hidden animate-in fade-in zoom-in-98 duration-200">
+    <Card className="rounded-2xl sm:rounded-3xl border border-border/80 bg-card shadow-2xs overflow-hidden animate-in fade-in zoom-in-98 duration-200">
       <CardHeader className="p-4 sm:p-6 lg:p-7 border-b border-border/50 bg-muted/20">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-violet-600 text-white flex items-center justify-center shadow-xs shrink-0">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-2xs shrink-0">
               <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <div>
-              <CardTitle className="font-heading text-base sm:text-lg lg:text-xl font-bold tracking-tight">
+              <CardTitle className="font-heading text-base sm:text-lg lg:text-xl font-bold tracking-tight text-foreground">
                 {hasExistingProfile ? "Edit Learning Profile" : "Create Your Learning Profile"}
               </CardTitle>
               <CardDescription className="text-[11px] sm:text-xs mt-0.5">
@@ -425,10 +418,10 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
           {hasExistingProfile && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleCancelEdit}
-              className="text-xs h-7 sm:h-8 text-muted-foreground hover:text-foreground"
+              className="text-xs h-8 px-3 rounded-xl border-border/80"
             >
               Cancel Edit
             </Button>
@@ -436,27 +429,29 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-6 lg:p-7 space-y-5 sm:space-y-6">
-        {/* Toggle Resume Uploader Banner */}
-        <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3 flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-violet-600" />
-            <span className="text-xs font-semibold text-foreground">
-              Have a resume (.pdf or text)?
-            </span>
-            <span className="text-[11px] text-muted-foreground hidden sm:inline">
-              Auto-extract skills & experience into Personalized Long-Term Memory
-            </span>
+      <CardContent className="p-4 sm:p-6 lg:p-7 space-y-6">
+        {/* Quick Resume Uploader Drawer */}
+        <div className="rounded-2xl border border-primary/25 bg-primary/[0.04] p-3.5 sm:p-4 flex items-center justify-between flex-wrap gap-2.5 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
+              <FileText className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">Have a Resume or CV (.PDF / Text)?</p>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">
+                Auto-extract your skills, work history, and experience directly into your learning profile.
+              </p>
+            </div>
           </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={toggleResumeUploader}
-            className="h-7 px-2.5 text-xs rounded-lg border-violet-500/30 text-violet-700 dark:text-violet-300 gap-1 font-medium"
+            className="h-8 px-3 text-xs rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1.5 font-semibold shrink-0 cursor-pointer shadow-2xs"
           >
             {showResumeUploader ? "Hide Uploader" : "Upload Resume (.PDF / Text)"}
-            {showResumeUploader ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showResumeUploader ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </Button>
         </div>
 
@@ -466,37 +461,49 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
         )}
 
-        {/* Section 1: Target Goal */}
-        <div className="space-y-2 sm:space-y-2.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="goal" className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" /> Target Engineering Goal
-            </Label>
-            <span className="text-[10px] sm:text-xs text-muted-foreground font-mono">{goal.length}/500</span>
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* SUB-SECTION 1: Target Goal & Engineering Domain                        */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-2xl border-2 border-border bg-card/60 p-4 sm:p-5 space-y-3.5 shadow-sm">
+          <div className="flex items-center justify-between pb-2.5 border-b border-border/70">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold font-mono shadow-2xs">
+                01
+              </span>
+              <div>
+                <Label htmlFor="goal" className="font-heading font-bold text-xs sm:text-sm text-foreground flex items-center gap-1.5">
+                  <Target className="h-4 w-4 text-primary" /> Target Engineering Goal
+                </Label>
+                <p className="text-[11px] text-muted-foreground">What specific role or project milestone are you aiming to master?</p>
+              </div>
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-2 py-0.5 rounded-md border border-border/80 font-bold">
+              {goal.length}/500
+            </span>
           </div>
 
           <Textarea
             id="goal"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="e.g. Become a production-ready backend engineer building a SaaS with Docker and Microservices"
+            placeholder="e.g. Become a production-ready Backend Engineer building distributed systems with Go, Docker, and PostgreSQL"
             rows={2}
-            className="text-xs sm:text-sm rounded-xl resize-none border-border/80 focus:border-violet-500 leading-relaxed"
+            className="text-xs sm:text-sm rounded-xl resize-none border-2 border-border/80 bg-background focus:border-primary leading-relaxed shadow-2xs font-medium"
           />
 
           {/* Quick preset chips */}
-          <div className="space-y-1 pt-0.5">
-            <p className="text-[10px] sm:text-[11px] text-muted-foreground font-medium">Quick suggestions:</p>
-            <div className="flex flex-wrap gap-1">
+          <div className="space-y-1.5 pt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground font-bold uppercase tracking-wider">Quick Role Presets:</p>
+            <div className="flex flex-wrap gap-1.5">
               {GOAL_PRESETS.map((preset) => (
                 <button
                   key={preset}
                   type="button"
                   onClick={() => setGoal(preset)}
-                  className={`text-left rounded-lg border px-2 py-0.5 text-[10px] sm:text-[11px] transition-colors ${
+                  className={`text-left rounded-lg border px-2.5 py-1 text-[11px] transition-all cursor-pointer ${
                     goal === preset
-                      ? "border-violet-500 bg-violet-500/10 text-violet-700 dark:text-violet-300 font-medium"
-                      : "border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      ? "border-primary bg-primary text-primary-foreground font-bold shadow-2xs ring-1 ring-primary/40"
+                      : "border-border/80 bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70"
                   }`}
                 >
                   {preset}
@@ -506,96 +513,123 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
           </div>
         </div>
 
-        {/* Section 2: Experience Level & Weekly Commitment */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-1">
-          {/* Level Cards */}
-          <div className="space-y-2">
-            <Label className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" /> Current Level
-            </Label>
-            <div className="space-y-1.5">
-              {LEVELS.map((l) => {
-                const isSelected = level === l.value;
-                return (
-                  <button
-                    key={l.value}
-                    type="button"
-                    onClick={() => setLevel(l.value)}
-                    className={`w-full rounded-xl border p-2.5 sm:p-3 text-left transition-all flex items-start justify-between ${
-                      isSelected
-                        ? "border-violet-600 bg-violet-500/10 dark:bg-violet-500/15 shadow-2xs"
-                        : "border-border/70 bg-card hover:bg-muted/30 hover:border-border"
-                    }`}
-                  >
-                    <div>
-                      <p className={`text-xs font-semibold ${isSelected ? "text-violet-700 dark:text-violet-300" : "text-foreground"}`}>
-                        {l.label}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                        {l.desc}
-                      </p>
-                    </div>
-                    {isSelected && (
-                      <Check className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0 mt-0.5" />
-                    )}
-                  </button>
-                );
-              })}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* SUB-SECTION 2: Experience Level & Study Bandwidth                      */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-2xl border-2 border-border bg-card/60 p-4 sm:p-5 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/70">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold font-mono shadow-2xs">
+              02
+            </span>
+            <div>
+              <p className="font-heading font-bold text-xs sm:text-sm text-foreground flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4 text-primary" /> Experience Level & Velocity
+              </p>
+              <p className="text-[11px] text-muted-foreground">Calibrate curriculum difficulty and weekly milestone pacing.</p>
             </div>
           </div>
 
-          {/* Weekly Hours Input & Presets */}
-          <div className="space-y-2">
-            <Label htmlFor="hours" className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" /> Weekly Availability
-            </Label>
-            <div className="rounded-xl border border-border/70 bg-card p-3 sm:p-3.5 space-y-3">
-              <div className="flex items-center gap-3">
-                <Input
-                  id="hours"
-                  type="number"
-                  min={1}
-                  max={80}
-                  value={weeklyHours}
-                  onChange={(e) => setWeeklyHours(parseInt(e.target.value || "0", 10))}
-                  className="w-20 text-sm sm:text-base font-bold text-center h-9 sm:h-10 rounded-xl border-border/80"
-                />
-                <div className="space-y-0.5">
-                  <p className="text-xs font-semibold text-foreground">{weeklyHours} Hours / Week</p>
-                  <p className="text-[10px] text-muted-foreground">Adjusts milestone velocity</p>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] text-muted-foreground font-medium">Presets:</span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[5, 10, 15, 20].map((h) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            {/* Level Cards */}
+            <div className="space-y-2">
+              <Label className="font-bold text-xs text-foreground">Current Experience Level</Label>
+              <div className="space-y-2">
+                {LEVELS.map((l) => {
+                  const isSelected = level === l.value;
+                  return (
                     <button
-                      key={h}
+                      key={l.value}
                       type="button"
-                      onClick={() => setWeeklyHours(h)}
-                      className={`rounded-lg border py-1 text-xs font-semibold transition-all ${
-                        weeklyHours === h
-                          ? "border-violet-600 bg-violet-600 text-white"
-                          : "border-border/60 bg-muted/40 text-foreground hover:bg-muted"
+                      onClick={() => setLevel(l.value)}
+                      className={`w-full rounded-xl border-2 p-2.5 sm:p-3 text-left transition-all flex items-start justify-between cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary shadow-2xs font-bold ring-1 ring-primary/40"
+                          : "border-border/80 bg-background hover:bg-muted/40 text-card-foreground"
                       }`}
                     >
-                      {h}h
+                      <div>
+                        <p className={`text-xs font-bold ${isSelected ? "text-primary" : "text-foreground"}`}>
+                          {l.label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                          {l.desc}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      )}
                     </button>
-                  ))}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Weekly Hours Input & Presets */}
+            <div className="space-y-2">
+              <Label htmlFor="hours" className="font-bold text-xs text-foreground flex items-center justify-between">
+                <span>Weekly Study Hours</span>
+                <span className="text-[11px] text-primary font-bold">{weeklyHours}h / week</span>
+              </Label>
+              <div className="rounded-xl border-2 border-border/80 bg-background p-3 sm:p-3.5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="hours"
+                    type="number"
+                    min={1}
+                    max={80}
+                    value={weeklyHours}
+                    onChange={(e) => setWeeklyHours(parseInt(e.target.value || "0", 10))}
+                    className="w-20 text-sm sm:text-base font-bold text-center h-9 sm:h-10 rounded-xl border-2 border-border/80"
+                  />
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground">{weeklyHours} Hours / Week</p>
+                    <p className="text-[10px] text-muted-foreground">Controls roadmap module pacing & hours</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-1.5 border-t border-border/60">
+                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Quick Presets:</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[5, 10, 15, 20].map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setWeeklyHours(h)}
+                        className={`rounded-lg border-2 py-1 text-xs font-bold transition-all cursor-pointer ${
+                          weeklyHours === h
+                            ? "border-primary bg-primary text-primary-foreground shadow-2xs ring-1 ring-primary/40"
+                            : "border-border/70 bg-muted/40 text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {h}h
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 3: Known Skills Tag Manager */}
-        <div id="skills-section" className="space-y-2 pt-1 scroll-mt-6">
-          <div className="flex items-center justify-between">
-            <Label className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <Code2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" /> Known Skills & Technologies ({skills.length}/20)
-            </Label>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">{skills.length} / 20 skills added</span>
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* SUB-SECTION 3: Known Skills Tag Manager                                */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div id="skills-section" className="rounded-2xl border-2 border-border bg-card/60 p-4 sm:p-5 space-y-3.5 shadow-sm scroll-mt-6">
+          <div className="flex items-center justify-between pb-2.5 border-b border-border/70 flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold font-mono shadow-2xs">
+                03
+              </span>
+              <div>
+                <Label className="font-heading font-bold text-xs sm:text-sm text-foreground flex items-center gap-1.5">
+                  <Code2 className="h-4 w-4 text-primary" /> Known Technical Skills & Tools
+                </Label>
+                <p className="text-[11px] text-muted-foreground">List technologies you already know to prevent redundant roadmap beginner modules.</p>
+              </div>
+            </div>
+            <span className="text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-md border border-primary/30">
+              {skills.length} / 20 skills added
+            </span>
           </div>
 
           <div className="flex gap-2">
@@ -608,8 +642,8 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                   addSkill();
                 }
               }}
-              placeholder="Type a skill (e.g. Docker, PostgreSQL, Go) and press Enter"
-              className="text-xs sm:text-sm rounded-xl h-9 border-border/80 focus:border-violet-500"
+              placeholder="Type a skill (e.g. Docker, TypeScript, PostgreSQL) and press Enter"
+              className="text-xs sm:text-sm rounded-xl h-9 border-2 border-border/80 bg-background focus:border-primary font-medium"
               disabled={skills.length >= 20}
             />
             <Button
@@ -617,89 +651,102 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
               variant="outline"
               onClick={addSkill}
               disabled={!skillInput.trim() || skills.length >= 20}
-              className="h-9 px-3.5 rounded-xl text-xs font-semibold gap-1 shrink-0"
+              className="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 shrink-0 border-2 border-border/80 cursor-pointer shadow-2xs"
             >
-              <Plus className="h-3 w-3" /> Add
+              <Plus className="h-3.5 w-3.5" /> Add Skill
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-1.5 min-h-[36px] p-2.5 rounded-xl border border-dashed border-border/70 bg-muted/10">
+          <div className="flex flex-wrap gap-1.5 min-h-[44px] p-3 rounded-xl border-2 border-dashed border-border/80 bg-background">
             {skills.map((s) => (
               <span
                 key={s}
-                className="inline-flex items-center gap-1 rounded-lg sm:rounded-xl border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-foreground transition-all hover:bg-violet-500/15"
+                className="inline-flex items-center gap-1.5 rounded-lg border-2 border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-foreground transition-all hover:bg-primary/15 shadow-2xs"
               >
                 {s}
                 <button
                   type="button"
                   onClick={() => removeSkill(s)}
-                  className="rounded-full p-0.5 text-muted-foreground hover:text-foreground hover:bg-violet-500/20 transition-colors"
+                  className="rounded-full p-0.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                   aria-label={`Remove ${s}`}
                 >
-                  <X className="h-2.5 w-2.5" />
+                  <X className="h-3 w-3" />
                 </button>
               </span>
             ))}
             {skills.length === 0 && (
-              <span className="text-xs text-muted-foreground/80 py-0.5">
-                No skills added yet. Add skills or upload your resume above to populate.
+              <span className="text-xs text-muted-foreground py-1">
+                No skills added yet. Add known technologies above or use the Resume Uploader to extract them automatically.
               </span>
             )}
           </div>
         </div>
 
-        {/* Section 4: Learning Style & Preferred Format */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-1">
-          {/* Style */}
-          <div className="space-y-2">
-            <Label className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <Brain className="h-3.5 w-3.5 text-violet-600" /> Learning Style
-            </Label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {STYLES.map((s) => {
-                const isSelected = style === s.value;
-                return (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setStyle(s.value)}
-                    className={`rounded-xl border p-2.5 text-left transition-all ${
-                      isSelected
-                        ? "border-violet-600 bg-violet-500/10 text-violet-700 dark:text-violet-300 font-semibold"
-                        : "border-border/70 bg-card hover:bg-muted/30 text-foreground"
-                    }`}
-                  >
-                    <p className="text-xs font-semibold capitalize">{s.label}</p>
-                    <p className="text-[9px] text-muted-foreground line-clamp-1">{s.desc}</p>
-                  </button>
-                );
-              })}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        {/* SUB-SECTION 4: Learning Style & Output Format                          */}
+        {/* ══════════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-2xl border-2 border-border bg-card/60 p-4 sm:p-5 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2.5 pb-2.5 border-b border-border/70">
+            <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xs font-bold font-mono shadow-2xs">
+              04
+            </span>
+            <div>
+              <p className="font-heading font-bold text-xs sm:text-sm text-foreground flex items-center gap-1.5">
+                <Brain className="h-4 w-4 text-primary" /> Learning Style & Resource Preferences
+              </p>
+              <p className="text-[11px] text-muted-foreground">Tailors mentor explanations, research recommendations, and practical drills.</p>
             </div>
           </div>
 
-          {/* Format */}
-          <div className="space-y-2">
-            <Label className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-foreground">
-              <BookOpen className="h-3.5 w-3.5 text-violet-600" /> Preferred Format
-            </Label>
-            <div className="grid grid-cols-2 gap-1.5">
-              {FORMATS.map((f) => {
-                const isSelected = format === f.value;
-                return (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => setFormat(f.value)}
-                    className={`rounded-xl border p-2.5 text-left transition-all ${
-                      isSelected
-                        ? "border-violet-600 bg-violet-500/10 text-violet-700 dark:text-violet-300 font-semibold"
-                        : "border-border/70 bg-card hover:bg-muted/30 text-foreground"
-                    }`}
-                  >
-                    <p className="text-xs font-semibold">{f.label}</p>
-                  </button>
-                );
-              })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            {/* Style */}
+            <div className="space-y-2">
+              <Label className="font-bold text-xs text-foreground">Preferred Learning Style</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {STYLES.map((s) => {
+                  const isSelected = style === s.value;
+                  return (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => setStyle(s.value)}
+                      className={`rounded-xl border-2 p-2.5 text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-2xs ring-1 ring-primary/40"
+                          : "border-border/80 bg-background hover:bg-muted/40 text-foreground"
+                      }`}
+                    >
+                      <p className="text-xs font-bold capitalize">{s.label}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{s.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Format */}
+            <div className="space-y-2">
+              <Label className="font-bold text-xs text-foreground">Preferred Resource Format</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {FORMATS.map((f) => {
+                  const isSelected = format === f.value;
+                  return (
+                    <button
+                      key={f.value}
+                      type="button"
+                      onClick={() => setFormat(f.value)}
+                      className={`rounded-xl border-2 p-2.5 text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "border-primary bg-primary/10 text-primary font-bold shadow-2xs ring-1 ring-primary/40"
+                          : "border-border/80 bg-background hover:bg-muted/40 text-foreground"
+                      }`}
+                    >
+                      <p className="text-xs font-bold">{f.label}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">Prioritize {f.label.toLowerCase()}</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -707,7 +754,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         {/* Status / Error Message */}
         {msg && (
           <div
-            className={`rounded-xl border p-3 flex items-center gap-2.5 text-xs font-medium ${
+            className={`rounded-xl border p-3.5 flex items-center gap-2.5 text-xs font-medium ${
               msg.type === "error"
                 ? "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300"
                 : "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
@@ -723,44 +770,44 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 pt-2 border-t border-border/50">
-          <Button
-            onClick={submit}
-            disabled={isPending}
-            className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl px-5 h-9 text-xs sm:text-sm font-semibold gap-1.5 shadow-2xs"
-          >
-            {isPending ? (
-              "Saving Profile..."
-            ) : (
-              <>
-                <Save className="h-3.5 w-3.5" /> Save Learning Profile
-              </>
-            )}
-          </Button>
-
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/60">
           {hasExistingProfile && (
             <Button
               variant="outline"
               type="button"
               onClick={handleCancelEdit}
               disabled={isPending}
-              className="rounded-xl h-9 px-3.5 text-xs font-medium border-border/80"
+              className="rounded-xl h-9 px-4 text-xs font-medium border-border/80 cursor-pointer"
             >
               Cancel
             </Button>
           )}
+
+          <Button
+            onClick={submit}
+            disabled={isPending}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-9 sm:h-10 text-xs sm:text-sm font-bold gap-2 shadow-2xs cursor-pointer"
+          >
+            {isPending ? (
+              "Saving Profile..."
+            ) : (
+              <>
+                <Save className="h-4 w-4" /> Save Learning Profile
+              </>
+            )}
+          </Button>
         </div>
       </CardContent>
 
       {/* 2-Step Roadmap Regeneration Confirmation Modal */}
       {showRegenModal && pendingPayload && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <Card className="w-full max-w-lg rounded-3xl border border-violet-500/30 bg-card p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
+          <Card className="w-full max-w-lg rounded-3xl border border-border/80 bg-card p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-200">
             {regenStep === 1 ? (
               /* STEP 1: Regeneration Prompt */
               <>
                 <div className="flex items-start gap-3.5">
-                  <div className="h-10 w-10 rounded-2xl bg-violet-600/15 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center shrink-0 shadow-inner">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div className="space-y-1">
@@ -776,18 +823,18 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                 <div className="rounded-2xl border border-border/70 bg-muted/20 p-3.5 space-y-1 text-xs text-muted-foreground">
                   <div className="flex items-center gap-2 text-foreground font-semibold">
                     <span>Target Goal:</span>
-                    <span className="text-violet-600 dark:text-violet-400 truncate">“{pendingPayload.goal}”</span>
+                    <span className="text-primary truncate">“{pendingPayload.goal}”</span>
                   </div>
                   <p>Level: <strong className="capitalize text-foreground">{pendingPayload.currentLevel}</strong> • {pendingPayload.knownSkills.length} Skills Added</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t">
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-border/50">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => performSave(pendingPayload, false)}
                     disabled={isPending}
-                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium order-2 sm:order-1"
+                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium order-2 sm:order-1 border-border/80"
                   >
                     Keep Current Roadmap
                   </Button>
@@ -795,7 +842,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                     type="button"
                     onClick={() => setRegenStep(2)}
                     disabled={isPending}
-                    className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-xs order-1 sm:order-2"
+                    className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-2xs order-1 sm:order-2"
                   >
                     <Sparkles className="h-3.5 w-3.5" /> Regenerate Roadmap & Projects
                   </Button>
@@ -822,7 +869,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                   <strong>Warning:</strong> Existing checked tasks and module badges in your current roadmap will be reset and rebuilt around your new profile.
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t">
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2 border-t border-border/50">
                   <Button
                     type="button"
                     variant="ghost"
@@ -837,7 +884,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                     variant="outline"
                     onClick={() => performSave(pendingPayload, false)}
                     disabled={isPending}
-                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium"
+                    className="w-full sm:w-auto text-xs h-9 rounded-xl font-medium border-border/80"
                   >
                     Cancel & Keep Progress
                   </Button>
@@ -845,7 +892,7 @@ export function LearningProfileForm({ initial, action, userName }: Props) {
                     type="button"
                     onClick={() => performSave(pendingPayload, true)}
                     disabled={isPending || isRegenerating}
-                    className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-xs"
+                    className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-9 px-4 rounded-xl font-semibold gap-1.5 shadow-2xs"
                   >
                     {isRegenerating ? (
                       <>

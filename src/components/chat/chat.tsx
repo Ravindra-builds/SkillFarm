@@ -177,7 +177,7 @@ function FriendlyServiceErrorCard({
             {error.retryable && onRetry && (
               <Button
                 size="sm"
-                className="h-8 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-lg gap-1.5 font-medium shadow-xs"
+                className="h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg gap-1.5 font-semibold shadow-2xs cursor-pointer"
                 onClick={onRetry}
               >
                 <RefreshCw className="h-3 w-3" /> Try Again
@@ -232,11 +232,13 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
   const [guestMessageLimitReached, setGuestMessageLimitReached] = useState(false);
   const [guestNoticeText, setGuestNoticeText] = useState<string | null>(null);
 
-  useEffect(() => {
+  const [prevInitialConv, setPrevInitialConv] = useState(initialConv);
+  if (initialConv !== prevInitialConv) {
+    setPrevInitialConv(initialConv);
     if (initialConv) {
       setConvId(initialConv);
     }
-  }, [initialConv]);
+  }
 
   const [isMock, setIsMock] = useState(false);
   const [decision, setDecision] = useState<{ requiredMentors: string[]; reasoning: string; confidence: number } | null>(null);
@@ -532,7 +534,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
     : mentor?.config.expertise.slice(0, 4).join(" • ") ?? "";
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden min-w-0">
       {/* Subtle Guest Top Conversion Banner */}
       {isMockUser && (
         <div className="border-b bg-violet-500/10 border-violet-500/20 px-3 sm:px-6 py-2 flex items-center justify-between gap-3 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
@@ -546,11 +548,11 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         </div>
       )}
 
-      <div className="border-b bg-card/50 backdrop-blur px-3 sm:px-6 py-2.5 sm:py-3 flex items-center gap-2 sm:gap-3">
+      <div className="border-b bg-card/50 backdrop-blur px-3 sm:px-6 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Mobile: history drawer trigger */}
         <Sheet open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
           <SheetTrigger
-            className="md:hidden h-8 w-8 inline-flex items-center justify-center shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="md:hidden h-8 w-8 inline-flex items-center justify-center shrink-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-border/60"
             title="Conversation history"
             aria-label="Open conversation history"
           >
@@ -568,7 +570,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden h-8 w-8 shrink-0 text-primary hover:bg-primary/10"
+          className="md:hidden h-8 w-8 shrink-0 rounded-xl text-primary hover:bg-primary/10 border border-primary/20"
           onClick={handleNewChat}
           disabled={isCreatingChat}
           title="New chat"
@@ -580,23 +582,25 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           )}
         </Button>
 
-        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold shrink-0" style={{ background: headerColor }}>
+        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs relative" style={{ background: headerColor }}>
           {isAuto ? <Network className="h-4 w-4" /> : (mentor?.config.shortName[0] ?? "M")}
+          {isStreaming && (
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background animate-pulse" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <p className="font-heading font-semibold leading-none text-xs sm:text-sm">{headerTitle}</p>
+            <p className="font-heading font-bold leading-none text-xs sm:text-sm text-foreground">{headerTitle}</p>
             {isAuto ? (
-              <Badge className="bg-[#7C5CFC] text-white border-0 text-[10px] sm:text-[11px] py-0">Auto Router</Badge>
+              <Badge className="bg-primary text-primary-foreground border-0 text-[10px] py-0 font-semibold rounded-md">Auto Router</Badge>
             ) : (
-              <Badge className="text-white border-0 text-[10px] sm:text-[11px] py-0" style={{ background: mentor?.config.color }}>
+              <Badge className="text-white border-0 text-[10px] py-0 font-semibold rounded-md" style={{ background: mentor?.config.color }}>
                 {mentor?.config.role}
               </Badge>
             )}
-            {isMock && <Badge variant="outline" className="text-[10px] sm:text-[11px] bg-amber-500/10 text-amber-700 border-amber-500/20 py-0">Mock</Badge>}
-            {isStreaming && <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />}
+            {isMock && <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 py-0">Mock</Badge>}
           </div>
-          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">{headerSubtitle}</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">{headerSubtitle}</p>
         </div>
 
         <div className="hidden sm:flex items-center gap-2">
@@ -605,7 +609,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
             size="sm"
             onClick={handleNewChat}
             disabled={isCreatingChat}
-            className="h-8 gap-1.5 text-xs border-border/60 bg-background/60 hover:bg-accent font-medium text-foreground"
+            className="h-8 gap-1.5 text-xs border-border/70 bg-card hover:bg-muted font-semibold text-foreground rounded-xl shadow-2xs cursor-pointer"
             title="Start a new chat"
           >
             {isCreatingChat ? (
@@ -619,7 +623,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
           <select
             value={mentorId}
             onChange={(e) => switchMentor(e.target.value as MentorId | "auto")}
-            className="h-8 rounded-lg border bg-background px-2 text-xs min-w-[130px]"
+            className="h-8 rounded-xl border border-border/80 bg-card px-2 text-xs font-semibold min-w-[135px] text-foreground cursor-pointer shadow-2xs"
             aria-label="Select mentor"
           >
             <option value="auto">Auto (Orchestrator)</option>
@@ -633,21 +637,25 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         </div>
       </div>
 
-      {/* Mobile: Mentor Pills */}
-      <div className="sm:hidden border-b bg-card px-3 py-2 flex gap-1.5 overflow-x-auto">
+      {/* Mobile: Mentor Horizontal Quick Rail */}
+      <div className="sm:hidden border-b border-border/60 bg-muted/20 px-2.5 py-1.5 flex gap-1.5 overflow-x-auto no-scrollbar shrink-0">
         <button
           onClick={() => switchMentor("auto")}
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${isAuto ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
-          style={isAuto ? { background: "#7C5CFC" } : undefined}
+          className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+            isAuto ? "bg-primary text-primary-foreground shadow-2xs" : "bg-card border border-border/60 text-muted-foreground hover:text-foreground"
+          }`}
         >
-          Auto
+          ⚡ Auto Router
         </button>
         {allMentors.map((m) => (
           <button
             key={m.id}
             onClick={() => switchMentor(m.id as MentorId)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium border transition ${mentorId === m.id ? "text-white border-transparent" : "bg-muted hover:bg-muted/80"}`}
-            style={mentorId === m.id ? { background: m.color } : undefined}
+            className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+              mentorId === m.id
+                ? "bg-primary text-primary-foreground shadow-2xs"
+                : "bg-card border border-border/60 text-muted-foreground hover:text-foreground"
+            }`}
           >
             {m.shortName}
           </button>
@@ -656,11 +664,11 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       {/* Compact Orchestrator Decision Bar */}
       {decision && (
-        <div className="border-b bg-violet-500/5 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+        <div className="border-b border-primary/20 bg-primary/5 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-foreground animate-in fade-in duration-200 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <Network className="h-3.5 w-3.5 text-[#7C5CFC] shrink-0" />
+            <Network className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-semibold shrink-0">Routed to:</span>
-            <span className="font-mono bg-[#7C5CFC] text-white px-1.5 py-0.5 rounded text-[10px]">
+            <span className="font-mono bg-primary text-primary-foreground px-1.5 py-0.2 rounded text-[10px] font-bold">
               {decision.requiredMentors.join(" + ")}
             </span>
             <span className="text-muted-foreground hidden sm:inline truncate text-[11px]">
@@ -679,14 +687,14 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
       {/* Compact Active Mentor / Mock Notice */}
       {activeMentorHeader && !decision && isAuto && (
-        <div className="border-b bg-muted/40 px-3 sm:px-6 py-1 text-[11px] text-muted-foreground flex items-center justify-between">
-          <span>Consulted: <span className="font-medium text-foreground">{activeMentorHeader}</span> {isMock ? "(mock)" : ""}</span>
+        <div className="border-b border-border/50 bg-muted/30 px-3 sm:px-6 py-1 text-[11px] text-muted-foreground flex items-center justify-between shrink-0">
+          <span>Consulted: <span className="font-semibold text-foreground">{activeMentorHeader}</span> {isMock ? "(mock)" : ""}</span>
         </div>
       )}
 
       {/* Ultra-Compact Handoff Banner (Low-profile, non-intrusive) */}
       {lastHandoff && (
-        <div className="border-b bg-amber-500/10 border-amber-500/20 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+        <div className="border-b bg-amber-500/10 border-amber-500/20 px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in duration-200 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <GitBranch className="h-3.5 w-3.5 text-amber-600 shrink-0" />
             <span className="font-semibold shrink-0">
@@ -708,43 +716,43 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         </div>
       )}
 
-      <div ref={listRef} className="flex-1 overflow-auto p-4 sm:p-6 space-y-4 bg-muted/30">
+      <div ref={listRef} className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 sm:p-6 space-y-3 sm:space-y-4 bg-muted/20 w-full min-w-0">
         {messages.length === 0 && (
-          <Card className="border-dashed bg-card max-w-2xl mx-auto">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4" style={{ color: headerColor }} />
-                <p className="font-semibold text-sm">{isAuto ? "Orchestrator — You don’t pick a mentor" : `${mentor?.config.name} — how I can help`}</p>
-                <Badge variant="secondary" className="ml-auto text-xs">
-                  {isAuto ? "Auto Routing" : `${allMentors.length} Active Mentors`}
-                </Badge>
+          <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-6 shadow-2xs max-w-2xl mx-auto space-y-4 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-border/40">
+              <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <Sparkles className="h-4 w-4" />
               </div>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                {isAuto
-                  ? `Ask anything — the orchestrator reads intent, picks the smallest set of specialists, runs them in parallel when needed, and synthesizes. No manual picker. Try: “Is my architecture production ready?”`
-                  : mentor?.config.description ?? ""}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="font-heading font-bold text-sm text-foreground">{isAuto ? "AI Lead Orchestrator" : `${mentor?.config.name}`}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{isAuto ? "Auto routing across all 6 specialized engineering mentors" : mentor?.config.role}</p>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20 shrink-0">
+                {isAuto ? "Smart Routing" : "Specialist"}
+              </Badge>
+            </div>
+
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              {isAuto
+                ? `Ask any engineering question — the orchestrator dynamically chooses the most qualified specialist mentors, runs them in parallel, and returns a unified code review and architectural answer.`
+                : mentor?.config.description ?? ""}
+            </p>
+
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[10px] sm:text-[11px] font-bold text-foreground uppercase tracking-wider">Suggested Questions:</p>
+              <div className="flex flex-wrap gap-1.5">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-xs text-left border rounded-full px-3 py-1.5 hover:bg-muted bg-card transition"
+                    className="text-xs text-left rounded-xl border border-border/70 bg-muted/30 hover:bg-muted hover:border-primary/40 px-2.5 sm:px-3 py-1.5 text-foreground transition-all cursor-pointer shadow-2xs"
                   >
                     {s}
                   </button>
                 ))}
               </div>
-              <div className="mt-4 rounded-lg border bg-muted/50 p-3 flex gap-2">
-                <Lightbulb className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {isAuto
-                    ? "Example: “chat app with AI + auth + WebSockets” → Backend + AI + Security (parallel) → orchestrator synthesis. Manual picker still works — choose a mentor above to bypass."
-                    : `Ask about ${mentor?.config.expertise.slice(0, 2).join(" or ")} — I’ll stream. Switch to Auto to see orchestrator.`}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {messages.map((m) => {
@@ -755,18 +763,20 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
               : null;
           const isOrchestrated = m.mentorId?.includes(",") || m.mentorId?.includes("+");
           return (
-            <div key={m.id} className={`flex gap-3 max-w-3xl mx-auto ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={m.id} className={`flex gap-2 sm:gap-3 max-w-3xl mx-auto w-full min-w-0 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               {m.role === "assistant" && (
                 <div
-                  className="h-7 w-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0 mt-1"
+                  className="h-7 w-7 rounded-xl text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-2xs"
                   style={{ background: msgMentor?.config.color ?? headerColor }}
                 >
-                  {isOrchestrated ? <Network className="h-3 w-3" /> : (msgMentor?.config.shortName ?? mentor?.config.shortName ?? "O")[0]}
+                  {isOrchestrated ? <Network className="h-3.5 w-3.5" /> : (msgMentor?.config.shortName ?? mentor?.config.shortName ?? "O")[0]}
                 </div>
               )}
               <div
-                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed break-words ${
-                  m.role === "user" ? "bg-primary text-primary-foreground max-w-[80%]" : "bg-card border shadow-sm max-w-[85%] w-full"
+                className={`rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm leading-relaxed break-words shadow-2xs min-w-0 ${
+                  m.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-tr-xs max-w-[88%] sm:max-w-[75%]"
+                    : "bg-card border border-border/80 rounded-tl-xs max-w-[96%] sm:max-w-[85%] w-full"
                 }`}
               >
                 {m.content ? (
@@ -781,23 +791,23 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
                   </span>
                 )}
                 {m.role === "assistant" && (
-                  <div className="mt-3 text-[11px] text-muted-foreground border-t pt-2 flex items-center justify-between gap-2">
-                    <span className="font-medium flex items-center gap-1">
-                      <Sparkles className="h-3 w-3 text-violet-500" />
+                  <div className="mt-2 text-[10px] sm:text-[11px] text-muted-foreground border-t border-border/40 pt-1.5 flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-medium flex items-center gap-1 text-foreground/80">
+                      <Sparkles className="h-3 w-3 text-primary" />
                       {isOrchestrated ? `Orchestrated: ${m.mentorId}` : `via ${msgMentor?.config.shortName ?? m.mentorId ?? "Mentor"}`}
                     </span>
-                    <span className="text-[10px] text-muted-foreground/80 font-mono bg-muted/60 px-1.5 py-0.5 rounded">
-                      Trace: ~{Math.min(950, Math.max(300, m.content.length * 3))}ms • ~{Math.ceil(m.content.length / 4)} tokens
+                    <span className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">
+                      ~{Math.min(950, Math.max(300, m.content.length * 3))}ms • ~{Math.ceil(m.content.length / 4)} tokens
                     </span>
                   </div>
                 )}
-                {/* AI disclosure — shown only on completed assistant messages, never on streaming or mock */}
+                {/* AI disclosure — shown only on completed assistant messages */}
                 {m.role === "assistant" && m.content && !isStreaming && (
                   <AiDisclosure content={m.content} isMock={isMock} />
                 )}
               </div>
               {m.role === "user" && (
-                <div className="h-7 w-7 rounded-full bg-zinc-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-1">
+                <div className="h-7 w-7 rounded-xl bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-2xs">
                   {userName?.[0]?.toUpperCase() ?? "U"}
                 </div>
               )}
@@ -806,12 +816,12 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         })}
 
         {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
-          <div className="flex gap-3 max-w-3xl mx-auto">
-            <div className="h-7 w-7 rounded-full text-white flex items-center justify-center text-xs font-bold" style={{ background: headerColor }}>
-              {isAuto ? <Network className="h-3 w-3" /> : (mentor?.config.shortName[0] ?? "M")}
+          <div className="flex gap-2 sm:gap-2.5 max-w-3xl mx-auto w-full">
+            <div className="h-7 w-7 rounded-xl text-white flex items-center justify-center text-xs font-bold shadow-2xs" style={{ background: headerColor }}>
+              {isAuto ? <Network className="h-3.5 w-3.5" /> : (mentor?.config.shortName[0] ?? "M")}
             </div>
-            <div className="rounded-2xl border bg-card px-4 py-3 text-sm flex items-center gap-1.5">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> {isAuto ? "Orchestrator routing & synthesizing…" : `Streaming from ${mentor?.config.shortName}…`}
+            <div className="rounded-2xl border border-border/80 bg-card px-3 py-2 text-xs sm:text-sm flex items-center gap-2 shadow-2xs">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> {isAuto ? "Orchestrator routing & synthesizing…" : `Streaming response…`}
             </div>
           </div>
         )}
@@ -833,30 +843,29 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
         )}
       </div>
 
-      <Separator />
-
-      <div className="p-3 sm:p-4 bg-card/60 backdrop-blur-md border-t">
-        <div className="max-w-3xl mx-auto space-y-2">
+      {/* Floating Modern Chat Composer - Compact for Small Screens, Unclipped Popover */}
+      <div className="p-1.5 sm:p-3.5 bg-card/70 backdrop-blur-lg border-t border-border/70 shrink-0">
+        <div className="max-w-3xl mx-auto space-y-1.5 sm:space-y-2">
           {/* Guest Message Limit Inline Notice */}
           {guestMessageLimitReached && (
-            <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-2.5 sm:p-3 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-foreground animate-in fade-in duration-200">
               <div className="flex items-center gap-2">
-                <Lock className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+                <Lock className="h-3.5 w-3.5 text-primary shrink-0" />
                 <span className="font-medium leading-relaxed">
                   {guestNoticeText || "Mentor: Create a free account to continue this conversation."}
                 </span>
               </div>
               <Link href="/login" className="shrink-0 w-full sm:w-auto">
-                <Button size="sm" className="w-full sm:w-auto h-7 px-3 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold shadow-xs">
+                <Button size="sm" className="w-full sm:w-auto h-7 px-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-semibold shadow-2xs">
                   <Sparkles className="h-3 w-3 mr-1" /> Sign in with Google
                 </Button>
               </Link>
             </div>
           )}
 
-          {/* Integrated prompt card */}
-          <div className="relative rounded-2xl border border-border/80 bg-background/90 shadow-xs transition-all focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/15">
-            {/* Expanding Textarea */}
+          {/* Integrated prompt card without overflow-hidden so model dropdown pops cleanly */}
+          <div className="relative rounded-2xl border border-border/80 bg-background shadow-2xs transition-all focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/15">
+            {/* Expanding Textarea - Reduced height on small screens */}
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -866,14 +875,14 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
                   ? "Ask anything — orchestrator will route to the right specialist…"
                   : `Ask ${mentor?.config.shortName}…`
               }
-              rows={2}
-              className="min-h-[56px] max-h-[160px] resize-none border-0 shadow-none bg-transparent px-3.5 pt-3 pb-2 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/60"
+              rows={1}
+              className="min-h-[38px] sm:min-h-[52px] max-h-[140px] resize-none border-0 shadow-none bg-transparent px-3 pt-2 pb-1.5 text-xs sm:text-sm focus-visible:ring-0 placeholder:text-muted-foreground/60 leading-relaxed rounded-t-2xl"
               disabled={isStreaming}
             />
 
             {/* Bottom Toolbar inside the prompt box */}
-            <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-border/30">
-              {/* Left: Model Selector (claude, gpt, gemini style) */}
+            <div className="flex items-center justify-between px-2 sm:px-3 pb-1.5 pt-1 border-t border-border/30 bg-muted/10 rounded-b-2xl">
+              {/* Left: Minimal Model Selector */}
               <div className="flex items-center gap-2">
                 <ModelSelector
                   placement="top"
@@ -884,19 +893,17 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
 
               {/* Right: Character count & Send button */}
               <div className="flex items-center gap-2">
-                <span className="text-[11px] text-muted-foreground/70 font-mono">
+                <span className="text-[10px] text-muted-foreground/70 font-mono hidden sm:inline">
                   {input.length}/4000
                 </span>
                 <Button
                   onClick={() => send()}
                   disabled={!input.trim() || isStreaming}
-                  className="h-8 w-8 rounded-xl text-white transition-transform active:scale-95 shrink-0"
-                  style={{ background: headerColor }}
-                  size="icon"
+                  className="h-7 w-7 sm:h-7.5 sm:w-7.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-transform active:scale-95 shrink-0 shadow-2xs cursor-pointer p-0"
                   title="Send message (Enter)"
                 >
                   {isStreaming ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
@@ -905,18 +912,13 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-1 text-[11px] text-muted-foreground flex-wrap gap-1.5">
-            <p>
-              {isAuto
-                ? "Auto Orchestrator routes questions across mentors."
-                : `Direct chat with ${mentor?.config.name}.`}{" "}
-              Press <kbd className="rounded border px-1 text-[10px] bg-muted/60">Enter</kbd> to send, <kbd className="rounded border px-1 text-[10px] bg-muted/60">Shift+Enter</kbd> for newline.
+          <div className="flex items-center justify-between px-1 text-[9px] sm:text-[11px] text-muted-foreground flex-wrap gap-1">
+            <p className="truncate">
+              {isAuto ? "Auto Orchestrator routes across mentors." : `Chatting with ${mentor?.config.name}.`}{" "}
+              <span className="hidden sm:inline">Press Enter to send.</span>
             </p>
             {isMock && (
-              <Badge
-                variant="outline"
-                className="text-[10px] bg-amber-500/10 text-amber-700 border-amber-500/20"
-              >
+              <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 py-0">
                 Mock Mode
               </Badge>
             )}
@@ -927,8 +929,8 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
       {/* Guest conversation limit reached modal */}
       {guestLimitModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
-            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mx-auto shadow-inner">
               <Lock className="h-6 w-6" />
             </div>
             <div className="space-y-1.5">
@@ -941,7 +943,7 @@ export function MentorChat({ initialMessages, conversationId: initialConv, userN
             </div>
             <div className="flex flex-col gap-2 pt-1">
               <Link href="/login" className="w-full">
-                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs h-9 shadow-2xs">
                   <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
                 </Button>
               </Link>

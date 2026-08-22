@@ -479,8 +479,8 @@ export function ConversationHistory({
       {/* Guest conversation limit reached modal */}
       {guestLimitModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
-            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-full max-w-sm rounded-2xl border border-border/80 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mx-auto shadow-inner">
               <Lock className="h-6 w-6" />
             </div>
             <div className="space-y-1.5">
@@ -493,7 +493,7 @@ export function ConversationHistory({
             </div>
             <div className="flex flex-col gap-2 pt-1">
               <Link href="/login" className="w-full">
-                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs h-9 shadow-2xs">
                   <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
                 </Button>
               </Link>
@@ -516,23 +516,23 @@ export function ConversationHistory({
       {/* Panel */}
       <div
         className={cn(
-          "flex flex-col border-r bg-card/40 transition-all duration-300 shrink-0 h-full",
-          collapsed ? "w-[48px]" : "w-[260px]"
+          "flex flex-col border-r border-border/80 bg-card/60 transition-all duration-300 ease-in-out shrink-0 h-full overflow-hidden",
+          collapsed ? "w-[52px]" : "w-[260px]"
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between h-[57px] px-3 border-b shrink-0">
+        <div className="flex items-center justify-between h-[52px] sm:h-[57px] px-2.5 sm:px-3 border-b border-border/70 shrink-0">
           {!collapsed && (
-            <span className="text-xs font-semibold tracking-widest text-muted-foreground/70 uppercase">
+            <span className="text-[11px] font-bold tracking-widest text-muted-foreground uppercase">
               Conversations
             </span>
           )}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className={cn("flex items-center gap-1", collapsed && "w-full justify-center")}>
             {!collapsed && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10 rounded-lg"
                 onClick={handleNewChat}
                 disabled={isCreatingNew}
                 title="New chat"
@@ -547,9 +547,9 @@ export function ConversationHistory({
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-lg cursor-pointer"
               onClick={() => setCollapsed((v) => !v)}
-              title={collapsed ? "Expand" : "Collapse"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -562,37 +562,37 @@ export function ConversationHistory({
 
         {/* Collapsed state — show icons only */}
         {collapsed ? (
-          <div className="flex flex-col items-center gap-1.5 pt-3 px-1.5">
+          <div className="flex flex-col items-center gap-1.5 pt-2.5 px-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10 rounded-xl border border-primary/20 shadow-2xs"
               onClick={handleNewChat}
               disabled={isCreatingNew}
-              title="New chat"
+              title="Start new chat"
             >
               {isCreatingNew ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <MessageSquarePlus className="h-4 w-4" />
               )}
             </Button>
-            {sorted.slice(0, 8).map((c) => (
+            {sorted.slice(0, 10).map((c) => (
               <Link
                 key={c.id}
                 href={`/chat?conversationId=${c.id}`}
                 title={c.title ?? "Conversation"}
                 onClick={onSelect}
                 className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center transition-colors relative group",
+                  "h-8 w-8 rounded-xl flex items-center justify-center transition-all relative group cursor-pointer",
                   c.id === activeConversationId
-                    ? "bg-primary/10 text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    ? "bg-primary text-primary-foreground shadow-2xs font-bold"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 {c.pinned && (
-                  <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-violet-500" />
+                  <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary ring-1 ring-background" />
                 )}
               </Link>
             ))}
