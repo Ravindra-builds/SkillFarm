@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { MentorTeamGrid } from "@/components/dashboard/mentor-team";
+import { ThemeDropdown } from "@/components/theme/theme-dropdown";
+import { UserNavDropdown } from "@/components/layout/user-nav-dropdown";
 import {
   Sparkles,
   ArrowRight,
@@ -94,7 +96,7 @@ export default async function LandingPage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link href="/dashboard">
               <Button variant="ghost" size="sm" className="text-xs font-semibold rounded-xl">
                 Dashboard
@@ -102,39 +104,19 @@ export default async function LandingPage() {
             </Link>
 
             {user ? (
-              <div className="flex items-center gap-2">
-                <Link href="/dashboard" className="flex items-center gap-2 group">
-                  {user.image ? (
-                    <img
-                      src={user.image}
-                      alt={user.name ?? "User"}
-                      className="h-8 w-8 rounded-full object-cover ring-2 ring-violet-500/30 group-hover:ring-violet-500 transition-all shadow-xs"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold ring-2 ring-violet-500/30 shadow-xs">
-                      {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "U"}
-                    </div>
-                  )}
-                  <span className="text-xs font-bold text-foreground hidden md:inline">
-                    {user.name?.split(" ")[0] ?? "Profile"}
-                  </span>
-                </Link>
-                <Link href="/login">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground" title="Sign Out">
-                    <LogOut className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
+              <UserNavDropdown user={user} showNameOnDesktop={true} />
             ) : (
               <Link href="/login">
                 <Button
                   size="sm"
-                  className="bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold rounded-xl shadow-xs"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-xl shadow-2xs"
                 >
-                  Sign In <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  Sign in
                 </Button>
               </Link>
             )}
+
+            <ThemeDropdown />
           </div>
         </div>
       </header>
@@ -145,11 +127,11 @@ export default async function LandingPage() {
         <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-12 sm:pt-16 pb-12">
           <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 items-center">
             <div>
-              <Badge className="bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20 gap-1.5 font-semibold text-xs px-3 py-1">
+              <Badge className="bg-primary/10 text-primary border-primary/20 gap-1.5 font-semibold text-xs px-3 py-1">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />{" "}
                 Orchestrator Live • 6 AI Mentors Online
               </Badge>
-              <h1 className="mt-5 font-heading text-4xl sm:text-5xl lg:text-[50px] font-bold leading-[1.04] tracking-tight text-balance">
+              <h1 className="mt-5 font-heading text-4xl sm:text-5xl lg:text-[50px] font-bold leading-[1.04] tracking-tight text-balance text-foreground">
                 Plant knowledge.{" "}
                 <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">Grow skills.</span> Ship real things.
               </h1>
@@ -161,40 +143,40 @@ export default async function LandingPage() {
                 <Link href="/dashboard">
                   <Button
                     size="lg"
-                    className="h-11 px-6 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl shadow-xs"
+                    className="h-11 px-6 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-2xs cursor-pointer"
                   >
                     Open Dashboard <ArrowRight className="ml-1.5 h-4 w-4" />
                   </Button>
                 </Link>
                 <Link href="#team">
-                  <Button size="lg" variant="outline" className="h-11 px-6 font-semibold rounded-xl">
+                  <Button size="lg" variant="outline" className="h-11 px-6 font-semibold rounded-xl border-border/80 cursor-pointer">
                     Meet Your Team
                   </Button>
                 </Link>
               </div>
 
               <div className="mt-7 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 bg-card">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 bg-card shadow-2xs">
                   <Zap className="h-3 w-3 text-amber-500" /> Streaming Orchestrator
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 bg-card">
-                  <GitBranch className="h-3 w-3 text-violet-500" /> Mentor Handoffs
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 bg-card shadow-2xs">
+                  <GitBranch className="h-3 w-3 text-primary" /> Mentor Handoffs
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 bg-card">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 bg-card shadow-2xs">
                   <Search className="h-3 w-3 text-blue-500" /> Scored Resources
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 bg-card">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 bg-card shadow-2xs">
                   <Brain className="h-3 w-3 text-purple-500" /> Personalized Long-Term Memory
                 </span>
               </div>
             </div>
 
             {/* Complete SkillFarm End-to-End Learning Engine Flow */}
-            <div className="rounded-3xl border border-border/80 bg-card/60 backdrop-blur p-5 sm:p-6 shadow-md space-y-3.5">
-              <div className="flex items-center justify-between border-b pb-3">
+            <div className="rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs space-y-3.5">
+              <div className="flex items-center justify-between border-b border-border/60 pb-3">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-violet-600" /> SkillFarm Learning Flow
+                    <Sparkles className="h-3.5 w-3.5 text-primary" /> SkillFarm Learning Flow
                   </span>
                   <p className="text-[11px] text-muted-foreground mt-0.5">How your personalized journey works</p>
                 </div>
@@ -205,8 +187,8 @@ export default async function LandingPage() {
 
               <div className="space-y-2.5 text-xs">
                 {/* 1. Learning Profile */}
-                <div className="rounded-2xl border bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5">
-                  <div className="h-7 w-7 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
                     1
                   </div>
                   <div className="min-w-0 flex-1">
@@ -220,13 +202,13 @@ export default async function LandingPage() {
                 </div>
 
                 {/* 2. Concept-First Roadmap */}
-                <div className="rounded-2xl border bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5">
-                  <div className="h-7 w-7 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
                     2
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-foreground flex items-center gap-1.5">
-                      <BookOpen className="h-3.5 w-3.5 text-violet-500" /> Concept-First Roadmap
+                      <BookOpen className="h-3.5 w-3.5 text-primary" /> Concept-First Roadmap
                     </p>
                     <p className="text-muted-foreground leading-snug text-[11px] mt-0.5">
                       Structured weekly curriculum teaching foundational mental models before project implementation.
@@ -235,8 +217,8 @@ export default async function LandingPage() {
                 </div>
 
                 {/* 3. Main-Project Application */}
-                <div className="rounded-2xl border bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5">
-                  <div className="h-7 w-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
                     3
                   </div>
                   <div className="min-w-0 flex-1">
@@ -250,8 +232,8 @@ export default async function LandingPage() {
                 </div>
 
                 {/* 4. Evaluated Resources */}
-                <div className="rounded-2xl border bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5">
-                  <div className="h-7 w-7 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
                     4
                   </div>
                   <div className="min-w-0 flex-1">
@@ -265,8 +247,8 @@ export default async function LandingPage() {
                 </div>
 
                 {/* 5. Specialist Mentors */}
-                <div className="rounded-2xl border bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5">
-                  <div className="h-7 w-7 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
+                <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs">
                     5
                   </div>
                   <div className="min-w-0 flex-1">
@@ -280,16 +262,16 @@ export default async function LandingPage() {
                 </div>
 
                 {/* 6. Personalized Long-Term Memory */}
-                <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
-                  <div className="h-7 w-7 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs shadow-xs">
+                <div className="rounded-2xl border-2 border-primary/40 bg-primary/5 p-2.5 sm:p-3 flex items-start gap-2.5 shadow-2xs">
+                  <div className="h-7 w-7 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 mt-0.5 font-bold text-xs shadow-2xs">
                     ★
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="font-bold text-violet-700 dark:text-violet-300 flex items-center gap-1">
-                        <Brain className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" /> Personalized Long-Term Memory
+                      <p className="font-bold text-primary flex items-center gap-1">
+                        <Brain className="h-3.5 w-3.5 text-primary" /> Personalized Long-Term Memory
                       </p>
-                      <Badge className="bg-violet-600 text-white text-[9px] px-1.5 py-0">Adaptive</Badge>
+                      <Badge className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0">Adaptive</Badge>
                     </div>
                     <p className="text-muted-foreground leading-snug text-[11px] mt-0.5">
                       Mentors remember your past bottlenecks, preferred technologies, project architecture, and velocity across every conversation.
@@ -302,12 +284,12 @@ export default async function LandingPage() {
         </section>
 
         {/* Mentor Team Section */}
-        <section id="team" className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 border-t">
+        <section id="team" className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-16 border-t border-border/80">
           <div className="max-w-2xl">
             <Badge variant="outline" className="text-xs font-semibold">
               Meet Your Team
             </Badge>
-            <h2 className="mt-3 font-heading text-2xl sm:text-3xl font-bold tracking-tight">
+            <h2 className="mt-3 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Six Specialists. One Tech Lead.
             </h2>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
@@ -319,11 +301,11 @@ export default async function LandingPage() {
             <MentorTeamGrid />
           </div>
 
-          <Card className="mt-8 rounded-3xl border-dashed bg-muted/20">
+          <Card className="mt-8 rounded-3xl border-dashed border-border/80 bg-muted/20">
             <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div>
-                <p className="font-semibold text-sm sm:text-base flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-violet-600" /> Dynamic Mentor Handoffs
+                <p className="font-semibold text-sm sm:text-base flex items-center gap-2 text-foreground">
+                  <GitBranch className="h-4 w-4 text-primary" /> Dynamic Mentor Handoffs
                 </p>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
                   Backend Mentor → “Auth token architecture requires cryptography & threat modeling.” →{" "}
@@ -334,7 +316,7 @@ export default async function LandingPage() {
                 </p>
               </div>
               <Link href="/chat">
-                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8.5 shrink-0">
+                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8.5 shrink-0 border-border/80 cursor-pointer">
                   Chat with Team <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                 </Button>
               </Link>

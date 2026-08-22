@@ -44,70 +44,70 @@ export function Sidebar({ user, authConfigured, isMockUser }: SidebarProps) {
   const displayEmail = user?.email ?? "Sign in to save";
 
   return (
-    <aside className="hidden lg:flex w-[280px] shrink-0 flex-col border-r bg-card/60 backdrop-blur-xl supports-[backdrop-filter]:bg-card/40">
-      {/* Brand Header matching Home Screen */}
-      <div className="flex h-[64px] items-center gap-3 px-5 border-b">
+    <aside className="hidden lg:flex w-[272px] shrink-0 flex-col border-r border-border/70 bg-sidebar backdrop-blur-xl supports-[backdrop-filter]:bg-sidebar/80">
+      {/* Brand Header */}
+      <div className="flex h-[64px] items-center gap-3 px-5 border-b border-border/70">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center group-hover:scale-105 transition-transform">
-            <Image src="/logo.png" alt="SkillFarm Logo" width={42} height={42} className="h-full w-full object-contain" />
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center group-hover:scale-105 transition-transform">
+            <Image src="/logo.png" alt="SkillFarm Logo" width={38} height={38} className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center">
-              <span className="font-heading text-base font-extrabold leading-none text-foreground">
+              <span className="font-heading text-base font-extrabold leading-none text-sidebar-foreground">
                 Skill
               </span>
               <span className="font-heading text-base font-extrabold leading-none bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent">
                 Farm
               </span>
             </div>
-            <span className="text-[10.5px] text-muted-foreground leading-tight mt-0.5">
+            <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">
               Plant knowledge. Grow skills.
             </span>
           </div>
         </Link>
-        <Badge variant="secondary" className="ml-auto text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+        <Badge variant="secondary" className="ml-auto text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded-md">
           v1.0
         </Badge>
       </div>
 
       {/* Navigation Links */}
-      <div className="flex-1 overflow-auto py-5 px-3">
-        <div className="mb-3 px-3">
-          <p className="text-[10.5px] font-bold tracking-widest text-muted-foreground/70 uppercase">Workspace</p>
+      <div className="flex-1 overflow-auto py-5 px-3 space-y-4">
+        <div>
+          <p className="px-3 text-[10.5px] font-bold tracking-widest text-muted-foreground/80 uppercase">Workspace</p>
+          <nav className="mt-2 space-y-1">
+            {nav.map((item) => {
+              const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all duration-150",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.badge && (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-[10px] font-medium px-1.5 py-0 rounded-md",
+                        active ? "bg-primary-foreground/20 text-primary-foreground border-primary-foreground/20" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-        <nav className="space-y-1">
-          {nav.map((item) => {
-            const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href + "/"));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-all",
-                  active
-                    ? "bg-violet-600 text-white shadow-xs"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.badge && (
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-[10px] font-medium px-1.5 py-0",
-                      active ? "bg-white/20 text-white border-white/20" : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {item.badge}
-                  </Badge>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
 
-        <Separator className="my-5" />
+        <Separator className="bg-border/60" />
 
         {!authConfigured ? (
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-1.5">
@@ -124,25 +124,26 @@ export function Sidebar({ user, authConfigured, isMockUser }: SidebarProps) {
             </Link>
           </div>
         ) : (
-          <div className="rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 p-3.5 text-white space-y-1 shadow-xs">
-            <p className="text-xs font-bold leading-tight flex items-center gap-1">Personalized AI Mentors ✓</p>
-            <p className="text-[11px] leading-relaxed text-violet-100">
-              {user ? `Signed in as ${user.email}` : "Sign in to persist your learning profile & roadmap."}
+          <div className="rounded-2xl bg-card border border-border/70 p-3.5 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-foreground">AI Engineering Team</p>
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] px-1.5 py-0 rounded-md">Live</Badge>
+            </div>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              {user ? `Active for ${user.email}` : "Sign in to persist your learning profile & roadmap."}
             </p>
-            {!user ? (
-              <Link href="/login" className="block pt-1.5">
-                <Button size="sm" variant="secondary" className="w-full bg-white text-violet-700 hover:bg-violet-50 text-xs font-semibold h-7.5 rounded-xl">
+            {!user && (
+              <Link href="/login" className="block pt-1">
+                <Button size="sm" variant="outline" className="w-full text-xs font-semibold h-7.5 rounded-xl border-border">
                   Sign in with Google
                 </Button>
               </Link>
-            ) : (
-              <Badge className="bg-white/20 text-white border-white/20 text-[10px] mt-1">Protected ✓</Badge>
             )}
           </div>
         )}
 
-        <div className="mt-5 px-3">
-          <p className="text-[10.5px] font-bold tracking-widest text-muted-foreground/70 uppercase">Specialist Mentors</p>
+        <div className="px-3">
+          <p className="text-[10.5px] font-bold tracking-widest text-muted-foreground/80 uppercase">Specialist Mentors</p>
           <div className="mt-2.5 space-y-2">
             {[
               { name: "Backend Architect", dot: "bg-[#4F9CF9]" },
@@ -161,13 +162,13 @@ export function Sidebar({ user, authConfigured, isMockUser }: SidebarProps) {
       </div>
 
       {/* User Workspace Footer */}
-      <div className="border-t p-3 bg-muted/20">
+      <div className="border-t border-border/70 p-3 bg-muted/20">
         {user ? (
-          <div className="flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border/80 shadow-2xs">
+          <div className="flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border/70 shadow-2xs">
             {user.image ? (
-              <img src={user.image} alt={user.name ?? "user"} className="h-8 w-8 rounded-full object-cover ring-1 ring-violet-500/30 shrink-0" />
+              <img src={user.image} alt={user.name ?? "user"} className="h-8 w-8 rounded-full object-cover ring-1 ring-border shrink-0" />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
                 {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "?"}
               </div>
             )}
@@ -182,7 +183,7 @@ export function Sidebar({ user, authConfigured, isMockUser }: SidebarProps) {
             </Link>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border/80 shadow-2xs">
+          <div className="flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border/70 shadow-2xs">
             <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
               G
             </div>

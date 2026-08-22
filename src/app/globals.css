@@ -52,86 +52,179 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light theme (kept for completeness, but app is dark-first) */
-:root {
-  --background: #f8f8fa;
-  --foreground: #0f1117;
-  --card: #ffffff;
-  --card-foreground: #0f1117;
-  --popover: #ffffff;
-  --popover-foreground: #0f1117;
-  --primary: #7c5cfc;
-  --primary-foreground: #ffffff;
-  --secondary: #f1f1f3;
-  --secondary-foreground: #171a23;
-  --muted: #f1f1f3;
-  --muted-foreground: #6b7280;
-  --accent: #f1f1f3;
-  --accent-foreground: #171a23;
-  --destructive: #ef4444;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #7c5cfc;
-  --chart-1: #7c5cfc;
-  --chart-2: #4f9cf9;
-  --chart-3: #35c98b;
-  --chart-4: #f59e0b;
-  --chart-5: #ec4899;
-  --radius: 0.75rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #0f1117;
-  --sidebar-primary: #7c5cfc;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f1f1f3;
-  --sidebar-accent-foreground: #171a23;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #7c5cfc;
+/* ==========================================================================
+   SkillFarm Multi-Theme Token Architecture
+   1. SkillFarm (Default Dark)
+   2. Canvas (Clean Productivity Light)
+   3. Resend (Minimal Developer Dark)
+   4. Aurora (Premium Obsidian AI)
+   ========================================================================== */
 
-  /* SkillFarm semantic */
-  --success: #35c98b;
-  --success-foreground: #ffffff;
-  --info: #4f9cf9;
-  --info-foreground: #ffffff;
-  --warning: #f59e0b;
-}
-
-/* Dark theme — PRIMARY (Deep Charcoal #0F1117, Soft Dark #171A23, Violet #7C5CFC) */
+/* Theme 1: SkillFarm (Default Dark) */
+:root,
+[data-theme="skillfarm"],
 .dark {
   --background: #0f1117;
   --foreground: #f8f8fa;
-  --card: #171a23;
+  --card: #161922;
   --card-foreground: #f8f8fa;
-  --popover: #171a23;
+  --popover: #161922;
   --popover-foreground: #f8f8fa;
   --primary: #7c5cfc;
   --primary-foreground: #ffffff;
   --secondary: #1f2330;
   --secondary-foreground: #f8f8fa;
-  --muted: #1f2330;
-  --muted-foreground: #9ca3af;
+  --muted: #1c202c;
+  --muted-foreground: #94a3b8;
   --accent: #1f2330;
   --accent-foreground: #f8f8fa;
   --destructive: #ef4444;
-  --border: #252a3a;
-  --input: #252a3a;
+  --border: #232838;
+  --input: #232838;
   --ring: #7c5cfc;
   --chart-1: #7c5cfc;
   --chart-2: #4f9cf9;
-  --chart-3: #35c98b;
+  --chart-3: #10b981;
   --chart-4: #f59e0b;
   --chart-5: #ec4899;
-  --sidebar: #0f1117;
+  --radius: 0.75rem;
+  --sidebar: #0d0f15;
   --sidebar-foreground: #f8f8fa;
   --sidebar-primary: #7c5cfc;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #171a23;
   --sidebar-accent-foreground: #f8f8fa;
-  --sidebar-border: #252a3a;
+  --sidebar-border: #232838;
   --sidebar-ring: #7c5cfc;
-
-  --success: #35c98b;
+  --success: #10b981;
   --success-foreground: #0f1117;
   --info: #4f9cf9;
+  --info-foreground: #ffffff;
+  --warning: #f59e0b;
+}
+
+/* Theme 2: Canvas (Clean Light Productivity) */
+[data-theme="canvas"],
+.light {
+  --background: #f8f9fb;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #10b981;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #10b981;
+  --chart-1: #10b981;
+  --chart-2: #3b82f6;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ec4899;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8fafc;
+  --sidebar-accent-foreground: #0f172a;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #10b981;
+  --success: #10b981;
+  --success-foreground: #ffffff;
+  --info: #3b82f6;
+  --info-foreground: #ffffff;
+  --warning: #f59e0b;
+}
+
+/* Theme 3: Resend (Minimal Developer Dark) */
+[data-theme="resend"] {
+  --background: #000000;
+  --foreground: #ededed;
+  --card: #0a0a0a;
+  --card-foreground: #ededed;
+  --popover: #0a0a0a;
+  --popover-foreground: #ededed;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #171717;
+  --secondary-foreground: #ededed;
+  --muted: #121212;
+  --muted-foreground: #888888;
+  --accent: #171717;
+  --accent-foreground: #ffffff;
+  --destructive: #f43f5e;
+  --border: #222222;
+  --input: #222222;
+  --ring: #ffffff;
+  --chart-1: #ffffff;
+  --chart-2: #a1a1aa;
+  --chart-3: #71717a;
+  --chart-4: #52525b;
+  --chart-5: #3f3f46;
+  --radius: 0.5rem;
+  --sidebar: #050505;
+  --sidebar-foreground: #ededed;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #121212;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #ffffff;
+  --success: #22c55e;
+  --success-foreground: #000000;
+  --info: #60a5fa;
+  --info-foreground: #000000;
+  --warning: #fbbf24;
+}
+
+/* Theme 4: Obsidian Ember (Smoked Obsidian Dark + Burnt Orange + Honey Cream + Moss Sage) */
+[data-theme="aurora"] {
+  --background: #0a0908;
+  --foreground: #f5ede0;
+  --card: #13110f;
+  --card-foreground: #f5ede0;
+  --popover: #13110f;
+  --popover-foreground: #f5ede0;
+  --primary: #cd5c08;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1815;
+  --secondary-foreground: #f5e8b7;
+  --muted: #171412;
+  --muted-foreground: #a39888;
+  --accent: #1f1a16;
+  --accent-foreground: #f5ede0;
+  --destructive: #f43f5e;
+  --border: #28221c;
+  --input: #28221c;
+  --ring: #cd5c08;
+  --chart-1: #cd5c08;
+  --chart-2: #6a9c89;
+  --chart-3: #f5e8b7;
+  --chart-4: #e28743;
+  --chart-5: #84a98c;
+  --radius: 0.75rem;
+  --sidebar: #070605;
+  --sidebar-foreground: #f5ede0;
+  --sidebar-primary: #cd5c08;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #14110f;
+  --sidebar-accent-foreground: #f5ede0;
+  --sidebar-border: #221c17;
+  --sidebar-ring: #cd5c08;
+  --success: #6a9c89;
+  --success-foreground: #0a0908;
+  --info: #6a9c89;
+  --info-foreground: #ffffff;
+  --warning: #f5e8b7;
 }
 
 @layer base {

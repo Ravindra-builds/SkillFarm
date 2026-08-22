@@ -523,9 +523,9 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
 
           {/* Guest Limit Conversion Notice */}
           {guestLimitNotice && (
-            <div className="rounded-2xl border border-violet-500/40 bg-violet-500/10 p-3.5 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
+            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3.5 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
               <div className="flex items-start gap-2.5">
-                <div className="h-7 w-7 rounded-xl bg-violet-600/20 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-7 w-7 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0 mt-0.5">
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div className="space-y-1 min-w-0">
@@ -537,7 +537,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <Link href="/login">
-                  <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-8 px-3.5 gap-1.5 shadow-xs cursor-pointer">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold h-8 px-3.5 gap-1.5 shadow-2xs cursor-pointer">
                     <LogIn className="h-3.5 w-3.5" /> Sign in with Google
                   </Button>
                 </Link>
@@ -561,7 +561,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
                 variant="outline"
                 size="sm"
                 onClick={() => setIsReplacing(false)}
-                className="text-xs h-9 rounded-xl cursor-pointer"
+                className="text-xs h-9 rounded-xl cursor-pointer border-border/80"
               >
                 Cancel
               </Button>
@@ -576,7 +576,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
                 }
               }}
               disabled={loading || (mode === "file" && !file) || (mode === "text" && !rawText.trim())}
-              className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-9 px-4 gap-1.5 shadow-2xs cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold h-9 px-4 gap-1.5 shadow-2xs cursor-pointer"
             >
               {loading ? (
                 <>
@@ -584,7 +584,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-3.5 w-3.5 shrink-0" /> {existingResume ? "Update & Save Resume" : "Parse & Save to Memory"}
+                  <Sparkles className="h-3.5 w-3.5" /> {existingResume ? "Process & Replace Resume" : "Upload & Sync Profile"}
                 </>
               )}
             </Button>
@@ -595,11 +595,11 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
       {/* 4. IN-APP FORMATTED RESUME VIEWER MODAL (Retrieved directly from DB) */}
       {viewModalOpen && existingResume && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-md flex items-center justify-center p-2.5 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-200">
-          <Card className="w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-violet-500/30 bg-card p-4 sm:p-6 shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+          <Card className="w-full max-w-2xl max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-border/80 bg-card p-4 sm:p-6 shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b pb-3.5 gap-2 shrink-0">
+            <div className="flex items-start justify-between border-b border-border/50 pb-3.5 gap-2 shrink-0">
               <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
-                <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-2xl bg-violet-600/10 text-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                   <FileText className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -634,7 +634,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
               {/* Profile Summary */}
               {existingResume.summary && (
                 <div className="space-y-1.5">
-                  <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1.5">
+                  <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                     <Brain className="h-3.5 w-3.5 shrink-0" /> Executive Profile Summary
                   </h4>
                   <p className="text-xs sm:text-sm text-foreground leading-relaxed rounded-2xl bg-muted/20 border border-border/60 p-3 sm:p-4 break-words">
@@ -646,7 +646,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
               {/* Technical Skills Matrix */}
               {existingResume.extractedSkills && existingResume.extractedSkills.length > 0 && (
                 <div className="space-y-1.5">
-                  <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                  <h4 className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5 shrink-0" /> Technical Skills & Stack ({existingResume.extractedSkills.length})
                   </h4>
                   <div className="flex flex-wrap gap-1 sm:gap-1.5 rounded-2xl bg-muted/20 border border-border/60 p-3 sm:p-4">
@@ -654,7 +654,7 @@ export function ResumeUploader({ userName, onProfileExtracted, className = "" }:
                       <Badge
                         key={sk}
                         variant="secondary"
-                        className="text-[11px] sm:text-xs py-0.5 sm:py-1 px-2 sm:px-2.5 bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 break-all"
+                        className="text-[11px] sm:text-xs py-0.5 sm:py-1 px-2 sm:px-2.5 bg-primary/10 text-primary border border-primary/20 break-all"
                       >
                         {sk}
                       </Badge>

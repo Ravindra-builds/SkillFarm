@@ -97,40 +97,40 @@ export default async function DashboardPage() {
   const weeklyHours = profile?.weeklyHours ?? 10;
 
   return (
-    <div className="mx-auto max-w-6xl p-3.5 sm:p-5 lg:p-6 space-y-4 sm:space-y-5">
-      {/* Header Greeting & Actions */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-3.5">
+    <div className="mx-auto max-w-6xl p-4 sm:p-6 lg:p-8 space-y-8 sm:space-y-10">
+      {/* Level 1: Page Header & Action Bar */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/70 pb-5">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Good day, {greetingName} 👋
             </h1>
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs px-2.5 py-0.5 font-medium rounded-md">
-              <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/30" /> {streak.streakDays} Day Streak
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-xs px-2.5 py-0.5 font-semibold rounded-md">
+              <Flame className="h-3.5 w-3.5 mr-1 fill-emerald-500/20" /> {streak.streakDays} Day Momentum
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {profile
-              ? `Goal: “${goalText}” • ${weeklyHours}h/week • ${profile.currentLevel}`
-              : "Your AI engineering team is ready to guide your learning journey."}
+              ? `Target: “${goalText}” • ${weeklyHours}h/week • ${profile.currentLevel}`
+              : "Your dedicated AI engineering team is ready to guide your journey."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 flex-wrap w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap w-full sm:w-auto">
           <Link href="/chat" className="flex-1 sm:flex-initial">
-            <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white shadow-xs rounded-xl text-xs sm:text-sm font-semibold h-8.5 px-3.5">
+            <Button className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs rounded-xl text-xs sm:text-sm font-semibold h-9 px-4">
               <MessageSquare className="h-4 w-4 mr-1.5" /> Ask Mentors
             </Button>
           </Link>
           <Link href="/roadmap" className="flex-1 sm:flex-initial">
-            <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm font-semibold h-8.5 px-3.5">
+            <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm font-semibold h-9 px-4 border-border/80">
               Roadmap <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Learning Profile Overview & Editor */}
+      {/* Level 2: Learning Profile Context Card */}
       <LearningProfileForm
         initial={
           profile
@@ -148,54 +148,59 @@ export default async function DashboardPage() {
         userName={user?.name}
       />
 
-      {/* Dynamic Real Metrics Row */}
-      <DashboardStats
-        progressPercent={progressPercent}
-        progressLabel={roadmap ? `${nodesCompleted}/${nodesTotal} Nodes` : "No active track"}
-        nodesCompleted={nodesCompleted}
-        nodesTotal={nodesTotal}
-        nextNodeLabel={currentNode?.title ?? "—"}
-        nextNodeEta="1–2 weeks"
-        goal={goalText}
-        weeklyHours={weeklyHours}
-        activeLabel={currentNode ? `Current: ${currentNode.title}` : undefined}
-        streakDays={streak.streakDays}
-        streakPercentile={streak.streakPercentile}
-        streakHistory={streak.streakHistory}
-      />
+      {/* Level 2: Real Progress Metrics Section */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Progress & Cadence</h2>
+        </div>
+        <DashboardStats
+          progressPercent={progressPercent}
+          progressLabel={roadmap ? `${nodesCompleted}/${nodesTotal} Nodes` : "No active track"}
+          nodesCompleted={nodesCompleted}
+          nodesTotal={nodesTotal}
+          nextNodeLabel={currentNode?.title ?? "—"}
+          nextNodeEta="1–2 weeks"
+          goal={goalText}
+          weeklyHours={weeklyHours}
+          activeLabel={currentNode ? `Current: ${currentNode.title}` : undefined}
+          streakDays={streak.streakDays}
+          streakPercentile={streak.streakPercentile}
+          streakHistory={streak.streakHistory}
+        />
+      </section>
 
-      {/* Main Grid: Left (Roadmap & Actions) + Right (Mentors & Ongoing Topic Resources) */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4 sm:gap-5 items-start">
-        {/* Left Column */}
-        <div className="space-y-4 sm:space-y-5">
+      {/* Level 2: Primary Content Section (Active Track + Team & Resources) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-6 sm:gap-8 items-start">
+        {/* Left Column: Recommended Step + Interactive Roadmap Track */}
+        <section className="space-y-6">
           <NextActionCard
             mentorLabel={currentNode?.mentorId ? `${currentNode.mentorId} Mentor` : "Tech Lead"}
-            title={currentNode ? `Current Topic: ${currentNode.topic || currentNode.title}` : "Complete your learning profile"}
+            title={currentNode ? `Current Focus: ${currentNode.topic || currentNode.title}` : "Complete your learning profile"}
             description={currentNode?.description ?? "Set your goal and skills to generate your roadmap."}
             tags={currentConcepts}
             estimatedTime={currentNode ? `${currentNode.difficulty}` : ""}
             projectHref={currentNode ? `/projects` : "/dashboard"}
           />
 
-          {/* Active Roadmap Progress — Clickable Interactive Track */}
-          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
-            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-violet-500 shrink-0" /> Active Roadmap Track
-                </CardTitle>
-                <Link href="/roadmap">
-                  <Badge variant="secondary" className="text-xs px-2 py-0.5 hover:bg-violet-500/20 hover:text-violet-600 transition-colors cursor-pointer rounded-md">
-                    {nodesTotal} Milestones →
-                  </Badge>
-                </Link>
+          {/* Active Roadmap Track */}
+          <div className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <div className="p-4 sm:p-5 pb-3 border-b border-border/60 flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-primary shrink-0" /> Active Roadmap Track
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Concept-first curriculum for “{goalText}”
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                Personalized curriculum based on “{goalText}” • Click milestone to open
-              </p>
-            </CardHeader>
+              <Link href="/roadmap">
+                <Badge variant="secondary" className="text-[11px] px-2 py-0.5 hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer rounded-md">
+                  {nodesTotal} Milestones →
+                </Badge>
+              </Link>
+            </div>
 
-            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2">
+            <div className="p-4 sm:p-5 space-y-2.5">
               {nodes.length > 0 ? (
                 nodes.slice(0, 6).map((n) => {
                   const nodeTopic = n.topic || n.title;
@@ -203,35 +208,35 @@ export default async function DashboardPage() {
                     <Link
                       key={n.id}
                       href="/roadmap"
-                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border p-2.5 sm:p-3 transition-all shadow-xs group cursor-pointer ${
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3 transition-all shadow-2xs group cursor-pointer ${
                         n.status === "current"
-                          ? "border-2 border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/50 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-2xs"
+                          ? "border-2 border-l-4 border-l-primary border-primary/50 bg-primary/[0.06] shadow-xs"
                           : n.status === "completed"
-                          ? "border border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] hover:bg-emerald-500/[0.08] opacity-90"
+                          ? "border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05] hover:bg-emerald-500/[0.08]"
                           : n.status === "next"
-                          ? "border border-violet-500/40 border-dashed bg-card hover:bg-violet-500/[0.03]"
-                          : "border border-border/60 bg-muted/20 hover:bg-muted/40 opacity-75"
+                          ? "border-primary/30 border-dashed bg-card hover:bg-primary/[0.03]"
+                          : "border-border/60 bg-muted/20 hover:bg-muted/40 opacity-75"
                       }`}
                     >
-                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
                         <div className="shrink-0 mt-0.5">
                           {n.status === "completed" && <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />}
                           {n.status === "current" && (
-                            <div className="h-4.5 w-4.5 rounded-full border-2 border-violet-500 flex items-center justify-center">
-                              <div className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                            <div className="h-4.5 w-4.5 rounded-full border-2 border-primary flex items-center justify-center">
+                              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                             </div>
                           )}
-                          {n.status === "next" && <Circle className="h-4.5 w-4.5 text-violet-500" />}
+                          {n.status === "next" && <Circle className="h-4.5 w-4.5 text-primary" />}
                           {n.status === "locked" && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-md">
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.2 rounded-md">
                               Week {n.week ?? 1}
                             </span>
-                            <p className={`text-xs sm:text-sm font-semibold leading-snug group-hover:text-violet-600 transition-colors ${
-                              n.status === "current" ? "text-violet-600 dark:text-violet-400 font-bold" : "text-foreground"
+                            <p className={`text-xs sm:text-sm font-semibold leading-snug group-hover:text-primary transition-colors ${
+                              n.status === "current" ? "text-primary font-bold" : "text-foreground"
                             }`}>
                               {nodeTopic}
                             </p>
@@ -245,7 +250,7 @@ export default async function DashboardPage() {
                           {n.mentorId}
                         </Badge>
                         {n.status === "completed" && <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] rounded-md">✓ Done</Badge>}
-                        {n.status === "current" && <Badge className="bg-violet-600 text-white text-[10px] font-bold rounded-md">⚡ Active</Badge>}
+                        {n.status === "current" && <Badge className="bg-primary text-primary-foreground text-[10px] font-bold rounded-md">⚡ Active</Badge>}
                         {n.status === "next" && <Badge variant="secondary" className="text-[10px] rounded-md">Next</Badge>}
                       </div>
                     </Link>
@@ -260,30 +265,30 @@ export default async function DashboardPage() {
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-t border-border/50">
+              <div className="pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-t border-border/50">
                 <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-violet-500" /> Pace: {weeklyHours}h / week
+                  <Clock className="h-3.5 w-3.5 text-primary" /> Pace: {weeklyHours}h / week
                 </span>
-                <Link href="/roadmap" className="font-semibold text-violet-600 hover:underline flex items-center gap-1">
+                <Link href="/roadmap" className="font-semibold text-primary hover:underline flex items-center gap-1">
                   Manage & Edit Full Roadmap <ArrowRight className="h-3 w-3" />
                 </Link>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </section>
 
-        {/* Right Column */}
-        <div className="space-y-4 sm:space-y-5">
-          {/* Active AI Mentors */}
-          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
-            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
-              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
-                <Brain className="h-4 w-4 text-violet-500 shrink-0" /> Your AI Engineering Team
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2.5">
+        {/* Right Column: AI Mentors & Ongoing Resources */}
+        <section className="space-y-6">
+          {/* AI Engineering Team Card */}
+          <div className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <div className="p-4 sm:p-5 pb-3 border-b border-border/60">
+              <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary shrink-0" /> AI Engineering Team
+              </h3>
+            </div>
+            <div className="p-4 sm:p-5 space-y-3">
               <MentorTeamCompact />
-              <div className="rounded-xl border-2 border-amber-500/25 p-2.5 bg-amber-500/[0.06] dark:bg-amber-500/10 text-xs space-y-1">
+              <div className="rounded-xl border border-border/80 p-3 bg-muted/30 text-xs space-y-1">
                 <p className="font-semibold flex items-center gap-1 text-foreground text-xs">
                   <Zap className="h-3.5 w-3.5 text-amber-500" /> Tech Lead Orchestrator
                 </p>
@@ -291,49 +296,47 @@ export default async function DashboardPage() {
                   Automatically routes queries, consults specialists in parallel, and synthesizes unified engineering answers.
                 </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Recommended Resources for Current Ongoing Topic */}
-          <Card className="rounded-2xl border-2 border-border/90 shadow-sm bg-card overflow-hidden">
-            <CardHeader className="p-3.5 sm:p-4 pb-2.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="space-y-0.5">
-                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" /> Topic Resources
-                  </CardTitle>
-                  {currentNode && (
-                    <CardDescription className="text-xs text-muted-foreground">
-                      Week {currentNode.week ?? 1}: <strong className="text-foreground">{currentTopic}</strong>
-                    </CardDescription>
-                  )}
-                </div>
-
+          {/* Recommended Resources for Current Topic */}
+          <div className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+            <div className="p-4 sm:p-5 pb-3 border-b border-border/60 flex items-center justify-between flex-wrap gap-2">
+              <div className="space-y-0.5">
+                <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-primary shrink-0" /> Topic Resources
+                </h3>
                 {currentNode && (
-                  <Link
-                    href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
-                  >
-                    <Button size="sm" variant="outline" className="h-6.5 text-[11px] px-2 rounded-lg border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 cursor-pointer">
-                      View All →
-                    </Button>
-                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    Week {currentNode.week ?? 1}: <strong className="text-foreground">{currentTopic}</strong>
+                  </p>
                 )}
               </div>
-            </CardHeader>
 
-            <CardContent className="p-3.5 sm:p-4 pt-0 space-y-2">
+              {currentNode && (
+                <Link
+                  href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
+                >
+                  <Button size="sm" variant="outline" className="h-6.5 text-[11px] px-2 rounded-lg border-border text-primary hover:bg-muted cursor-pointer">
+                    View All →
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-2.5">
               {currentTopicPack && currentTopicPack.allResources.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {currentTopicPack.allResources.slice(0, 3).map((r) => (
                     <ResourceCard key={r.url} r={r} compact />
                   ))}
 
                   <Link
                     href={`/resources?topic=${encodeURIComponent(currentTopic || "")}&week=${currentNode?.week ?? 1}&concepts=${encodeURIComponent(currentConcepts.join(","))}`}
-                    className="block pt-0.5"
+                    className="block pt-1"
                   >
-                    <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-7.5 rounded-xl gap-1.5 shadow-xs">
-                      <Sparkles className="h-3 w-3 text-violet-600" /> Explore All {currentTopicPack.allResources.length} Resources
+                    <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-8 rounded-xl gap-1.5 shadow-2xs border-border/80">
+                      <Sparkles className="h-3 w-3 text-primary" /> Explore All {currentTopicPack.allResources.length} Resources
                     </Button>
                   </Link>
                 </div>
@@ -341,18 +344,18 @@ export default async function DashboardPage() {
                 <div className="rounded-xl border border-dashed p-6 text-center space-y-2">
                   <p className="text-xs sm:text-sm font-semibold text-foreground">Resources are being prepared...</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Evaluated guides, videos, and GitHub starter projects for <strong className="text-foreground">{currentTopic}</strong> are being synced.
+                    Evaluated guides, videos, and GitHub starter projects for <strong className="text-foreground">{currentTopic}</strong> are ready for discovery.
                   </p>
                   <Link href="/resources" className="inline-block pt-1">
-                    <Button size="sm" variant="outline" className="rounded-xl text-xs h-8">
+                    <Button size="sm" variant="outline" className="rounded-xl text-xs h-8 border-border">
                       Open Resource Discovery
                     </Button>
                   </Link>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

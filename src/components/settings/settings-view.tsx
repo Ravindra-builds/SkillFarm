@@ -35,6 +35,7 @@ import {
   Copy,
   Flame,
   Clock,
+  X,
 } from "lucide-react";
 import type { MemoryItem } from "@/lib/memory/mem0";
 import type { AccountQuotaStats } from "@/lib/subscription";
@@ -46,6 +47,7 @@ import {
   LlmPreference,
 } from "@/lib/llm-client-store";
 import { ResumeUploader } from "@/components/resume/resume-uploader";
+import { useTheme } from "@/components/theme/theme-provider";
 
 type SettingsProps = {
   user?: { name?: string | null; email?: string | null; image?: string | null } | null;
@@ -54,7 +56,8 @@ type SettingsProps = {
 };
 
 export function SettingsView({ user, authConfigured, initialQuotaStats }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<string>("models");
+  const { theme, setTheme, themes } = useTheme();
+  const [activeTab, setActiveTab] = useState<string>("appearance");
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loadingMemories, setLoadingMemories] = useState(true);
   const [quotaStats, setQuotaStats] = useState<AccountQuotaStats | null>(initialQuotaStats ?? null);
@@ -315,6 +318,12 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
   // Tab definitions
   const tabsList = [
     {
+      id: "appearance",
+      title: "Appearance",
+      badge: themes.find((t) => t.id === theme)?.name ?? "SkillFarm",
+      icon: Sparkles,
+    },
+    {
       id: "models",
       title: "AI & Models",
       badge: `${validEnabledModels.length} Active`,
@@ -344,11 +353,11 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
     <div className="space-y-6 max-w-5xl mx-auto py-2 px-1 sm:px-4">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Settings className="h-5 w-5 text-violet-600 shrink-0" /> Settings & Configuration
+        <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+          <Settings className="h-5 w-5 text-primary shrink-0" /> Settings & Configuration
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground">
-          Manage AI LLM models, resume background, personalized long-term memory, and subscription quotas.
+          Manage theme appearance, AI LLM models, resume context, long-term memory, and subscription quotas.
         </p>
       </div>
 
@@ -379,8 +388,8 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
 
       {/* Tabs Layout */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-        {/* Mobile: Compact 2 rows x 2 columns badge cards (< sm) */}
-        <div className="grid grid-cols-2 gap-2 sm:hidden">
+        {/* Mobile: Compact badge cards (< sm) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:hidden">
           {tabsList.map((tab) => {
             const isSelected = activeTab === tab.id;
             const Icon = tab.icon;
@@ -391,22 +400,22 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                 onClick={() => setActiveTab(tab.id)}
                 className={`rounded-xl border p-2.5 text-left transition-all flex flex-col justify-between cursor-pointer ${
                   isSelected
-                    ? "border-violet-600 bg-violet-600 text-white shadow-sm ring-2 ring-violet-500/20"
+                    ? "border-primary bg-primary text-primary-foreground shadow-2xs font-bold ring-2 ring-primary/20"
                     : "border-border/70 bg-card hover:bg-muted/40 text-card-foreground shadow-2xs"
                 }`}
               >
                 <div className="flex items-center justify-between gap-1 w-full">
                   <div
                     className={`h-6 w-6 rounded-lg flex items-center justify-center ${
-                      isSelected ? "bg-white/20 text-white" : "bg-muted text-foreground"
+                      isSelected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-foreground"
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <span
-                    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full truncate max-w-[70px] ${
                       isSelected
-                        ? "bg-white/20 text-white"
+                        ? "bg-primary-foreground/20 text-primary-foreground"
                         : "bg-muted/80 text-muted-foreground"
                     }`}
                   >
@@ -415,7 +424,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                 </div>
 
                 <div className="mt-2">
-                  <p className={`text-xs font-semibold tracking-tight ${isSelected ? "text-white" : "text-foreground"}`}>
+                  <p className={`text-xs font-semibold tracking-tight ${isSelected ? "text-primary-foreground" : "text-foreground"}`}>
                     {tab.title}
                   </p>
                 </div>
@@ -442,7 +451,113 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
           })}
         </TabsList>
 
-        {/* Tab 0: AI Providers & Model Selection */}
+        {/* Tab 0: Appearance & Theme Customization */}
+        <TabsContent value="appearance" className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="h-4.5 w-4.5 text-primary" /> Choose Application Theme
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Select your preferred visual aesthetic. Four distinct design systems with identical features, zero reload necessary.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {themes.map((t) => {
+              const isSelected = theme === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTheme(t.id)}
+                  className={`relative text-left rounded-2xl border-2 p-4 transition-all duration-200 cursor-pointer overflow-hidden group flex flex-col justify-between ${
+                    isSelected
+                      ? "border-primary bg-primary/[0.06] shadow-md ring-2 ring-primary/20"
+                      : "border-border/80 bg-card hover:border-border hover:bg-muted/30 shadow-2xs"
+                  }`}
+                >
+                  {/* Miniature Realistic UI Preview */}
+                  <div
+                    className="rounded-xl border p-2.5 mb-3.5 space-y-2 shadow-2xs select-none transition-transform group-hover:scale-[1.01]"
+                    style={{
+                      backgroundColor: t.preview.bg,
+                      borderColor: t.preview.border,
+                    }}
+                  >
+                    {/* Mini Window Top Bar */}
+                    <div className="flex items-center justify-between border-b pb-1.5" style={{ borderColor: t.preview.border }}>
+                      <div className="flex items-center gap-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-red-500/80" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-amber-500/80" />
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/80" />
+                      </div>
+                      <span className="text-[9px] font-mono tracking-wider opacity-60" style={{ color: t.preview.text }}>
+                        skillfarm.in
+                      </span>
+                    </div>
+
+                    {/* Mini Layout Body */}
+                    <div className="grid grid-cols-[36px_1fr] gap-2 items-start py-0.5">
+                      {/* Mini Sidebar */}
+                      <div className="space-y-1 rounded p-1" style={{ backgroundColor: t.preview.card, borderColor: t.preview.border }}>
+                        <div className="h-1.5 w-4 rounded-full" style={{ backgroundColor: t.preview.primary }} />
+                        <div className="h-1 w-5 rounded-full bg-muted-foreground/30" />
+                        <div className="h-1 w-4 rounded-full bg-muted-foreground/20" />
+                      </div>
+
+                      {/* Mini Content Area */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="h-2 w-16 rounded-full" style={{ backgroundColor: t.preview.primary }} />
+                          <div className="h-1.5 w-6 rounded-full bg-emerald-500/70" />
+                        </div>
+                        <div
+                          className="rounded p-1.5 border space-y-1"
+                          style={{
+                            backgroundColor: t.preview.card,
+                            borderColor: t.preview.border,
+                          }}
+                        >
+                          <div className="h-1.5 w-24 rounded-full" style={{ backgroundColor: t.preview.text, opacity: 0.8 }} />
+                          <div className="h-1 w-32 rounded-full bg-muted-foreground/40" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theme Info & Action */}
+                  <div className="flex items-start justify-between gap-2 mt-auto">
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-foreground">{t.name}</span>
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-md bg-muted text-muted-foreground border border-border/60">
+                          {t.mode}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {t.description}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 pt-0.5">
+                      {isSelected ? (
+                        <Badge className="bg-primary text-primary-foreground border-primary text-[11px] font-semibold rounded-lg px-2 py-0.5 shadow-2xs flex items-center gap-1">
+                          <Check className="h-3 w-3" /> Active
+                        </Badge>
+                      ) : (
+                        <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition-colors px-2 py-0.5 rounded-lg border border-border/80 bg-muted/40">
+                          Select
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* Tab 1: AI Providers & Model Selection */}
         <TabsContent value="models" className="space-y-5">
           {/* Provider Selection Cards */}
           <div className={`grid grid-cols-1 ${anthropicModels.length > 0 ? "sm:grid-cols-3" : "sm:grid-cols-2"} gap-3 sm:gap-4`}>
@@ -580,14 +695,14 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
             <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/50">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div>
-                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
-                    <Cpu className="h-4 w-4 text-violet-600" /> Active Model Catalog for Chat
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2 text-foreground">
+                    <Cpu className="h-4 w-4 text-primary" /> Active Model Catalog for Chat
                   </CardTitle>
-                  <CardDescription className="text-xs mt-0.5">
+                  <CardDescription className="text-xs mt-0.5 text-muted-foreground">
                     Toggle which models appear in the Chat input dropdown. Click &ldquo;Set default&rdquo; to choose your primary model.
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20">
+                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 bg-primary/10 text-primary border-primary/20">
                   {validEnabledModels.length} of {activeCatalogModels.length} enabled
                 </Badge>
               </div>
@@ -708,21 +823,21 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
 
         {/* Tab 2: Mem0 Memory Manager */}
         <TabsContent value="memories" className="space-y-4">
-          <Card className="rounded-2xl border border-border/80">
+          <Card className="rounded-2xl border border-border/80 bg-card shadow-2xs">
             <CardHeader className="p-4 sm:p-6 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-                  <Brain className="h-4 w-4 text-violet-600 shrink-0" /> Personalized Long-Term Memory Store
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-foreground">
+                  <Brain className="h-4 w-4 text-primary shrink-0" /> Personalized Long-Term Memory Store
                 </CardTitle>
                 <CardDescription className="text-xs mt-0.5">
                   Key background facts, skills, work history, and engineering preferences stored across sessions.
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto">
-                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer" onClick={refreshMemories} disabled={loadingMemories}>
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer border-border/80" onClick={refreshMemories} disabled={loadingMemories}>
                   <RefreshCw className={`h-3 w-3 ${loadingMemories ? "animate-spin" : ""}`} /> Refresh
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer" onClick={handleExportMemories} disabled={memories.length === 0}>
+                <Button size="sm" variant="outline" className="text-xs h-8 gap-1 rounded-xl cursor-pointer border-border/80" onClick={handleExportMemories} disabled={memories.length === 0}>
                   <Download className="h-3 w-3" /> Export JSON
                 </Button>
               </div>
@@ -735,9 +850,9 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                   placeholder="Add a custom long-term fact (e.g. 'Prefer microservices with Go and PostgreSQL')"
                   value={newMemory}
                   onChange={(e) => setNewMemory(e.target.value)}
-                  className="text-xs h-9 rounded-xl flex-1"
+                  className="text-xs h-9 rounded-xl flex-1 border-border/80"
                 />
-                <Button size="sm" type="submit" className="text-xs h-9 px-4 rounded-xl bg-violet-600 hover:bg-violet-500 shrink-0 cursor-pointer" disabled={addingMemory || !newMemory.trim()}>
+                <Button size="sm" type="submit" className="text-xs h-9 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs shrink-0 cursor-pointer font-semibold" disabled={addingMemory || !newMemory.trim()}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Fact
                 </Button>
               </form>
@@ -766,7 +881,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                         }}
                         className={`text-[11px] rounded-lg px-2.5 py-1 font-medium transition-all flex items-center gap-1 cursor-pointer ${
                           memoryFilter === cat.id
-                            ? "bg-violet-600 text-white shadow-2xs"
+                            ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
                             : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -779,28 +894,33 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
 
                 {/* Search Bar */}
                 <div className="relative w-full sm:w-56">
-                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
                     placeholder="Search memories..."
                     value={memorySearch}
                     onChange={(e) => setMemorySearch(e.target.value)}
-                    className="h-8 pl-8 text-xs rounded-xl"
+                    className="text-xs h-8 pl-8 rounded-lg border-border/80"
                   />
+                  {memorySearch && (
+                    <button
+                      type="button"
+                      onClick={() => setMemorySearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
               </div>
 
               {/* Memory List */}
               {loadingMemories ? (
-                <div className="py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                  <RefreshCw className="h-4 w-4 animate-spin" /> Loading memory store...
-                </div>
-              ) : filteredMemories.length === 0 ? (
-                <div className="py-8 text-center border border-dashed rounded-xl bg-muted/20">
-                  <Brain className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-40" />
-                  <p className="text-xs font-medium">No memories found</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    Upload a resume in the &ldquo;Resume Context&rdquo; tab or add a fact above.
-                  </p>
+                <div className="p-8 text-center text-xs text-muted-foreground">Loading personalized memory context...</div>
+              ) : displayedMemories.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-8 text-center space-y-1.5 bg-muted/10">
+                  <Brain className="h-6 w-6 text-muted-foreground mx-auto" />
+                  <p className="text-xs font-semibold text-foreground">No memory context found</p>
+                  <p className="text-[11px] text-muted-foreground">Add facts manually above or upload your resume in the Resume Sync tab.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
@@ -811,7 +931,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                     return (
                       <div
                         key={m.id}
-                        className="rounded-xl border bg-card/60 p-3 sm:p-3.5 text-xs flex items-start justify-between gap-2.5 hover:border-violet-500/30 transition-colors shadow-2xs overflow-hidden"
+                        className="rounded-xl border bg-card/60 p-3 sm:p-3.5 text-xs flex items-start justify-between gap-2.5 hover:border-primary/40 transition-colors shadow-2xs overflow-hidden"
                       >
                         <div className="space-y-1.5 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -819,7 +939,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                               variant="outline"
                               className={`text-[10px] px-2 py-0 font-medium capitalize ${
                                 cat === "skills"
-                                  ? "bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/20"
+                                  ? "bg-primary/10 text-primary border-primary/20"
                                   : cat === "projects"
                                   ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
                                   : cat === "experience"
@@ -880,7 +1000,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowAllMemories(!showAllMemories)}
-                        className="h-7 text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500 gap-1 cursor-pointer"
+                        className="h-7 text-xs text-primary hover:text-primary/80 gap-1 cursor-pointer font-semibold"
                       >
                         {showAllMemories ? (
                           <>
@@ -903,14 +1023,14 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
         {/* Tab 3: Account & Plan Tier */}
         <TabsContent value="account" className="space-y-5">
           {/* User Profile Card */}
-          <Card className="rounded-2xl border border-border/80 overflow-hidden">
+          <Card className="rounded-2xl border border-border/80 bg-card shadow-2xs overflow-hidden">
             <CardHeader className="p-4 sm:p-6 pb-4 bg-muted/20 border-b border-border/40">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   {user?.image ? (
-                    <img src={user.image} alt="User" className="h-12 w-12 rounded-2xl object-cover ring-2 ring-violet-500/30 shrink-0" />
+                    <img src={user.image} alt="User" className="h-12 w-12 rounded-2xl object-cover ring-2 ring-primary/30 shrink-0" />
                   ) : (
-                    <div className="h-12 w-12 rounded-2xl bg-violet-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+                    <div className="h-12 w-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-2xs shrink-0">
                       {user?.name?.[0] ?? user?.email?.[0]?.toUpperCase() ?? "D"}
                     </div>
                   )}
@@ -951,7 +1071,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
 
                 <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-1">
                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5">
-                    <CreditCard className="h-3.5 w-3.5 text-violet-500" /> Active Plan
+                    <CreditCard className="h-3.5 w-3.5 text-primary" /> Active Plan
                   </span>
                   <p className="font-semibold text-xs sm:text-sm text-foreground">
                     {quotaStats?.planName ?? "SkillFarm Free"}
@@ -970,7 +1090,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
               <div className="space-y-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
-                    <Flame className="h-4 w-4 text-violet-600" /> Daily Feature Quotas & Limits
+                    <Flame className="h-4 w-4 text-primary" /> Daily Feature Quotas & Limits
                   </h4>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] text-muted-foreground">Rolling 24-hour cycle</span>
@@ -992,7 +1112,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                   <div className="p-3 rounded-xl border border-border/60 bg-muted/15 space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground flex items-center gap-1.5">
-                        <Brain className="h-3.5 w-3.5 text-violet-500" /> {quotaStats?.quotas.mentorMessages.name ?? "Mentor Chat Messages"}
+                        <Brain className="h-3.5 w-3.5 text-primary" /> {quotaStats?.quotas.mentorMessages.name ?? "Mentor Chat Messages"}
                       </span>
                       <span className="text-muted-foreground font-mono text-[11px]">
                         {quotaStats ? `${quotaStats.quotas.mentorMessages.current} / ${quotaStats.quotas.mentorMessages.label}` : "Loading..."}
@@ -1000,7 +1120,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div
-                        className="h-full bg-violet-600 transition-all duration-300"
+                        className="h-full bg-primary transition-all duration-300"
                         style={{ width: `${quotaStats?.quotas.mentorMessages.percent ?? 0}%` }}
                       />
                     </div>
@@ -1081,7 +1201,7 @@ export function SettingsView({ user, authConfigured, initialQuotaStats }: Settin
               {/* Plan Comparison Table */}
               <div className="space-y-3">
                 <h4 className="text-xs sm:text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <Layers className="h-4 w-4 text-violet-600" /> Plan Features & Entitlements
+                  <Layers className="h-4 w-4 text-primary" /> Plan Features & Entitlements
                 </h4>
                 <div className="rounded-xl border border-border/60 overflow-hidden divide-y divide-border/40 text-xs">
                   <div className="p-3 bg-muted/20 flex items-center justify-between font-semibold">

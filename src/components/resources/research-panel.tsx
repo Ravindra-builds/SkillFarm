@@ -162,7 +162,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
           <div className="space-y-2 pt-1">
             <div className="rounded-xl bg-muted/40 p-2.5 border border-border/60 text-xs space-y-1">
               <p className="text-[11px] font-semibold flex items-center gap-1.5 text-foreground">
-                <Sparkles className="h-3 w-3 text-violet-600 shrink-0" /> Why this was selected
+                <Sparkles className="h-3 w-3 text-primary shrink-0" /> Why this was selected
               </p>
               <p className="text-muted-foreground text-[10px] leading-relaxed line-clamp-2">{r.score.reasoning}</p>
               <div className="flex flex-wrap gap-1 pt-0.5 text-[9px]">
@@ -172,7 +172,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
                 <span className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-1.5 py-0.2 rounded-md border border-blue-500/20 font-medium">
                   Fresh {r.score.freshness}
                 </span>
-                <span className="bg-violet-500/10 text-violet-700 dark:text-violet-300 px-1.5 py-0.2 rounded-md border border-violet-500/20 font-medium">
+                <span className="bg-primary/10 text-primary px-1.5 py-0.2 rounded-md border border-primary/20 font-medium">
                   Practical {r.score.practicalValue}
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-7.5 w-full items-center justify-center gap-1.5 rounded-xl border bg-background px-3 text-xs font-semibold hover:bg-muted transition-colors shadow-2xs"
+              className="inline-flex h-7.5 w-full items-center justify-center gap-1.5 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold hover:bg-muted transition-colors shadow-2xs text-foreground"
             >
               Open Resource <ExternalLink className="h-3 w-3 ml-0.5" />
             </a>
@@ -195,19 +195,19 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
   return (
     <div className="space-y-4 sm:space-y-5">
       {/* Search Header Banner & Manual Search Input */}
-      <Card className="rounded-2xl border border-border/80 shadow-xs bg-card overflow-hidden">
+      <Card className="rounded-2xl border border-border/80 shadow-2xs bg-card overflow-hidden">
         <CardHeader className="p-3.5 sm:p-5 pb-2.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2">
-                <Compass className="h-5 w-5 text-violet-600 shrink-0" /> Resource Discovery Engine
+              <CardTitle className="text-lg sm:text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
+                <Compass className="h-5 w-5 text-primary shrink-0" /> Resource Discovery Engine
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm mt-0.5">
+              <CardDescription className="text-xs sm:text-sm mt-0.5 text-muted-foreground">
                 Tavily, YouTube & GitHub resources automatically discovered for your roadmap topics, evaluated and deduplicated.
               </CardDescription>
             </div>
             <Link href="/roadmap">
-              <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8 gap-1.5">
+              <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-8 gap-1.5 border-border/80">
                 <Layers className="h-3.5 w-3.5" /> Back to Roadmap
               </Button>
             </Link>
@@ -222,14 +222,14 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
                 value={manualQuery}
                 onChange={(e) => setManualQuery(e.target.value)}
                 placeholder="Search any topic manually (e.g. WebAuthn, Redis Cluster, Docker Compose)..."
-                className="pl-10 h-9.5 text-xs sm:text-sm rounded-xl"
+                className="pl-10 h-9.5 text-xs sm:text-sm rounded-xl bg-background"
                 onKeyDown={(e) => e.key === "Enter" && runManualSearch()}
               />
             </div>
             <Button
               onClick={() => runManualSearch()}
               disabled={loading || !manualQuery.trim()}
-              className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs sm:text-sm font-semibold h-9.5 px-4 cursor-pointer shrink-0"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs sm:text-sm font-semibold h-9.5 px-4 cursor-pointer shrink-0 shadow-2xs"
             >
               {loading ? "Searching..." : "Search"}
             </Button>
@@ -238,7 +238,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
           {/* Popular Cached Topic Pills */}
           <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
             <span className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-violet-600" /> Popular Topics:
+              <Sparkles className="h-3 w-3 text-primary" /> Popular Topics:
             </span>
             {[
               "PostgreSQL Architecture",
@@ -251,7 +251,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
                 key={s}
                 type="button"
                 onClick={() => handleSelectTopic(s)}
-                className="text-[11px] px-2.5 py-0.5 rounded-lg border border-border/80 bg-background/90 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-600 dark:hover:text-violet-400 text-foreground transition-all cursor-pointer shadow-2xs font-medium"
+                className="text-[11px] px-2.5 py-0.5 rounded-lg border border-border/80 bg-background/90 hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-foreground transition-all cursor-pointer shadow-2xs font-medium"
               >
                 {s}
               </button>
@@ -275,16 +275,16 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
       {/* Topic Resource Pack View (from Roadmap) */}
       {topicPack && (
         <div className="space-y-4">
-          {/* Topic Pack Banner - Distinct Violet Gradient */}
-          <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+          {/* Topic Pack Banner */}
+          <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-4 sm:p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 {week && (
-                  <span className="flex items-center justify-center h-5.5 w-5.5 rounded-md bg-violet-600 text-white font-bold text-xs">
+                  <span className="flex items-center justify-center h-5.5 w-5.5 rounded-md bg-primary text-primary-foreground font-bold text-xs">
                     W{week}
                   </span>
                 )}
-                <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold rounded-md">
+                <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-primary/10 text-primary border-primary/20 font-semibold rounded-md">
                   Roadmap Topic Resource Pack
                 </Badge>
                 {topicPack.cached && (
@@ -306,7 +306,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
               size="sm"
               onClick={() => topic && loadTopicResources(topic, concepts, week, true)}
               disabled={loading}
-              className="rounded-xl text-xs font-semibold h-8 px-3 gap-1.5 shrink-0 self-start sm:self-center cursor-pointer"
+              className="rounded-xl text-xs font-semibold h-8 px-3 gap-1.5 shrink-0 self-start sm:self-center cursor-pointer border-border/80"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
@@ -327,7 +327,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
                 onClick={() => setActiveCategory(tab.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                   activeCategory === tab.id
-                    ? "bg-violet-600 text-white shadow-xs font-semibold"
+                    ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/60 bg-card border border-border/80"
                 }`}
               >
@@ -391,9 +391,9 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
       {/* Manual Search Results View */}
       {manualResults && !topicPack && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b pb-2">
+          <div className="flex items-center justify-between border-b border-border/80 pb-2">
             <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
-              <Search className="h-4 w-4 text-violet-600" /> Search Results for &quot;{manualQuery}&quot;
+              <Search className="h-4 w-4 text-primary" /> Search Results for &quot;{manualQuery}&quot;
             </h3>
             <span className="text-xs text-muted-foreground">{manualResults.length} resources found</span>
           </div>
@@ -406,7 +406,7 @@ export function ResearchPanel({ initialTopic, initialWeek, initialConcepts, init
 
       {/* Empty State */}
       {!topicPack && !manualResults && !loading && (
-        <Card className="border-dashed bg-muted/30 rounded-3xl p-6 text-center">
+        <Card className="border-dashed border-border/80 bg-muted/30 rounded-3xl p-6 text-center">
           <CardContent className="space-y-2 p-4">
             <ShieldCheck className="h-8 w-8 text-emerald-600 mx-auto" />
             <p className="text-sm font-bold text-foreground">Explore Curated Learning Resources</p>

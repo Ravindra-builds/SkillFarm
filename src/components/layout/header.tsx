@@ -21,7 +21,10 @@ import {
   LogOut,
   Settings,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
+import { ThemeDropdown } from "@/components/theme/theme-dropdown";
+import { UserNavDropdown } from "@/components/layout/user-nav-dropdown";
 
 export type NavItem = {
   href: string;
@@ -51,6 +54,9 @@ type HeaderProps = {
 export function Header({ user }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Mobile drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -112,7 +118,7 @@ export function Header({ user }: HeaderProps) {
     <header className="sticky top-0 z-30 flex h-[64px] items-center justify-between border-b bg-background/80 backdrop-blur-xl px-4 lg:px-6">
       <div className="flex items-center gap-2 min-w-0">
         {/* Mobile menu drawer */}
-        <Sheet>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger
             render={
               <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 rounded-lg shrink-0">
@@ -122,9 +128,14 @@ export function Header({ user }: HeaderProps) {
           />
           <SheetContent side="left" className="p-0 w-[280px] bg-card text-foreground border-r border-border shadow-2xl flex flex-col justify-between">
             <div>
-              {/* Brand Header */}
-              <div className="flex h-[64px] items-center gap-3 px-5 border-b border-border/80">
-                <div className="relative flex h-9.5 w-9.5 shrink-0 items-center justify-center">
+              {/* Brand Header - Clickable Link to Home Page */}
+              <Link
+                href="/"
+                onClick={() => setDrawerOpen(false)}
+                className="flex h-[64px] items-center gap-3 px-5 border-b border-border/80 group cursor-pointer hover:bg-muted/40 transition-colors"
+                title="Go to SkillFarm Home"
+              >
+                <div className="relative flex h-9.5 w-9.5 shrink-0 items-center justify-center group-hover:scale-105 transition-transform">
                   <Image src="/logo.png" alt="SkillFarm Logo" width={38} height={38} className="h-full w-full object-contain" />
                 </div>
                 <div>
@@ -138,7 +149,7 @@ export function Header({ user }: HeaderProps) {
                     Plant knowledge. Grow skills.
                   </p>
                 </div>
-              </div>
+              </Link>
 
               {/* Drawer Links */}
               <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-170px)]">
@@ -149,21 +160,22 @@ export function Header({ user }: HeaderProps) {
                     <Link
                       key={i.href}
                       href={i.href}
+                      onClick={() => setDrawerOpen(false)}
                       className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-violet-600 text-white shadow-xs"
+                          ? "bg-primary text-primary-foreground shadow-2xs font-bold"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-white" : "text-muted-foreground"}`} />
+                        <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary-foreground" : "text-muted-foreground"}`} />
                         <span className="truncate">{i.label}</span>
                       </div>
                       {i.badge && (
                         <Badge
                           variant="secondary"
                           className={`text-[10px] px-1.5 py-0 ${
-                            isActive ? "bg-white/20 text-white" : "bg-muted text-muted-foreground"
+                            isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted text-muted-foreground"
                           }`}
                         >
                           {i.badge}
@@ -181,9 +193,9 @@ export function Header({ user }: HeaderProps) {
                 <div className="flex items-center justify-between gap-2.5 rounded-lg p-2 bg-card border border-border/60">
                   <div className="flex items-center gap-2 min-w-0">
                     {user.image ? (
-                      <img src={user.image} alt={user.name ?? "User"} className="h-7.5 w-7.5 rounded-full object-cover ring-1 ring-violet-500/30 shrink-0" />
+                      <img src={user.image} alt={user.name ?? "User"} className="h-7.5 w-7.5 rounded-full object-cover ring-1 ring-primary/30 shrink-0" />
                     ) : (
-                      <div className="h-7.5 w-7.5 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                      <div className="h-7.5 w-7.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">
                         {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "U"}
                       </div>
                     )}
@@ -200,7 +212,7 @@ export function Header({ user }: HeaderProps) {
                 </div>
               ) : (
                 <Link href="/login" className="block">
-                  <Button size="sm" className="w-full h-8 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg">
+                  <Button size="sm" className="w-full h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-2xs">
                     <LogIn className="h-3.5 w-3.5 mr-1.5" /> Sign In
                   </Button>
                 </Link>
@@ -209,14 +221,14 @@ export function Header({ user }: HeaderProps) {
           </SheetContent>
         </Sheet>
 
-        {/* Working Search Bar */}
+        {/* Responsive Search Bar */}
         <div className="relative">
           <div
             onClick={() => {
               setSearchOpen(true);
               setTimeout(() => searchInputRef.current?.focus(), 50);
             }}
-            className="flex items-center gap-2 h-8 w-48 sm:w-80 md:w-96 rounded-full border bg-muted/40 hover:bg-muted/70 px-3 text-xs text-muted-foreground cursor-pointer transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 sm:gap-2 h-8 w-28 xs:w-36 sm:w-64 md:w-80 lg:w-96 rounded-full border border-border/80 bg-muted/40 hover:bg-muted/70 px-2.5 sm:px-3 text-xs text-muted-foreground cursor-pointer transition-colors shadow-2xs"
           >
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate flex-1 text-xs">Search sections…</span>
@@ -232,7 +244,7 @@ export function Header({ user }: HeaderProps) {
               className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:left-0 sm:top-10 z-50 w-auto sm:w-80 md:w-96 rounded-2xl border border-border/80 bg-card p-2 text-foreground shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95"
             >
               <div className="relative flex items-center border-b border-border/60 pb-2 mb-2 px-2">
-                <Search className="h-4 w-4 text-violet-500 shrink-0 mr-2" />
+                <Search className="h-4 w-4 text-primary shrink-0 mr-2" />
                 <input
                   ref={searchInputRef}
                   value={searchQuery}
@@ -244,7 +256,7 @@ export function Header({ user }: HeaderProps) {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="text-[11px] text-muted-foreground hover:text-foreground font-semibold px-1 shrink-0"
+                    className="text-[11px] text-muted-foreground hover:text-foreground font-semibold px-1 shrink-0 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -259,14 +271,14 @@ export function Header({ user }: HeaderProps) {
                       <button
                         key={item.href}
                         onClick={() => handleSelectNav(item.href)}
-                        className="w-full flex items-center justify-between gap-2.5 p-2 rounded-lg text-left hover:bg-muted transition-colors cursor-pointer group"
+                        className="w-full flex items-center justify-between gap-2.5 p-2 rounded-xl text-left hover:bg-muted transition-colors cursor-pointer group"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="h-6.5 w-6.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                          <div className="h-7 w-7 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
                             <Icon className="h-3.5 w-3.5" />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-foreground group-hover:text-violet-600 transition-colors leading-tight">
+                            <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-tight">
                               {item.label}
                             </p>
                             <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
@@ -291,31 +303,20 @@ export function Header({ user }: HeaderProps) {
       </div>
 
       {/* Right Header Navigation */}
-      <div className="flex items-center gap-2.5 shrink-0">
-        <Link href="/settings">
+      <div className="flex items-center gap-2.5 sm:gap-2 shrink-0">
+        <ThemeDropdown />
+
+        <Link href="/settings" className="hidden sm:inline-flex">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" title="Settings">
             <Settings className="h-4 w-4" />
           </Button>
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-2">
-            {user.image ? (
-              <img src={user.image} alt={user.name ?? "user"} className="h-7 w-7 rounded-full object-cover ring-2 ring-primary/20" />
-            ) : (
-              <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold ring-2 ring-primary/20">
-                {user.name?.[0] ?? user.email?.[0]?.toUpperCase() ?? "?"}
-              </div>
-            )}
-            <Link href="/login" className="hidden sm:inline-flex">
-              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground" title="Sign Out">
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </Link>
-          </div>
+          <UserNavDropdown user={user} />
         ) : (
           <Link href="/login">
-            <Button size="sm" className="h-8 text-xs bg-violet-600 hover:bg-violet-500 text-white rounded-lg">
+            <Button size="sm" className="h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-2xs">
               <LogIn className="h-3.5 w-3.5 mr-1" /> Sign in
             </Button>
           </Link>

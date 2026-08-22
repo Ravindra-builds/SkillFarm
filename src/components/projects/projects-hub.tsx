@@ -126,7 +126,7 @@ export function ProjectsHub() {
     // Auto-unlock check
     const weekTasks = updatedTasks.filter((t) => t.week === task.week);
     const weekAllDone = weekTasks.length > 0 && weekTasks.every((t) => t.completed);
-    let unlocked = [...capstone.unlockedWeeks];
+    const unlocked = [...capstone.unlockedWeeks];
     let nextCurrent = capstone.currentWeek;
 
     if (weekAllDone && !unlocked.includes(task.week + 1)) {
@@ -242,9 +242,11 @@ export function ProjectsHub() {
             <Button onClick={load} variant="outline" size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium">
               Retry
             </Button>
-            <Button onClick={() => (window.location.href = "/roadmap")} size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white">
-              Go to Roadmap
-            </Button>
+            <Link href="/roadmap">
+              <Button size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs cursor-pointer">
+                Go to Roadmap
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -278,13 +280,13 @@ export function ProjectsHub() {
       )}
 
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 sm:gap-4 border-b pb-3.5">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 sm:gap-4 border-b border-border/70 pb-4">
         <div className="space-y-1.5 flex-1 w-full">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-heading text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
-              <Hammer className="h-5 w-5 text-violet-600 shrink-0" /> Main-Project Application Hub
+            <h1 className="font-heading text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2 text-foreground">
+              <Hammer className="h-5 w-5 text-primary shrink-0" /> Main-Project Application Hub
             </h1>
-            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold rounded-md">
+            <Badge variant="outline" className="text-xs px-2 py-0.5 bg-primary/10 text-primary border-primary/20 font-semibold rounded-md">
               Portfolio Track
             </Badge>
           </div>
@@ -296,7 +298,7 @@ export function ProjectsHub() {
             <span>•</span>
             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ {totalTasksDone} Done ({overallProgress}%)</span>
             <span>•</span>
-            <span className="text-violet-600 dark:text-violet-400 font-semibold">Week {selectedWeek} Active</span>
+            <span className="text-primary font-semibold">Week {selectedWeek} Active</span>
           </div>
           <div className="pt-0.5 max-w-md">
             <Progress value={overallProgress} className="h-1.5 rounded-full" />
@@ -308,33 +310,33 @@ export function ProjectsHub() {
             onClick={syncFromRoadmap}
             disabled={syncing}
             variant="outline"
-            className="rounded-xl text-xs font-semibold h-8.5 px-3 gap-1.5 cursor-pointer"
+            className="rounded-xl text-xs font-semibold h-8.5 px-3 gap-1.5 cursor-pointer border-border/80"
           >
             <RefreshCw className={`h-3 w-3 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Sync Roadmap"}
           </Button>
           <Link href="/roadmap">
-            <Button className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-8.5 px-3.5 shadow-xs cursor-pointer">
+            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-semibold h-8.5 px-3.5 shadow-2xs cursor-pointer">
               View Roadmap
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Main-Project Overview Hero Card - Rich Violet Palette & Border */}
-      <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-3.5 sm:p-4.5 shadow-sm space-y-2.5">
+      {/* Main-Project Overview Hero Card */}
+      <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs space-y-3">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
           <div className="space-y-1 w-full">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-violet-600 text-white text-[10px] font-semibold px-2 py-0.2 uppercase tracking-wider rounded-md">
+              <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.2 uppercase tracking-wider rounded-md">
                 Primary Project
               </Badge>
               <span className="text-xs text-muted-foreground">{capstone.goalAlignment}</span>
             </div>
             <h2 className="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2 text-foreground">
-              <FolderGit2 className="h-4.5 w-4.5 text-violet-600 shrink-0" /> {capstone.name}
+              <FolderGit2 className="h-4.5 w-4.5 text-primary shrink-0" /> {capstone.name}
             </h2>
-            <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed max-w-3xl line-clamp-2">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-3xl line-clamp-2">
               {capstone.description}
             </p>
           </div>
@@ -342,7 +344,7 @@ export function ProjectsHub() {
           {/* GitHub Repo Link / Input */}
           <div className="shrink-0 self-start md:self-center w-full md:w-auto">
             {isEditingRepo ? (
-              <div className="flex items-center gap-2 bg-background p-1.5 rounded-xl border shadow-xs w-full md:w-auto">
+              <div className="flex items-center gap-2 bg-background p-1.5 rounded-xl border border-border/80 shadow-2xs w-full md:w-auto">
                 <Input
                   placeholder="https://github.com/username/repo"
                   value={repoInput}
@@ -354,7 +356,7 @@ export function ProjectsHub() {
                   size="sm"
                   disabled={savingRepo}
                   onClick={saveRepo}
-                  className="h-7.5 px-2.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg"
+                  className="h-7.5 px-2.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
                 >
                   <Check className="h-3 w-3" />
                 </Button>
@@ -368,12 +370,12 @@ export function ProjectsHub() {
                 </Button>
               </div>
             ) : capstone.repoUrl ? (
-              <div className="flex items-center gap-2 bg-background/90 p-2 rounded-xl border shadow-xs">
+              <div className="flex items-center gap-2 bg-background p-2 rounded-xl border border-border/80 shadow-2xs">
                 <a
                   href={capstone.repoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
                 >
                   <FolderGit2 className="h-3.5 w-3.5 shrink-0" />
                   <span>{capstone.repoUrl.replace("https://github.com/", "")}</span>
@@ -394,19 +396,19 @@ export function ProjectsHub() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditingRepo(true)}
-                className="w-full md:w-auto rounded-xl text-xs font-semibold h-8 px-3.5 gap-1.5 bg-background hover:bg-muted cursor-pointer"
+                className="w-full md:w-auto rounded-xl text-xs font-semibold h-8 px-3.5 gap-1.5 bg-background hover:bg-muted cursor-pointer border-border/80"
               >
-                <FolderGit2 className="h-3.5 w-3.5 text-violet-600" /> Link GitHub Repo
+                <FolderGit2 className="h-3.5 w-3.5 text-primary" /> Link GitHub Repo
               </Button>
             )}
           </div>
         </div>
 
         {capstone.stack && capstone.stack.length > 0 && (
-          <div className="flex items-center gap-1.5 flex-wrap pt-0.5 border-t border-violet-500/20">
-            <span className="text-xs font-bold text-foreground mr-1">Tech Stack:</span>
+          <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-border/60">
+            <span className="text-xs font-bold text-muted-foreground mr-1 uppercase tracking-wider">Tech Stack:</span>
             {capstone.stack.map((tech, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs font-medium px-2.5 py-0.5 bg-background/90 border shadow-xs rounded-md">
+              <Badge key={idx} variant="outline" className="text-xs font-medium px-2.5 py-0.5 bg-background border-border/80 shadow-2xs rounded-md">
                 {tech}
               </Badge>
             ))}
@@ -447,35 +449,35 @@ export function ProjectsHub() {
                 }}
                 className={`p-2.5 sm:p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-1.5 min-h-[70px] sm:min-h-[74px] cursor-pointer ${
                   isSelected
-                    ? "border-2 border-violet-600 bg-violet-600 text-white shadow-sm ring-2 ring-violet-500/30 font-bold"
+                    ? "border-2 border-primary bg-primary text-primary-foreground shadow-2xs ring-2 ring-primary/30 font-bold"
                     : isWeekCompleted
                     ? "border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-950 dark:text-emerald-200"
                     : isGuestLocked
-                    ? "border border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-muted-foreground"
+                    ? "border border-border/60 bg-muted/20 hover:bg-muted/30 text-muted-foreground"
                     : isUnlocked
                     ? "border-2 border-border/80 bg-card hover:bg-muted/60 text-foreground"
                     : "border border-border/40 bg-muted/20 opacity-60 cursor-not-allowed text-muted-foreground"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isSelected ? "text-violet-200" : "text-muted-foreground"}`}>
+                  <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${isSelected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                     Week {w}
                   </span>
                   {isWeekCompleted ? (
-                    <CheckCircle2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSelected ? "text-white" : "text-emerald-500"}`} />
+                    <CheckCircle2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isSelected ? "text-primary-foreground" : "text-emerald-500"}`} />
                   ) : isGuestLocked ? (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-violet-600 dark:text-violet-400">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-primary">
                       <Lock className="h-3 w-3" /> Locked
                     </span>
                   ) : !isUnlocked ? (
                     <Lock className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (
-                    <span className={`text-[10px] sm:text-[11px] font-bold ${isSelected ? "text-violet-100" : "text-violet-600 dark:text-violet-400"}`}>
+                    <span className={`text-[10px] sm:text-[11px] font-bold ${isSelected ? "text-primary-foreground" : "text-primary"}`}>
                       {wDone}/{wTasks.length}
                     </span>
                   )}
                 </div>
-                <p className={`text-xs font-semibold line-clamp-2 leading-snug ${isSelected ? "text-white" : "text-foreground"}`}>
+                <p className={`text-xs font-semibold line-clamp-2 leading-snug ${isSelected ? "text-primary-foreground font-bold" : "text-foreground"}`}>
                   {wLabel}
                 </p>
               </button>
@@ -485,20 +487,20 @@ export function ProjectsHub() {
       </div>
 
       {/* Active Week: Concept Context + Implementation Task Board */}
-      <Card className="rounded-2xl border-2 border-border/90 bg-card shadow-sm overflow-hidden">
-        <CardHeader className="p-3 sm:p-3.5 border-b bg-muted/30 space-y-2">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
+      <Card className="rounded-2xl border border-border/80 bg-card shadow-2xs overflow-hidden">
+        <CardHeader className="p-3.5 sm:p-4 border-b border-border/60 bg-muted/20 space-y-2.5">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-2.5">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="flex items-center justify-center h-5 w-5 rounded-md bg-violet-600 text-white font-bold text-[10px]">
+                <span className="flex items-center justify-center h-5.5 w-5.5 rounded-md bg-primary text-primary-foreground font-bold text-[10px] shadow-2xs">
                   W{selectedWeek}
                 </span>
-                <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
+                <span className="text-xs font-bold text-primary">
                   {currentTopic}
                 </span>
               </div>
               <CardTitle className="text-sm sm:text-base font-bold tracking-tight text-foreground">
-                Deliverable: <span className="text-violet-600 dark:text-violet-400">{currentFeature}</span>
+                Deliverable: <span className="text-primary">{currentFeature}</span>
               </CardTitle>
             </div>
 
@@ -514,8 +516,8 @@ export function ProjectsHub() {
                   `I am working on Week ${selectedWeek} of my Main-Project "${capstone.name}". The topic is "${currentTopic}" and deliverable is "${currentFeature}". Can you review my implementation plan and guide me on architectural best practices?`
                 )}`}
               >
-                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-7 px-2.5 gap-1 cursor-pointer">
-                  <MessageSquare className="h-3 w-3 text-violet-600" /> Ask Mentor
+                <Button variant="outline" size="sm" className="rounded-xl text-xs font-semibold h-7.5 px-2.5 gap-1.5 cursor-pointer border-border/80">
+                  <MessageSquare className="h-3 w-3 text-primary" /> Ask Mentor
                 </Button>
               </Link>
             </div>
@@ -523,15 +525,15 @@ export function ProjectsHub() {
 
           {/* Context Banner: Compact What You Learned & Mental Model Strip */}
           {activeWeekContext && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 pt-0.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-0.5">
               {activeWeekContext.concepts && activeWeekContext.concepts.length > 0 && (
-                <div className="rounded-xl border-2 border-blue-500/25 bg-blue-500/[0.06] dark:bg-blue-500/10 p-2 space-y-0.5 shadow-2xs">
-                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 uppercase tracking-wider">
-                    <BookOpen className="h-2.5 w-2.5" /> Core Concepts
+                <div className="rounded-xl border border-border/80 bg-muted/40 p-2.5 space-y-1 shadow-2xs">
+                  <span className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-wider">
+                    <BookOpen className="h-3 w-3" /> Core Concepts
                   </span>
                   <div className="flex flex-wrap gap-1">
                     {activeWeekContext.concepts.map((c, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 rounded-md">
+                      <Badge key={idx} variant="secondary" className="text-[10px] font-medium px-1.5 py-0 bg-background border border-border/60 rounded-md">
                         {c}
                       </Badge>
                     ))}
@@ -540,9 +542,9 @@ export function ProjectsHub() {
               )}
 
               {activeWeekContext.mentalModels && activeWeekContext.mentalModels.length > 0 && (
-                <div className="rounded-xl border-2 border-amber-500/25 bg-amber-500/[0.06] dark:bg-amber-500/10 p-2 space-y-0.5 shadow-2xs">
-                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 uppercase tracking-wider">
-                    <BrainCircuit className="h-2.5 w-2.5" /> Mental Model
+                <div className="rounded-xl border border-border/80 bg-muted/40 p-2.5 space-y-1 shadow-2xs">
+                  <span className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-wider">
+                    <BrainCircuit className="h-3 w-3" /> Mental Model
                   </span>
                   <p className="text-foreground/85 text-[10px] leading-relaxed line-clamp-1">
                     {activeWeekContext.mentalModels[0]}
@@ -552,26 +554,26 @@ export function ProjectsHub() {
             </div>
           )}
 
-          <Progress value={activeWeekProgress} className="h-1 mt-0.5 rounded-full" />
+          <Progress value={activeWeekProgress} className="h-1.5 mt-0.5 rounded-full" />
         </CardHeader>
 
-        <CardContent className="p-3 sm:p-3.5 pt-2.5 space-y-2">
+        <CardContent className="p-3.5 sm:p-4 pt-3 space-y-2.5">
           <div className="flex items-center justify-between flex-wrap gap-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Target className="h-3 w-3 text-violet-600" /> Implementation Checklist
+              <Target className="h-3.5 w-3.5 text-primary" /> Implementation Checklist
             </span>
             <span className="text-[10px] text-muted-foreground">Click task or checkmark to toggle</span>
           </div>
 
           {activeWeekTasks.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {activeWeekTasks.map((task) => (
                 <div
                   key={task.id}
-                  className={`p-2.5 sm:p-3 rounded-xl border transition-all flex items-center gap-2.5 ${
+                  className={`p-3 rounded-xl border transition-all flex items-center gap-3 ${
                     task.completed
                       ? "border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05] text-muted-foreground opacity-85"
-                      : "border-2 border-l-4 border-l-violet-600 border-border/80 bg-background hover:bg-violet-500/[0.03] text-foreground shadow-2xs"
+                      : "border-2 border-l-4 border-l-primary border-border/80 bg-background hover:bg-primary/[0.02] text-foreground shadow-2xs"
                   }`}
                 >
                   <button
@@ -584,13 +586,13 @@ export function ProjectsHub() {
                     aria-label={`Toggle task: ${task.title}`}
                   >
                     <div
-                      className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
+                      className={`h-4.5 w-4.5 rounded border flex items-center justify-center transition-colors ${
                         task.completed
                           ? "bg-emerald-600 border-emerald-600 text-white"
-                          : "border-border bg-background hover:border-violet-500"
+                          : "border-border bg-background hover:border-primary"
                       }`}
                     >
-                      {task.completed && <Check className="h-2.5 w-2.5 text-white stroke-[3]" />}
+                      {task.completed && <Check className="h-3 w-3 text-white stroke-[3]" />}
                     </div>
                   </button>
                   <div
@@ -604,14 +606,14 @@ export function ProjectsHub() {
                       className={`text-xs sm:text-sm font-medium leading-snug ${
                         task.completed
                           ? "line-through text-muted-foreground"
-                          : "text-foreground"
+                          : "text-foreground font-semibold"
                       }`}
                     >
                       {task.title}
                     </p>
                   </div>
                   {task.completed && (
-                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold px-1.5 py-0 shrink-0 rounded-md">
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold px-2 py-0.5 shrink-0 rounded-md">
                       Done
                     </Badge>
                   )}
@@ -630,7 +632,7 @@ export function ProjectsHub() {
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
                 <span className="leading-relaxed">
-                  <strong className="font-bold">Week {selectedWeek} Deliverable Complete!</strong> All tasks applied to Main-Project. Next week's module is now unlocked in your timeline.
+                  <strong className="font-bold">Week {selectedWeek} Deliverable Complete!</strong> All tasks applied to Main-Project. Next week&apos;s module is now unlocked in your timeline.
                 </span>
               </div>
               {selectedWeek < weekNumbers.length && (
@@ -647,8 +649,8 @@ export function ProjectsHub() {
 
           {/* Guest Locked Multi-Week Deliverables Teaser Card */}
           {isGuest && (
-            <div className="mt-4 rounded-2xl border-2 border-dashed border-violet-500/40 bg-gradient-to-b from-violet-500/10 via-card to-card p-5 sm:p-7 text-center space-y-3.5 shadow-md animate-in fade-in duration-300">
-              <div className="h-11 w-11 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+            <div className="mt-4 rounded-2xl border-2 border-dashed border-primary/30 bg-gradient-to-b from-primary/10 via-card to-card p-5 sm:p-7 text-center space-y-3.5 shadow-md animate-in fade-in duration-300">
+              <div className="h-11 w-11 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto shadow-inner">
                 <Lock className="h-5 w-5" />
               </div>
               <div className="space-y-1 max-w-md mx-auto">
@@ -661,12 +663,12 @@ export function ProjectsHub() {
               </div>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-1">
                 <Link href="/login" className="w-full sm:w-auto">
-                  <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 px-4 shadow-xs">
+                  <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs h-9 px-4 shadow-2xs">
                     <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Create Free Account
                   </Button>
                 </Link>
                 <Link href="/login" className="w-full sm:w-auto">
-                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs h-9 px-3.5">
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs h-9 px-3.5 border-border/80">
                     Sign in with Google
                   </Button>
                 </Link>
@@ -679,8 +681,8 @@ export function ProjectsHub() {
       {/* Guest Locked Deliverables Modal */}
       {showGuestLockedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl border border-violet-500/40 bg-card shadow-2xl p-6 text-center space-y-4">
-            <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="w-full max-w-sm rounded-2xl border border-primary/30 bg-card shadow-2xl p-6 text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center mx-auto shadow-inner">
               <Lock className="h-6 w-6" />
             </div>
             <div className="space-y-1.5">
@@ -693,7 +695,7 @@ export function ProjectsHub() {
             </div>
             <div className="flex flex-col gap-2 pt-1">
               <Link href="/login" className="w-full">
-                <Button className="w-full bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs h-9 shadow-xs">
+                <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs h-9 shadow-2xs">
                   <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Sign in with Google
                 </Button>
               </Link>

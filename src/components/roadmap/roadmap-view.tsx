@@ -335,12 +335,14 @@ export function RoadmapView() {
             Save your learning profile on the dashboard to build your tailored roadmap.
           </p>
           <div className="pt-1 flex flex-wrap gap-2.5">
-            <Button onClick={load} variant="outline" size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium">
+            <Button onClick={load} variant="outline" size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium border-border/80">
               Retry Loading
             </Button>
-            <Button onClick={() => (window.location.href = "/dashboard")} size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white">
-              Go to Dashboard
-            </Button>
+            <Link href="/dashboard">
+              <Button size="sm" className="rounded-xl h-9 px-3.5 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xs cursor-pointer">
+                Go to Dashboard
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
@@ -372,12 +374,12 @@ export function RoadmapView() {
 
       {/* Subtle Guest Top Banner */}
       {isGuest && (
-        <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20 text-xs text-violet-900 dark:text-violet-200 animate-in fade-in duration-200">
+        <div className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-primary/10 border border-primary/20 text-xs text-foreground animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
+            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
             <span className="font-medium">Create a free account to save your complete learning roadmap.</span>
           </div>
-          <Link href="/login" className="shrink-0 font-semibold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1">
+          <Link href="/login" className="shrink-0 font-semibold text-primary hover:underline flex items-center gap-1">
             Sign in <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -387,17 +389,17 @@ export function RoadmapView() {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 sm:gap-5 border-b pb-5">
         <div className="space-y-2.5 flex-1 w-full">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5">
-              <Sparkles className="h-6 w-6 text-violet-600 shrink-0" /> {roadmap.title}
+            <h1 className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2.5 text-foreground">
+              <Sparkles className="h-6 w-6 text-primary shrink-0" /> {roadmap.title}
             </h1>
-            <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20 font-semibold rounded-md">
+            <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-primary/10 text-primary border-primary/20 font-semibold rounded-md">
               Concept-First Curriculum • {weekGroups.length} Weeks
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground w-full max-w-3xl leading-relaxed">{roadmap.description}</p>
           <div className="flex items-center gap-2.5 sm:gap-3.5 text-xs text-muted-foreground pt-0.5 flex-wrap">
             <span className="flex items-center gap-1 font-semibold text-foreground">
-              <Layers className="h-3.5 w-3.5 text-violet-500" /> {totalCount} Modules
+              <Layers className="h-3.5 w-3.5 text-primary" /> {totalCount} Modules
             </span>
             <span>•</span>
             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -426,7 +428,7 @@ export function RoadmapView() {
               }
             }}
             disabled={regenerating}
-            className="w-full md:w-auto bg-violet-600 hover:bg-violet-500 text-white rounded-xl shadow-xs cursor-pointer text-xs sm:text-sm font-semibold h-9 px-4 flex items-center justify-center gap-2"
+            className="w-full md:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-2xs cursor-pointer text-xs sm:text-sm font-semibold h-9 px-4 flex items-center justify-center gap-2"
           >
             <Sparkles className={`h-3.5 w-3.5 ${regenerating ? "animate-spin" : ""}`} />
             {regenerating ? "Architecting Roadmap..." : "Regenerate AI Roadmap"}
@@ -439,37 +441,37 @@ export function RoadmapView() {
         </div>
       </div>
 
-      {/* Main-Project Application Showcase Hero - Distinct Violet Palette & Border */}
+      {/* Main-Project Application Showcase Hero */}
       {mainProject && (
-        <div className="rounded-2xl border-2 border-violet-500/40 bg-gradient-to-br from-violet-500/10 via-background to-violet-500/5 dark:from-violet-950/20 dark:via-background dark:to-violet-900/10 p-3.5 sm:p-4.5 shadow-sm space-y-2.5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-            <div className="space-y-0.5 flex-1 min-w-0">
+        <div className="rounded-2xl border border-border/80 bg-card p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-1 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge className="bg-violet-600 text-white text-[10px] font-semibold px-2 py-0.2 uppercase tracking-wider rounded-md">
-                  Portfolio Project
+                <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.2 uppercase tracking-wider rounded-md">
+                  Portfolio Capstone
                 </Badge>
                 <span className="text-xs text-muted-foreground">{mainProject.goalAlignment}</span>
               </div>
               <h2 className="text-base sm:text-lg font-bold tracking-tight flex items-center gap-2 text-foreground">
-                <Hammer className="h-4.5 w-4.5 text-violet-600 shrink-0" /> {mainProject.name}
+                <Hammer className="h-4.5 w-4.5 text-primary shrink-0" /> {mainProject.name}
               </h2>
-              <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed max-w-3xl line-clamp-2">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-3xl line-clamp-2">
                 {mainProject.description}
               </p>
             </div>
 
             <Link href="/projects" className="shrink-0 self-start md:self-center">
-              <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold h-8 px-3 gap-1.5 shadow-xs cursor-pointer">
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl text-xs font-semibold h-8.5 px-3.5 gap-1.5 shadow-2xs cursor-pointer">
                 <FolderGit2 className="h-3.5 w-3.5" /> Project Hub <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
           </div>
 
           {mainProject.stack && mainProject.stack.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-violet-500/20">
-              <span className="text-[11px] font-bold text-foreground mr-1">Stack:</span>
+            <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-border/60">
+              <span className="text-[11px] font-bold text-muted-foreground mr-1 uppercase tracking-wider">Stack:</span>
               {mainProject.stack.map((tech, idx) => (
-                <Badge key={idx} variant="outline" className="text-[11px] font-medium px-2 py-0 bg-background/90 border shadow-2xs rounded-md">
+                <Badge key={idx} variant="outline" className="text-[11px] font-medium px-2 py-0 bg-background/90 border-border/80 shadow-2xs rounded-md">
                   {tech}
                 </Badge>
               ))}
@@ -478,8 +480,8 @@ export function RoadmapView() {
         </div>
       )}
 
-      {/* Filter and Search Bar - Distinct Slate Container */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-muted/40 p-2.5 sm:p-3 rounded-2xl border-2 border-border/80 shadow-2xs">
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-card p-2.5 sm:p-3 rounded-2xl border border-border/80 shadow-2xs">
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -504,8 +506,8 @@ export function RoadmapView() {
               onClick={() => setStatusFilter(tab.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer ${
                 statusFilter === tab.id
-                  ? "bg-violet-600 text-white shadow-xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-background border border-transparent hover:border-border/60"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border/60"
               }`}
             >
               {tab.label}
@@ -523,11 +525,11 @@ export function RoadmapView() {
             if (visibleNodesInWeek.length === 0) return null;
 
             return (
-              <div key={group.weekNumber} className="rounded-2xl border-2 border-border/80 bg-card/60 p-3 sm:p-4 space-y-3 shadow-xs w-full min-w-0 overflow-hidden">
+              <div key={group.weekNumber} className="rounded-2xl border border-border/80 bg-card p-3.5 sm:p-4.5 space-y-3 shadow-2xs w-full min-w-0 overflow-hidden">
                 {/* Week Header */}
-                <div className="flex items-center justify-between border-b border-border/50 pb-2.5 flex-wrap gap-2 w-full min-w-0">
+                <div className="flex items-center justify-between border-b border-border/60 pb-2.5 flex-wrap gap-2 w-full min-w-0">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="flex items-center justify-center h-5.5 w-5.5 sm:h-6 sm:w-6 rounded-lg bg-violet-600 text-white font-bold text-[11px] sm:text-xs shrink-0 shadow-2xs">
+                    <span className="flex items-center justify-center h-5.5 w-5.5 sm:h-6 sm:w-6 rounded-lg bg-primary text-primary-foreground font-bold text-[11px] sm:text-xs shrink-0 shadow-2xs">
                       W{group.weekNumber}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -563,13 +565,13 @@ export function RoadmapView() {
                         }}
                         className={`rounded-xl border p-3 sm:p-3.5 transition-all cursor-pointer flex flex-col justify-between gap-2.5 w-full min-w-0 overflow-hidden ${
                           isSelected
-                            ? "border-2 border-violet-600 bg-violet-500/10 dark:bg-violet-500/15 shadow-sm ring-2 ring-violet-500/40"
+                            ? "border-2 border-primary bg-primary/[0.08] shadow-xs ring-2 ring-primary/30"
                             : node.status === "current"
-                            ? "border-2 border-l-4 border-l-violet-600 dark:border-l-violet-400 border-violet-500/50 bg-violet-500/[0.08] dark:bg-violet-500/12 shadow-xs"
+                            ? "border-2 border-l-4 border-l-primary border-primary/50 bg-primary/[0.05] shadow-2xs"
                             : node.status === "completed"
-                            ? "border border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.06] hover:bg-emerald-500/[0.08] opacity-90"
+                            ? "border-emerald-500/30 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05] hover:bg-emerald-500/[0.08] opacity-90"
                             : node.status === "next"
-                            ? "border border-dashed border-violet-500/40 bg-card hover:bg-violet-500/[0.03]"
+                            ? "border border-dashed border-primary/40 bg-card hover:bg-primary/[0.03]"
                             : "border border-border/60 bg-muted/20 hover:bg-muted/40 opacity-75"
                         }`}
                       >
@@ -580,15 +582,15 @@ export function RoadmapView() {
                               <div className="shrink-0 mt-0.5">
                                 {node.status === "completed" && <CheckCircle2 className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-emerald-500" />}
                                 {node.status === "current" && (
-                                  <div className="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded-full border-2 border-violet-600 flex items-center justify-center">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-violet-600 animate-pulse" />
+                                  <div className="h-4 w-4 sm:h-4.5 sm:w-4.5 rounded-full border-2 border-primary flex items-center justify-center">
+                                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                                   </div>
                                 )}
-                                {node.status === "next" && <Circle className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-violet-500" />}
+                                {node.status === "next" && <Circle className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-primary" />}
                                 {node.status === "locked" && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                               </div>
                               <p className={`text-xs sm:text-sm font-bold tracking-tight leading-snug truncate ${
-                                node.status === "current" || isSelected ? "text-violet-600 dark:text-violet-400" : "text-foreground"
+                                node.status === "current" || isSelected ? "text-primary" : "text-foreground"
                               }`}>
                                 {nodeTopic}
                               </p>
@@ -600,11 +602,11 @@ export function RoadmapView() {
                                   ✓ Mastered
                                 </Badge>
                               ) : node.status === "current" ? (
-                                <Badge className="bg-violet-600 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md shadow-2xs">
+                                <Badge className="bg-primary text-primary-foreground text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md shadow-2xs">
                                   ⚡ Active
                                 </Badge>
                               ) : node.status === "next" ? (
-                                <Badge variant="secondary" className="bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-500/20 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-md">
+                                <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20 text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded-md">
                                   Up Next
                                 </Badge>
                               ) : (
@@ -615,7 +617,7 @@ export function RoadmapView() {
                             </div>
                           </div>
 
-                          {/* Concise Description (Line clamped) */}
+                          {/* Concise Description */}
                           <p className="text-xs text-muted-foreground leading-relaxed pl-0 sm:pl-6 line-clamp-2">
                             {node.description}
                           </p>
@@ -638,7 +640,7 @@ export function RoadmapView() {
                           )}
 
                           {capstoneFeature && (
-                            <div className="flex items-center gap-1 text-[11px] text-violet-600 dark:text-violet-400 font-medium truncate max-w-full sm:max-w-xs">
+                            <div className="flex items-center gap-1 text-[11px] text-primary font-medium truncate max-w-full sm:max-w-xs">
                               <Hammer className="h-3 w-3 shrink-0" />
                               <span className="truncate">{capstoneFeature}</span>
                             </div>
@@ -661,7 +663,7 @@ export function RoadmapView() {
                             )}
                           </div>
 
-                          <span className="text-[11px] text-violet-600 dark:text-violet-400 font-semibold group-hover:underline flex items-center gap-0.5">
+                          <span className="text-[11px] text-primary font-semibold group-hover:underline flex items-center gap-0.5">
                             Inspect <ChevronRight className="h-3 w-3" />
                           </span>
                         </div>
@@ -675,8 +677,8 @@ export function RoadmapView() {
 
           {/* Guest Locked Multi-Week Progression Teaser Card */}
           {isGuest && (
-            <div className="rounded-2xl border-2 border-dashed border-violet-500/40 bg-gradient-to-b from-violet-500/10 via-card to-card p-6 sm:p-8 text-center space-y-4 shadow-lg relative overflow-hidden animate-in fade-in duration-300">
-              <div className="h-12 w-12 rounded-2xl bg-violet-600/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center mx-auto shadow-inner">
+            <div className="rounded-2xl border-2 border-dashed border-primary/40 bg-gradient-to-b from-primary/10 via-card to-card p-6 sm:p-8 text-center space-y-4 shadow-2xs relative overflow-hidden animate-in fade-in duration-300">
+              <div className="h-12 w-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center mx-auto shadow-inner">
                 <Lock className="h-6 w-6" />
               </div>
 
@@ -691,12 +693,12 @@ export function RoadmapView() {
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
                 <Link href="/login" className="w-full sm:w-auto">
-                  <Button className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs sm:text-sm h-10 px-5 shadow-xs">
+                  <Button className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs sm:text-sm h-10 px-5 shadow-2xs">
                     <Sparkles className="h-4 w-4 mr-2" /> Create Free Account
                   </Button>
                 </Link>
                 <Link href="/login" className="w-full sm:w-auto">
-                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm h-10 px-4">
+                  <Button variant="outline" className="w-full sm:w-auto rounded-xl text-xs sm:text-sm h-10 px-4 border-border/80">
                     Sign in with Google
                   </Button>
                 </Link>
@@ -709,7 +711,7 @@ export function RoadmapView() {
               <HelpCircle className="h-8 w-8 text-muted-foreground mx-auto" />
               <p className="text-sm font-bold text-foreground">No modules match your search</p>
               <p className="text-xs text-muted-foreground">Try clearing the search query or changing your status filter.</p>
-              <Button size="sm" variant="outline" onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="rounded-xl text-xs mt-2 h-8 px-3">
+              <Button size="sm" variant="outline" onClick={() => { setSearchQuery(""); setStatusFilter("all"); }} className="rounded-xl text-xs mt-2 h-8 px-3 border-border/80">
                 Clear Filters
               </Button>
             </div>
@@ -719,12 +721,12 @@ export function RoadmapView() {
         {/* Right Column: Interactive Detail Inspector & Editor */}
         <div className="space-y-3 lg:sticky lg:top-6">
           {selected ? (
-            <Card className="rounded-2xl border-2 border-border/90 bg-card shadow-sm overflow-hidden">
-              <CardHeader className="p-3.5 sm:p-4 border-b bg-muted/20 space-y-1">
+            <Card className="rounded-2xl border border-border/80 bg-card shadow-2xs overflow-hidden">
+              <CardHeader className="p-3.5 sm:p-4 border-b border-border/60 bg-muted/20 space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[11px] font-bold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-2 py-0.2 rounded-md">
+                      <span className="text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.2 rounded-md">
                         Week {selected.week ?? 1}
                       </span>
                       <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">
@@ -809,7 +811,7 @@ export function RoadmapView() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 pt-1">
-                      <Button type="submit" size="sm" disabled={savingEdit} className="h-7.5 text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white rounded-lg flex-1">
+                      <Button type="submit" size="sm" disabled={savingEdit} className="h-7.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg flex-1 shadow-2xs">
                         <Check className="h-3 w-3 mr-1" /> {savingEdit ? "Saving..." : "Save"}
                       </Button>
                       <Button type="button" size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="h-7.5 text-xs rounded-lg">
@@ -821,16 +823,16 @@ export function RoadmapView() {
                   /* Display Concept-First Unified Sub-Cards */
                   <>
                     {/* Sub-Card 1: Core Learning Objectives & Mental Models */}
-                    <div className="rounded-xl border-2 border-blue-500/25 bg-blue-500/[0.05] dark:bg-blue-500/10 p-3 space-y-2">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                        <BookOpen className="h-3 w-3" /> Core Concepts & Objectives
+                    <div className="rounded-xl border-2 border-border/80 bg-muted/30 p-3 space-y-2 shadow-2xs">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                        <BookOpen className="h-3 w-3 text-primary" /> Core Concepts & Objectives
                       </p>
                       
                       {selected.learningObjectives && selected.learningObjectives.length > 0 && (
                         <ul className="space-y-1 text-muted-foreground text-[11px] leading-relaxed">
                           {selected.learningObjectives.map((obj, idx) => (
                             <li key={idx} className="flex items-start gap-1.5">
-                              <span className="text-blue-500 font-bold leading-none mt-0.5">•</span>
+                              <span className="text-primary font-bold leading-none mt-0.5">•</span>
                               <span>{obj}</span>
                             </li>
                           ))}
@@ -838,7 +840,7 @@ export function RoadmapView() {
                       )}
 
                       {selected.mentalModels && selected.mentalModels.length > 0 && (
-                        <div className="flex items-start gap-1.5 bg-amber-500/15 p-2 rounded-lg border border-amber-500/30 text-foreground/90 text-[11px] leading-relaxed">
+                        <div className="flex items-start gap-1.5 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30 text-foreground/90 text-[11px] leading-relaxed">
                           <Lightbulb className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                           <span>{selected.mentalModels[0]}</span>
                         </div>
@@ -846,9 +848,9 @@ export function RoadmapView() {
                     </div>
 
                     {/* Sub-Card 2: Practical Drill & Main-Project Application */}
-                    <div className="rounded-xl border-2 border-violet-500/30 bg-violet-500/[0.05] dark:bg-violet-500/10 p-3 space-y-2">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400 flex items-center gap-1">
-                        <Hammer className="h-3 w-3" /> Apply to Main-Project: {selected.featureCompleted}
+                    <div className="rounded-xl border-2 border-border/80 bg-muted/30 p-3 space-y-2 shadow-2xs">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                        <Hammer className="h-3 w-3 text-primary" /> Apply to Main-Project: {selected.featureCompleted}
                       </p>
 
                       {selected.practicalTask && (
@@ -861,7 +863,7 @@ export function RoadmapView() {
                       <ul className="space-y-1">
                         {(selected.capstoneApplication || selected.projectWork || []).map((item, idx) => (
                           <li key={idx} className="flex items-start gap-1.5 text-[11px] text-foreground/90 font-medium leading-relaxed">
-                            <span className="text-violet-600 font-bold">✓</span>
+                            <span className="text-primary font-bold">✓</span>
                             <span>{item}</span>
                           </li>
                         ))}
@@ -869,13 +871,13 @@ export function RoadmapView() {
                     </div>
 
                     {/* Milestone Actions */}
-                    <div className="pt-2 border-t space-y-1.5">
+                    <div className="pt-2 border-t border-border/60 space-y-1.5">
                       <div className="grid grid-cols-2 gap-1.5">
                         {selected.status !== "completed" ? (
                           <Button
                             onClick={() => updateStatus(selected.id, "completed")}
                             size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold h-7.5 cursor-pointer"
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold h-7.5 cursor-pointer shadow-2xs"
                           >
                             <CheckCircle2 className="h-3 w-3 mr-1" /> Mastered
                           </Button>
@@ -895,9 +897,9 @@ export function RoadmapView() {
                             onClick={() => updateStatus(selected.id, "current")}
                             size="sm"
                             variant="outline"
-                            className="rounded-xl text-xs font-semibold h-7.5 cursor-pointer"
+                            className="rounded-xl text-xs font-semibold h-7.5 cursor-pointer text-primary border-primary/30"
                           >
-                            <PlayCircle className="h-3 w-3 mr-1 text-violet-600" /> Set Active
+                            <PlayCircle className="h-3 w-3 mr-1 text-primary" /> Set Active
                           </Button>
                         ) : (
                           <Button
@@ -916,13 +918,13 @@ export function RoadmapView() {
                           href={`/resources?topic=${encodeURIComponent(selected.topic || selected.title)}&week=${selected.week ?? 1}&concepts=${encodeURIComponent((selected.concepts || selected.relatedConcepts || []).join(","))}`}
                           className="block"
                         >
-                          <Button size="sm" className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold h-7.5 rounded-xl gap-1 shadow-xs cursor-pointer">
+                          <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-7.5 rounded-xl gap-1 shadow-2xs cursor-pointer">
                             <BookOpen className="h-3 w-3" /> Resources
                           </Button>
                         </Link>
 
                         <Link href="/projects" className="block">
-                          <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-7.5 rounded-xl gap-1 cursor-pointer">
+                          <Button variant="outline" size="sm" className="w-full text-xs font-semibold h-7.5 rounded-xl gap-1 cursor-pointer border-border/80">
                             <FolderGit2 className="h-3 w-3" /> Tasks
                           </Button>
                         </Link>
